@@ -19,3 +19,4 @@ F:\c_app\backend\src\SahakariMS.Infrastructure\obj\Debug\net8.0\refint\SahakariM
 F:\c_app\backend\src\SahakariMS.Infrastructure\obj\Debug\net8.0\SahakariMS.Infrastructure.pdb
 F:\c_app\backend\src\SahakariMS.Infrastructure\obj\Debug\net8.0\SahakariMS.Infrastructure.genruntimeconfig.cache
 F:\c_app\backend\src\SahakariMS.Infrastructure\obj\Debug\net8.0\ref\SahakariMS.Infrastructure.dll
+F:\c_app\backend\src\SahakariMS.Infrastructure\obj\Debug\net8.0\SahakariMS.Infrastructure.sourcelink.json

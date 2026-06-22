@@ -154,9 +154,17 @@ class MainShell extends ConsumerWidget {
     if (location == AppRoutes.savings &&
         (user.isAdmin || user.isManager || user.isCashier)) {
       return FloatingActionButton.extended(
-        onPressed: () {},
+        onPressed: () {
+          showModalBottomSheet(
+            context: context,
+            shape: const RoundedRectangleBorder(
+              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+            ),
+            builder: (_) => const _QuickTransactionSheet(),
+          );
+        },
         icon: const Icon(Icons.account_balance_wallet_outlined),
-        label: const Text('Deposit'),
+        label: const Text('Deposit / Withdraw'),
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
       );
@@ -344,3 +352,155 @@ class _UserMenuButton extends StatelessWidget {
   }
 }
 
+
+// ─── Quick Transaction Bottom Sheet ──────────────────────────────────────────
+class _QuickTransactionSheet extends StatelessWidget {
+  const _QuickTransactionSheet();
+
+  void _askAccountAndNavigate(BuildContext context, String actionType) {
+    final ctrl = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text(actionType == 'deposit' ? 'Deposit' : 'Withdrawal',
+            style: const TextStyle(fontWeight: FontWeight.bold)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              'Enter the savings account number:',
+              style: TextStyle(fontSize: 13, color: Colors.black54),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: ctrl,
+              autofocus: true,
+              decoration: InputDecoration(
+                hintText: 'e.g. SAV-2079-00001',
+                prefixIcon: const Icon(Icons.savings_outlined),
+                border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12)),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Cancel')),
+          FilledButton(
+            onPressed: () {
+              final id = ctrl.text.trim();
+              if (id.isEmpty) return;
+              Navigator.pop(ctx);
+              Navigator.pop(context);
+              final route = actionType == 'deposit'
+                  ? '/savings/$id/deposit'
+                  : '/savings/$id/withdraw';
+              context.push(route);
+            },
+            child: const Text('Continue'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Center(
+            child: Container(
+              width: 40, height: 4,
+              margin: const EdgeInsets.only(bottom: 20),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade300,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+          const Text('Quick Transaction',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 4),
+          const Text('Select an action to perform',
+              style: TextStyle(fontSize: 13, color: Colors.black54)),
+          const SizedBox(height: 20),
+          _ActionTile(
+            icon: Icons.arrow_downward_rounded,
+            iconColor: const Color(0xFF16A34A),
+            bgColor: const Color(0xFFDCFCE7),
+            title: 'Deposit',
+            subtitle: 'Credit funds to a savings account',
+            onTap: () => _askAccountAndNavigate(context, 'deposit'),
+          ),
+          const SizedBox(height: 12),
+          _ActionTile(
+            icon: Icons.arrow_upward_rounded,
+            iconColor: const Color(0xFFDC2626),
+            bgColor: const Color(0xFFFEE2E2),
+            title: 'Withdraw',
+            subtitle: 'Debit funds from a savings account',
+            onTap: () => _askAccountAndNavigate(context, 'withdraw'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ActionTile extends StatelessWidget {
+  final IconData icon;
+  final Color iconColor, bgColor;
+  final String title, subtitle;
+  final VoidCallback onTap;
+  const _ActionTile({
+    required this.icon, required this.iconColor, required this.bgColor,
+    required this.title, required this.subtitle, required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(14),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          border: Border.all(color: Colors.grey.shade200),
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 46, height: 46,
+              decoration: BoxDecoration(
+                  color: bgColor, borderRadius: BorderRadius.circular(12)),
+              child: Icon(icon, color: iconColor, size: 22),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title,
+                      style: const TextStyle(
+                          fontWeight: FontWeight.w600, fontSize: 15)),
+                  Text(subtitle,
+                      style: const TextStyle(
+                          fontSize: 12, color: Colors.black54)),
+                ],
+              ),
+            ),
+            Icon(Icons.chevron_right_rounded, color: Colors.grey.shade400),
+          ],
+        ),
+      ),
+    );
+  }
+}

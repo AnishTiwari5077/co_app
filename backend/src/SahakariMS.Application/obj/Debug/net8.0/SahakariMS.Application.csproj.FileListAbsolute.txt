@@ -15,3 +15,4 @@ F:\c_app\backend\src\SahakariMS.Application\obj\Debug\net8.0\SahakariMS.Applicat
 F:\c_app\backend\src\SahakariMS.Application\obj\Debug\net8.0\refint\SahakariMS.Application.dll
 F:\c_app\backend\src\SahakariMS.Application\obj\Debug\net8.0\SahakariMS.Application.pdb
 F:\c_app\backend\src\SahakariMS.Application\obj\Debug\net8.0\ref\SahakariMS.Application.dll
+F:\c_app\backend\src\SahakariMS.Application\obj\Debug\net8.0\SahakariMS.Application.sourcelink.json

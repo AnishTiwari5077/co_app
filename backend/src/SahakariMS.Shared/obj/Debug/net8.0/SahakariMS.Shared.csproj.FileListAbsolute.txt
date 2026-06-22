@@ -9,3 +9,4 @@ F:\c_app\backend\src\SahakariMS.Shared\obj\Debug\net8.0\SahakariMS.Shared.dll
 F:\c_app\backend\src\SahakariMS.Shared\obj\Debug\net8.0\refint\SahakariMS.Shared.dll
 F:\c_app\backend\src\SahakariMS.Shared\obj\Debug\net8.0\SahakariMS.Shared.pdb
 F:\c_app\backend\src\SahakariMS.Shared\obj\Debug\net8.0\ref\SahakariMS.Shared.dll
+F:\c_app\backend\src\SahakariMS.Shared\obj\Debug\net8.0\SahakariMS.Shared.sourcelink.json

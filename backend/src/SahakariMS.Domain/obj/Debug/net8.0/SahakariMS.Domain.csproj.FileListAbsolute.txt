@@ -13,3 +13,4 @@ F:\c_app\backend\src\SahakariMS.Domain\obj\Debug\net8.0\SahakariMS.Domain.dll
 F:\c_app\backend\src\SahakariMS.Domain\obj\Debug\net8.0\refint\SahakariMS.Domain.dll
 F:\c_app\backend\src\SahakariMS.Domain\obj\Debug\net8.0\SahakariMS.Domain.pdb
 F:\c_app\backend\src\SahakariMS.Domain\obj\Debug\net8.0\ref\SahakariMS.Domain.dll
+F:\c_app\backend\src\SahakariMS.Domain\obj\Debug\net8.0\SahakariMS.Domain.sourcelink.json
