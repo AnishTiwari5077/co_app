@@ -72,7 +72,7 @@ class _MemberRegistrationPageState
     super.dispose();
   }
 
-  /// Returns date only if format is yyyy-MM-dd, otherwise null.
+
   String? _parseDateSafe(String raw) {
     if (raw.isEmpty) return null;
     return RegExp(r'^\d{4}-\d{2}-\d{2}$').hasMatch(raw) ? raw : null;
@@ -132,7 +132,6 @@ class _MemberRegistrationPageState
       }
     }
   }
-
   void _showSuccessDialog(String memberId) {
     showDialog(
       context: context,
@@ -327,7 +326,7 @@ class _MemberRegistrationPageState
               child: AppTextField(
                 controller: _firstNameNpCtrl,
                 label: 'First Name (Nepali)',
-                hint: 'राम',
+                hint: 'à¤°à¤¾à¤®',
               ),
             ),
             const SizedBox(width: AppDimensions.sm),
@@ -335,7 +334,7 @@ class _MemberRegistrationPageState
               child: AppTextField(
                 controller: _lastNameNpCtrl,
                 label: 'Last Name (Nepali)',
-                hint: 'श्रेष्ठ',
+                hint: 'à¤¶à¥à¤°à¥‡à¤·à¥à¤ ',
               ),
             ),
           ],
@@ -634,7 +633,7 @@ class _MemberRegistrationPageState
   }
 }
 
-// ── Supporting widgets ────────────────────────────────────────────────────────
+// â”€â”€ Supporting widgets â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 class _DropdownField extends StatelessWidget {
   final String label, value;
@@ -733,7 +732,7 @@ class _DocumentUploadCardState extends State<_DocumentUploadCard> {
                 children: [
                   Text(widget.label, style: AppTextStyles.bodyMedium),
                   Text(
-                    _uploaded ? 'Uploaded ✓' : 'Tap to upload',
+                    _uploaded ? 'Uploaded âœ“' : 'Tap to upload',
                     style: AppTextStyles.bodySmall.copyWith(
                       color: _uploaded ? AppColors.secondary : AppColors.textSecondary,
                     ),
