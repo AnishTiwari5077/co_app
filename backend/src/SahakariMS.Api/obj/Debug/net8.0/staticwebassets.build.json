@@ -1,0 +1,11 @@
+{
+  "Version": 1,
+  "Hash": "0eVZ1MdsqHvGeUm4B1iEk+yrrXb5Sknhb/rx+ZOB25M=",
+  "Source": "SahakariMS.Api",
+  "BasePath": "_content/SahakariMS.Api",
+  "Mode": "Default",
+  "ManifestType": "Build",
+  "ReferencedProjectsConfiguration": [],
+  "DiscoveryPatterns": [],
+  "Assets": []
+}

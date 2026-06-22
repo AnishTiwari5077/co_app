@@ -1,0 +1,15 @@
+F:\c_app\backend\src\SahakariMS.Domain\bin\Debug\net8.0\SahakariMS.Domain.deps.json
+F:\c_app\backend\src\SahakariMS.Domain\bin\Debug\net8.0\SahakariMS.Domain.dll
+F:\c_app\backend\src\SahakariMS.Domain\bin\Debug\net8.0\SahakariMS.Domain.pdb
+F:\c_app\backend\src\SahakariMS.Domain\bin\Debug\net8.0\SahakariMS.Shared.dll
+F:\c_app\backend\src\SahakariMS.Domain\bin\Debug\net8.0\SahakariMS.Shared.pdb
+F:\c_app\backend\src\SahakariMS.Domain\obj\Debug\net8.0\SahakariMS.Domain.csproj.AssemblyReference.cache
+F:\c_app\backend\src\SahakariMS.Domain\obj\Debug\net8.0\SahakariMS.Domain.GeneratedMSBuildEditorConfig.editorconfig
+F:\c_app\backend\src\SahakariMS.Domain\obj\Debug\net8.0\SahakariMS.Domain.AssemblyInfoInputs.cache
+F:\c_app\backend\src\SahakariMS.Domain\obj\Debug\net8.0\SahakariMS.Domain.AssemblyInfo.cs
+F:\c_app\backend\src\SahakariMS.Domain\obj\Debug\net8.0\SahakariMS.Domain.csproj.CoreCompileInputs.cache
+F:\c_app\backend\src\SahakariMS.Domain\obj\Debug\net8.0\Sahakari.7594F3EF.Up2Date
+F:\c_app\backend\src\SahakariMS.Domain\obj\Debug\net8.0\SahakariMS.Domain.dll
+F:\c_app\backend\src\SahakariMS.Domain\obj\Debug\net8.0\refint\SahakariMS.Domain.dll
+F:\c_app\backend\src\SahakariMS.Domain\obj\Debug\net8.0\SahakariMS.Domain.pdb
+F:\c_app\backend\src\SahakariMS.Domain\obj\Debug\net8.0\ref\SahakariMS.Domain.dll

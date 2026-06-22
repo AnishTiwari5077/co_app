@@ -1,0 +1,81 @@
+name: sahakari_ms
+description: "SahakariMS — Enterprise Cooperative Management System for Nepal SACCOS"
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.6.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # ─── State Management ────────────────────────────────────────────────────────
+  flutter_riverpod: ^2.5.1
+  riverpod_annotation: ^2.3.5
+  hooks_riverpod: ^2.5.1
+  flutter_hooks: ^0.20.5
+
+  # ─── Navigation ──────────────────────────────────────────────────────────────
+  go_router: ^14.2.0
+
+  # ─── HTTP Client ─────────────────────────────────────────────────────────────
+  dio: ^5.4.3+1
+  retrofit: ^4.1.0
+
+  # ─── Local Storage ───────────────────────────────────────────────────────────
+  # flutter_secure_storage removed (needs ATL/MFC on Windows - missing atlstr.h)
+  shared_preferences: ^2.3.0
+
+  # ─── Serialization ───────────────────────────────────────────────────────────
+  json_annotation: ^4.9.0
+  freezed_annotation: ^2.4.4
+
+  # ─── UI & Theming ────────────────────────────────────────────────────────────
+  google_fonts: ^6.2.1
+  cupertino_icons: ^1.0.8
+  flutter_animate: ^4.5.0
+  shimmer: ^3.0.0
+  cached_network_image: ^3.3.1
+
+  # ─── Charts ──────────────────────────────────────────────────────────────────
+  fl_chart: ^0.68.0
+
+  # ─── Forms & Validation ────────────────────────────────────────────────────────
+  # reactive_forms deferred - using standard Form/TextFormField
+
+  # ─── Dates & Localization ─────────────────────────────────────────────────────
+  intl: ^0.20.0
+  # nepali_date_converter removed - no valid pub version
+
+  # ─── Icons ───────────────────────────────────────────────────────────────────
+
+  # ─── Utils ───────────────────────────────────────────────────────────────────
+  equatable: ^2.0.5
+  dartz: ^0.10.1
+  uuid: ^4.4.0
+  url_launcher: ^6.3.0
+  path_provider: ^2.1.4
+  package_info_plus: ^8.0.0
+
+  # ─── Networking ──────────────────────────────────────────────────────────────
+  connectivity_plus: ^6.0.3
+
+  # ─── PDF & Printing ──────────────────────────────────────────────────────────
+  # pdf/printing removed (native deps - add back when needed)
+
+  # ─── Notifications ───────────────────────────────────────────────────────────
+
+  # ─── Image & Camera ──────────────────────────────────────────────────────────
+  # image_picker removed (native deps - add back when needed)
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+  build_runner: ^2.4.11
+  json_serializable: ^6.8.0
+  freezed: ^2.5.7
+
+flutter:
+  uses-material-design: true

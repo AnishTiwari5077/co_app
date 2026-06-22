@@ -1,0 +1,693 @@
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/app_text_styles.dart';
+import '../../../../core/theme/app_dimensions.dart';
+import '../../../../shared/widgets/app_button.dart';
+import '../../../../shared/widgets/app_text_field.dart';
+
+class MemberRegistrationPage extends ConsumerStatefulWidget {
+  const MemberRegistrationPage({super.key});
+
+  @override
+  ConsumerState<MemberRegistrationPage> createState() =>
+      _MemberRegistrationPageState();
+}
+
+class _MemberRegistrationPageState
+    extends ConsumerState<MemberRegistrationPage> {
+  final _formKey = GlobalKey<FormState>();
+  int _currentStep = 0;
+  bool _isLoading = false;
+
+  // Controllers
+  final _firstNameCtrl = TextEditingController();
+  final _lastNameCtrl = TextEditingController();
+  final _firstNameNpCtrl = TextEditingController();
+  final _lastNameNpCtrl = TextEditingController();
+  final _dobCtrl = TextEditingController();
+  final _phoneCtrl = TextEditingController();
+  final _emailCtrl = TextEditingController();
+  final _citizenshipCtrl = TextEditingController();
+  final _panCtrl = TextEditingController();
+  final _districtCtrl = TextEditingController();
+  final _municipalityCtrl = TextEditingController();
+  final _wardCtrl = TextEditingController();
+  final _toleCtrl = TextEditingController();
+  final _nomineeNameCtrl = TextEditingController();
+  final _nomineeRelationCtrl = TextEditingController();
+  final _nomineePhoneCtrl = TextEditingController();
+
+  String _selectedGender = 'Male';
+  String _selectedOccupation = 'Business';
+  String _selectedEducation = 'Bachelor\'s Degree';
+
+  final _genders = ['Male', 'Female', 'Other'];
+  final _occupations = ['Business', 'Agriculture', 'Service', 'Teacher', 'Doctor', 'Other'];
+  final _educations = ['Below SLC', 'SLC', 'Intermediate', 'Bachelor\'s Degree', 'Master\'s Degree', 'PhD'];
+
+  @override
+  void dispose() {
+    _firstNameCtrl.dispose();
+    _lastNameCtrl.dispose();
+    _firstNameNpCtrl.dispose();
+    _lastNameNpCtrl.dispose();
+    _dobCtrl.dispose();
+    _phoneCtrl.dispose();
+    _emailCtrl.dispose();
+    _citizenshipCtrl.dispose();
+    _panCtrl.dispose();
+    _districtCtrl.dispose();
+    _municipalityCtrl.dispose();
+    _wardCtrl.dispose();
+    _toleCtrl.dispose();
+    _nomineeNameCtrl.dispose();
+    _nomineeRelationCtrl.dispose();
+    _nomineePhoneCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submitForm() async {
+    if (!_formKey.currentState!.validate()) return;
+    setState(() => _isLoading = true);
+    await Future.delayed(const Duration(seconds: 2));
+    if (mounted) {
+      setState(() => _isLoading = false);
+      _showSuccessDialog();
+    }
+  }
+
+  void _showSuccessDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppDimensions.radiusXl)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: AppDimensions.md),
+            Container(
+              width: 72,
+              height: 72,
+              decoration: BoxDecoration(
+                color: AppColors.secondary.withOpacity(0.1),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.check_circle_outline_rounded,
+                  color: AppColors.secondary, size: 40),
+            ),
+            const SizedBox(height: AppDimensions.md),
+            Text('Registration Successful!', style: AppTextStyles.titleLarge),
+            const SizedBox(height: AppDimensions.xs),
+            Text(
+              'Member KTM-2081-009 has been registered. Pending manager approval.',
+              style: AppTextStyles.bodyMedium
+                  .copyWith(color: AppColors.textSecondary),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: AppDimensions.lg),
+            AppButton(
+              label: 'Done',
+              onPressed: () {
+                Navigator.pop(ctx);
+                context.pop();
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppColors.background,
+      appBar: AppBar(
+        title: Text('New Member Registration', style: AppTextStyles.titleLarge),
+        backgroundColor: AppColors.surface,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new_rounded),
+          onPressed: () => context.pop(),
+        ),
+      ),
+      body: Form(
+        key: _formKey,
+        child: Column(
+          children: [
+            _buildStepIndicator(),
+            Expanded(
+              child: _buildCurrentStep(),
+            ),
+            _buildBottomBar(),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStepIndicator() {
+    final steps = ['Personal', 'Contact', 'Identity', 'Nominee'];
+    return Container(
+      color: AppColors.surface,
+      padding: const EdgeInsets.symmetric(
+          horizontal: AppDimensions.md, vertical: AppDimensions.sm),
+      child: Row(
+        children: List.generate(steps.length, (i) {
+          final isActive = i == _currentStep;
+          final isDone = i < _currentStep;
+          return Expanded(
+            child: Row(
+              children: [
+                GestureDetector(
+                  onTap: () => setState(() => _currentStep = i),
+                  child: Column(
+                    children: [
+                      Container(
+                        width: 32,
+                        height: 32,
+                        decoration: BoxDecoration(
+                          color: isDone
+                              ? AppColors.secondary
+                              : isActive
+                                  ? AppColors.primary
+                                  : AppColors.surfaceVariant,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Center(
+                          child: isDone
+                              ? const Icon(Icons.check_rounded,
+                                  color: Colors.white, size: 16)
+                              : Text('${i + 1}',
+                                  style: AppTextStyles.labelLarge.copyWith(
+                                    color: isActive
+                                        ? Colors.white
+                                        : AppColors.textSecondary,
+                                  )),
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        steps[i],
+                        style: AppTextStyles.bodySmall.copyWith(
+                          color: isActive
+                              ? AppColors.primary
+                              : AppColors.textSecondary,
+                          fontWeight:
+                              isActive ? FontWeight.w600 : FontWeight.w400,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                if (i < steps.length - 1)
+                  Expanded(
+                    child: Container(
+                      height: 2,
+                      margin: const EdgeInsets.only(bottom: 18),
+                      color: isDone ? AppColors.secondary : AppColors.surfaceVariant,
+                    ),
+                  ),
+              ],
+            ),
+          );
+        }),
+      ),
+    );
+  }
+
+  Widget _buildCurrentStep() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(AppDimensions.md),
+      child: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 300),
+        child: [
+          _buildPersonalStep(),
+          _buildContactStep(),
+          _buildIdentityStep(),
+          _buildNomineeStep(),
+        ][_currentStep],
+      ),
+    );
+  }
+
+  Widget _buildPersonalStep() {
+    return Column(
+      key: const ValueKey('personal'),
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Personal Information', style: AppTextStyles.titleMedium),
+        const SizedBox(height: AppDimensions.md),
+        Row(
+          children: [
+            Expanded(
+              child: AppTextField(
+                controller: _firstNameCtrl,
+                label: 'First Name *',
+                hint: 'Ram',
+                validator: (v) => v?.isEmpty == true ? 'Required' : null,
+              ),
+            ),
+            const SizedBox(width: AppDimensions.sm),
+            Expanded(
+              child: AppTextField(
+                controller: _lastNameCtrl,
+                label: 'Last Name *',
+                hint: 'Shrestha',
+                validator: (v) => v?.isEmpty == true ? 'Required' : null,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: AppDimensions.sm),
+        Row(
+          children: [
+            Expanded(
+              child: AppTextField(
+                controller: _firstNameNpCtrl,
+                label: 'First Name (Nepali)',
+                hint: 'राम',
+              ),
+            ),
+            const SizedBox(width: AppDimensions.sm),
+            Expanded(
+              child: AppTextField(
+                controller: _lastNameNpCtrl,
+                label: 'Last Name (Nepali)',
+                hint: 'श्रेष्ठ',
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: AppDimensions.sm),
+        AppTextField(
+          controller: _dobCtrl,
+          label: 'Date of Birth (BS) *',
+          hint: '2035-05-15',
+          prefixIcon: Icons.calendar_today_rounded,
+          validator: (v) => v?.isEmpty == true ? 'Required' : null,
+          keyboardType: TextInputType.datetime,
+        ),
+        const SizedBox(height: AppDimensions.sm),
+        // Gender
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Gender *', style: AppTextStyles.bodyMedium),
+            const SizedBox(height: AppDimensions.xs),
+            Row(
+              children: _genders.map((g) {
+                return Expanded(
+                  child: Padding(
+                    padding: EdgeInsets.only(
+                        right: g != _genders.last ? AppDimensions.xs : 0),
+                    child: GestureDetector(
+                      onTap: () => setState(() => _selectedGender = g),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            vertical: AppDimensions.sm),
+                        decoration: BoxDecoration(
+                          color: _selectedGender == g
+                              ? AppColors.primary
+                              : AppColors.surfaceVariant,
+                          borderRadius: BorderRadius.circular(
+                              AppDimensions.radiusMd),
+                          border: Border.all(
+                            color: _selectedGender == g
+                                ? AppColors.primary
+                                : const Color(0xFFE0E7EF),
+                          ),
+                        ),
+                        child: Center(
+                          child: Text(
+                            g,
+                            style: AppTextStyles.labelLarge.copyWith(
+                              color: _selectedGender == g
+                                  ? Colors.white
+                                  : AppColors.textPrimary,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+          ],
+        ),
+        const SizedBox(height: AppDimensions.sm),
+        // Occupation
+        _DropdownField(
+          label: 'Occupation',
+          value: _selectedOccupation,
+          items: _occupations,
+          onChanged: (v) => setState(() => _selectedOccupation = v!),
+        ),
+        const SizedBox(height: AppDimensions.sm),
+        _DropdownField(
+          label: 'Education',
+          value: _selectedEducation,
+          items: _educations,
+          onChanged: (v) => setState(() => _selectedEducation = v!),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildContactStep() {
+    return Column(
+      key: const ValueKey('contact'),
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Contact Information', style: AppTextStyles.titleMedium),
+        const SizedBox(height: AppDimensions.md),
+        AppTextField(
+          controller: _phoneCtrl,
+          label: 'Primary Phone *',
+          hint: '9841000001',
+          prefixIcon: Icons.phone_outlined,
+          keyboardType: TextInputType.phone,
+          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+          validator: (v) {
+            if (v?.isEmpty == true) return 'Required';
+            if (v!.length != 10) return 'Must be 10 digits';
+            return null;
+          },
+        ),
+        const SizedBox(height: AppDimensions.sm),
+        AppTextField(
+          controller: _emailCtrl,
+          label: 'Email Address',
+          hint: 'ram@email.com',
+          prefixIcon: Icons.email_outlined,
+          keyboardType: TextInputType.emailAddress,
+        ),
+        const SizedBox(height: AppDimensions.lg),
+        Text('Permanent Address', style: AppTextStyles.titleMedium),
+        const SizedBox(height: AppDimensions.md),
+        AppTextField(
+          controller: _districtCtrl,
+          label: 'District *',
+          hint: 'Kathmandu',
+          validator: (v) => v?.isEmpty == true ? 'Required' : null,
+        ),
+        const SizedBox(height: AppDimensions.sm),
+        AppTextField(
+          controller: _municipalityCtrl,
+          label: 'Municipality / VDC *',
+          hint: 'Kathmandu Metropolitan City',
+          validator: (v) => v?.isEmpty == true ? 'Required' : null,
+        ),
+        const SizedBox(height: AppDimensions.sm),
+        Row(
+          children: [
+            Expanded(
+              flex: 1,
+              child: AppTextField(
+                controller: _wardCtrl,
+                label: 'Ward No.',
+                hint: '5',
+                keyboardType: TextInputType.number,
+                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              ),
+            ),
+            const SizedBox(width: AppDimensions.sm),
+            Expanded(
+              flex: 2,
+              child: AppTextField(
+                controller: _toleCtrl,
+                label: 'Tole',
+                hint: 'Maharajgunj',
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildIdentityStep() {
+    return Column(
+      key: const ValueKey('identity'),
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Identity Documents', style: AppTextStyles.titleMedium),
+        const SizedBox(height: AppDimensions.md),
+        AppTextField(
+          controller: _citizenshipCtrl,
+          label: 'Citizenship Number',
+          hint: 'XX-XX-XX-XXXXX',
+          validator: null,
+        ),
+        const SizedBox(height: AppDimensions.sm),
+        AppTextField(
+          controller: _panCtrl,
+          label: 'PAN Number',
+          hint: 'XXXXXXXXX',
+          keyboardType: TextInputType.number,
+        ),
+        const SizedBox(height: AppDimensions.lg),
+        Text('Upload Documents', style: AppTextStyles.titleMedium),
+        const SizedBox(height: AppDimensions.md),
+        _DocumentUploadCard(label: 'Citizenship Certificate', icon: Icons.badge_outlined),
+        const SizedBox(height: AppDimensions.sm),
+        _DocumentUploadCard(label: 'Passport-size Photo', icon: Icons.photo_camera_outlined),
+        const SizedBox(height: AppDimensions.sm),
+        _DocumentUploadCard(label: 'Digital Signature', icon: Icons.draw_outlined),
+      ],
+    );
+  }
+
+  Widget _buildNomineeStep() {
+    return Column(
+      key: const ValueKey('nominee'),
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Nominee Information', style: AppTextStyles.titleMedium),
+        const SizedBox(height: AppDimensions.xs),
+        Text(
+          'Nominee will receive benefits in case of member\'s absence.',
+          style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondary),
+        ),
+        const SizedBox(height: AppDimensions.md),
+        AppTextField(
+          controller: _nomineeNameCtrl,
+          label: 'Nominee Full Name',
+          hint: 'Sita Shrestha',
+          prefixIcon: Icons.person_outline_rounded,
+        ),
+        const SizedBox(height: AppDimensions.sm),
+        AppTextField(
+          controller: _nomineeRelationCtrl,
+          label: 'Relationship',
+          hint: 'Wife',
+          prefixIcon: Icons.family_restroom_rounded,
+        ),
+        const SizedBox(height: AppDimensions.sm),
+        AppTextField(
+          controller: _nomineePhoneCtrl,
+          label: 'Nominee Phone',
+          hint: '9841000002',
+          prefixIcon: Icons.phone_outlined,
+          keyboardType: TextInputType.phone,
+          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+        ),
+        const SizedBox(height: AppDimensions.md),
+        // Review summary
+        Container(
+          padding: const EdgeInsets.all(AppDimensions.md),
+          decoration: BoxDecoration(
+            color: AppColors.primary.withOpacity(0.05),
+            borderRadius: BorderRadius.circular(AppDimensions.radiusLg),
+            border: Border.all(color: AppColors.primary.withOpacity(0.2)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  const Icon(Icons.info_outline_rounded,
+                      color: AppColors.primary, size: 18),
+                  const SizedBox(width: 6),
+                  Text('Registration Summary',
+                      style: AppTextStyles.titleSmall
+                          .copyWith(color: AppColors.primary)),
+                ],
+              ),
+              const SizedBox(height: AppDimensions.sm),
+              Text(
+                'After submission, the application will be sent to the Branch Manager for KYC verification and approval. '
+                'The member code will be generated automatically upon approval.',
+                style: AppTextStyles.bodySmall
+                    .copyWith(color: AppColors.textSecondary),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildBottomBar() {
+    return Container(
+      padding: const EdgeInsets.all(AppDimensions.md),
+      decoration: const BoxDecoration(
+        color: AppColors.surface,
+        border: Border(top: BorderSide(color: Color(0xFFE8EDF3))),
+      ),
+      child: Row(
+        children: [
+          if (_currentStep > 0) ...[
+            Expanded(
+              child: AppButton(
+                label: 'Back',
+                onPressed: () => setState(() => _currentStep--),
+                variant: ButtonVariant.outlined,
+              ),
+            ),
+            const SizedBox(width: AppDimensions.sm),
+          ],
+          Expanded(
+            flex: 2,
+            child: AppButton(
+              label: _currentStep == 3 ? 'Submit Registration' : 'Next',
+              onPressed: () {
+                if (_currentStep < 3) {
+                  setState(() => _currentStep++);
+                } else {
+                  _submitForm();
+                }
+              },
+              isLoading: _isLoading,
+              icon: _currentStep == 3 ? Icons.check_rounded : Icons.arrow_forward_rounded,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Supporting widgets ────────────────────────────────────────────────────────
+
+class _DropdownField extends StatelessWidget {
+  final String label, value;
+  final List<String> items;
+  final ValueChanged<String?> onChanged;
+  const _DropdownField(
+      {required this.label,
+      required this.value,
+      required this.items,
+      required this.onChanged});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: AppTextStyles.bodyMedium),
+        const SizedBox(height: AppDimensions.xs),
+        DropdownButtonFormField<String>(
+          value: value,
+          onChanged: onChanged,
+          decoration: InputDecoration(
+            filled: true,
+            fillColor: AppColors.surfaceVariant,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(AppDimensions.radiusMd),
+              borderSide: const BorderSide(color: Color(0xFFE0E7EF)),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(AppDimensions.radiusMd),
+              borderSide: const BorderSide(color: Color(0xFFE0E7EF)),
+            ),
+            contentPadding: const EdgeInsets.symmetric(
+                horizontal: AppDimensions.md, vertical: 14),
+          ),
+          items: items
+              .map((i) => DropdownMenuItem(value: i, child: Text(i)))
+              .toList(),
+          style: AppTextStyles.bodyMedium,
+        ),
+      ],
+    );
+  }
+}
+
+class _DocumentUploadCard extends StatefulWidget {
+  final String label;
+  final IconData icon;
+  const _DocumentUploadCard({required this.label, required this.icon});
+
+  @override
+  State<_DocumentUploadCard> createState() => _DocumentUploadCardState();
+}
+
+class _DocumentUploadCardState extends State<_DocumentUploadCard> {
+  bool _uploaded = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () => setState(() => _uploaded = !_uploaded),
+      child: Container(
+        padding: const EdgeInsets.all(AppDimensions.md),
+        decoration: BoxDecoration(
+          color: _uploaded
+              ? AppColors.secondary.withOpacity(0.05)
+              : AppColors.surfaceVariant,
+          borderRadius: BorderRadius.circular(AppDimensions.radiusLg),
+          border: Border.all(
+            color: _uploaded
+                ? AppColors.secondary.withOpacity(0.4)
+                : const Color(0xFFE0E7EF),
+          ),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: _uploaded
+                    ? AppColors.secondary.withOpacity(0.1)
+                    : AppColors.surfaceVariant,
+                borderRadius: BorderRadius.circular(AppDimensions.radiusMd),
+              ),
+              child: Icon(
+                _uploaded ? Icons.check_circle_rounded : widget.icon,
+                color: _uploaded ? AppColors.secondary : AppColors.textSecondary,
+                size: 22,
+              ),
+            ),
+            const SizedBox(width: AppDimensions.sm),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(widget.label, style: AppTextStyles.bodyMedium),
+                  Text(
+                    _uploaded ? 'Uploaded ✓' : 'Tap to upload',
+                    style: AppTextStyles.bodySmall.copyWith(
+                      color: _uploaded ? AppColors.secondary : AppColors.textSecondary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(
+              Icons.upload_rounded,
+              color: _uploaded ? AppColors.secondary : AppColors.textSecondary,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}

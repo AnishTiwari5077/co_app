@@ -1,0 +1,71 @@
+services:
+  # ── PostgreSQL 16 ────────────────────────────────────────────────────────────
+  db:
+    image: postgres:16-alpine
+    container_name: sahakari_db
+    environment:
+      POSTGRES_DB: sahakari_ms
+      POSTGRES_USER: sahakari
+      POSTGRES_PASSWORD: sahakari_pass
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sahakari -d sahakari_ms"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── Redis 7 ──────────────────────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: sahakari_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  # ── ASP.NET Core 8 API ────────────────────────────────────────────────────────
+  api:
+    build:
+      context: .
+      dockerfile: src/SahakariMS.Api/Dockerfile
+    container_name: sahakari_api
+    ports:
+      - "5000:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__DefaultConnection=Host=db;Port=5432;Database=sahakari_ms;Username=sahakari;Password=sahakari_pass;
+      - ConnectionStrings__Redis=redis:6379
+      - JwtSettings__SecretKey=SahakariMS_SuperSecret_Key_Change_In_Production_Min32Chars!
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  # ── pgAdmin (dev only) ────────────────────────────────────────────────────────
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: sahakari_pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@sahakarims.np
+      PGADMIN_DEFAULT_PASSWORD: admin123
+    ports:
+      - "5050:80"
+    depends_on:
+      - db
+    profiles:
+      - dev
+
+volumes:
+  postgres_data:
+  redis_data:

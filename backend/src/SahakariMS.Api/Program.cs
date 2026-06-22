@@ -1,0 +1,124 @@
+using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
+using MediatR;
+using StackExchange.Redis;
+using SahakariMS.Infrastructure.Persistence;
+using SahakariMS.Infrastructure.Services;
+using SahakariMS.Domain.Interfaces;
+using SahakariMS.Application.Interfaces;
+using SahakariMS.Api.Middleware;
+using Hangfire;
+using Hangfire.PostgreSql;
+
+var builder = WebApplication.CreateBuilder(args);
+
+// ── Configuration ─────────────────────────────────────────────────────────────
+var jwtSettings = builder.Configuration.GetSection("JwtSettings").Get<JwtSettings>()!;
+var connString  = builder.Configuration.GetConnectionString("DefaultConnection")!;
+var redisConn   = builder.Configuration.GetConnectionString("Redis") ?? "localhost:6379";
+
+// ── Database ──────────────────────────────────────────────────────────────────
+builder.Services.AddDbContext<AppDbContext>(opts =>
+    opts.UseNpgsql(connString, npg => npg.MigrationsAssembly("SahakariMS.Infrastructure")));
+builder.Services.AddScoped<IAppDbContext>(sp => sp.GetRequiredService<AppDbContext>());
+
+// ── Redis ─────────────────────────────────────────────────────────────────────
+builder.Services.AddSingleton<IConnectionMultiplexer>(
+    ConnectionMultiplexer.Connect(redisConn));
+builder.Services.AddScoped<ICacheService, RedisCacheService>();
+
+// ── MediatR ───────────────────────────────────────────────────────────────────
+builder.Services.AddMediatR(cfg =>
+{
+    cfg.RegisterServicesFromAssembly(typeof(SahakariMS.Application.Auth.LoginCommand).Assembly);
+});
+
+// ── JWT Auth ──────────────────────────────────────────────────────────────────
+builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("JwtSettings"));
+builder.Services.AddSingleton<JwtService>();
+builder.Services.AddSingleton<IJwtService>(sp => sp.GetRequiredService<JwtService>());
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(opts =>
+    {
+        opts.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer           = true,
+            ValidateAudience         = true,
+            ValidateLifetime         = true,
+            ValidateIssuerSigningKey = true,
+            ValidIssuer              = jwtSettings.Issuer,
+            ValidAudience            = jwtSettings.Audience,
+            IssuerSigningKey         = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings.SecretKey))
+        };
+    });
+builder.Services.AddAuthorization();
+
+// ── Repositories & UoW ────────────────────────────────────────────────────────
+builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
+builder.Services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
+
+// ── Infrastructure Services ───────────────────────────────────────────────────
+builder.Services.AddScoped<ISequenceGenerator, SequenceGenerator>();
+
+// ── Hangfire ──────────────────────────────────────────────────────────────────
+builder.Services.AddHangfire(cfg => cfg
+    .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
+    .UseSimpleAssemblyNameTypeSerializer()
+    .UseRecommendedSerializerSettings()
+    .UsePostgreSqlStorage(c => c.UseNpgsqlConnection(connString)));
+builder.Services.AddHangfireServer();
+
+// ── API ───────────────────────────────────────────────────────────────────────
+builder.Services.AddControllers().AddJsonOptions(opts =>
+    opts.JsonSerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase);
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen(c =>
+{
+    c.SwaggerDoc("v1", new() { Title = "SahakariMS API", Version = "v1",
+        Description = "Nepal Cooperative Management System API" });
+    c.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+    {
+        Name = "Authorization", Type = Microsoft.OpenApi.Models.SecuritySchemeType.Http,
+        Scheme = "bearer", BearerFormat = "JWT", In = Microsoft.OpenApi.Models.ParameterLocation.Header
+    });
+    c.AddSecurityRequirement(new Microsoft.OpenApi.Models.OpenApiSecurityRequirement
+    {
+        [new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+        {
+            Reference = new Microsoft.OpenApi.Models.OpenApiReference
+                { Type = Microsoft.OpenApi.Models.ReferenceType.SecurityScheme, Id = "Bearer" }
+        }] = []
+    });
+});
+
+builder.Services.AddCors(opts =>
+    opts.AddDefaultPolicy(p => p.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod()));
+
+// ── Build ─────────────────────────────────────────────────────────────────────
+var app = builder.Build();
+
+// Auto-migrate on startup
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    await db.Database.MigrateAsync();
+}
+
+app.UseMiddleware<CorrelationIdMiddleware>();
+app.UseMiddleware<ExceptionMiddleware>();
+
+if (app.Environment.IsDevelopment())
+{
+    app.UseSwagger();
+    app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "SahakariMS v1"));
+}
+
+app.UseCors();
+app.UseAuthentication();
+app.UseAuthorization();
+app.UseHangfireDashboard("/hangfire");
+app.MapControllers();
+
+app.Run();

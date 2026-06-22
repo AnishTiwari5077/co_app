@@ -1,0 +1,322 @@
+{
+  "format": 1,
+  "restore": {
+    "F:\\c_app\\backend\\src\\SahakariMS.Infrastructure\\SahakariMS.Infrastructure.csproj": {}
+  },
+  "projects": {
+    "F:\\c_app\\backend\\src\\SahakariMS.Application\\SahakariMS.Application.csproj": {
+      "version": "1.0.0",
+      "restore": {
+        "projectUniqueName": "F:\\c_app\\backend\\src\\SahakariMS.Application\\SahakariMS.Application.csproj",
+        "projectName": "SahakariMS.Application",
+        "projectPath": "F:\\c_app\\backend\\src\\SahakariMS.Application\\SahakariMS.Application.csproj",
+        "packagesPath": "C:\\Users\\AnishTiwari\\.nuget\\packages\\",
+        "outputPath": "F:\\c_app\\backend\\src\\SahakariMS.Application\\obj\\",
+        "projectStyle": "PackageReference",
+        "configFilePaths": [
+          "C:\\Users\\AnishTiwari\\AppData\\Roaming\\NuGet\\NuGet.Config"
+        ],
+        "originalTargetFrameworks": [
+          "net8.0"
+        ],
+        "sources": {
+          "https://api.nuget.org/v3/index.json": {}
+        },
+        "frameworks": {
+          "net8.0": {
+            "targetAlias": "net8.0",
+            "projectReferences": {
+              "F:\\c_app\\backend\\src\\SahakariMS.Domain\\SahakariMS.Domain.csproj": {
+                "projectPath": "F:\\c_app\\backend\\src\\SahakariMS.Domain\\SahakariMS.Domain.csproj"
+              },
+              "F:\\c_app\\backend\\src\\SahakariMS.Shared\\SahakariMS.Shared.csproj": {
+                "projectPath": "F:\\c_app\\backend\\src\\SahakariMS.Shared\\SahakariMS.Shared.csproj"
+              }
+            }
+          }
+        },
+        "warningProperties": {
+          "warnAsError": [
+            "NU1605"
+          ]
+        },
+        "restoreAuditProperties": {
+          "enableAudit": "true",
+          "auditLevel": "low",
+          "auditMode": "direct"
+        }
+      },
+      "frameworks": {
+        "net8.0": {
+          "targetAlias": "net8.0",
+          "dependencies": {
+            "AutoMapper": {
+              "target": "Package",
+              "version": "[14.0.0, )"
+            },
+            "BCrypt.Net-Next": {
+              "target": "Package",
+              "version": "[4.0.3, )"
+            },
+            "FluentValidation": {
+              "target": "Package",
+              "version": "[11.11.0, )"
+            },
+            "MediatR": {
+              "target": "Package",
+              "version": "[12.4.1, )"
+            },
+            "Microsoft.EntityFrameworkCore": {
+              "target": "Package",
+              "version": "[8.0.11, )"
+            },
+            "Microsoft.Extensions.Logging.Abstractions": {
+              "target": "Package",
+              "version": "[8.0.3, )"
+            }
+          },
+          "imports": [
+            "net461",
+            "net462",
+            "net47",
+            "net471",
+            "net472",
+            "net48",
+            "net481"
+          ],
+          "assetTargetFallback": true,
+          "warn": true,
+          "frameworkReferences": {
+            "Microsoft.NETCore.App": {
+              "privateAssets": "all"
+            }
+          },
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\8.0.422/PortableRuntimeIdentifierGraph.json"
+        }
+      }
+    },
+    "F:\\c_app\\backend\\src\\SahakariMS.Domain\\SahakariMS.Domain.csproj": {
+      "version": "1.0.0",
+      "restore": {
+        "projectUniqueName": "F:\\c_app\\backend\\src\\SahakariMS.Domain\\SahakariMS.Domain.csproj",
+        "projectName": "SahakariMS.Domain",
+        "projectPath": "F:\\c_app\\backend\\src\\SahakariMS.Domain\\SahakariMS.Domain.csproj",
+        "packagesPath": "C:\\Users\\AnishTiwari\\.nuget\\packages\\",
+        "outputPath": "F:\\c_app\\backend\\src\\SahakariMS.Domain\\obj\\",
+        "projectStyle": "PackageReference",
+        "configFilePaths": [
+          "C:\\Users\\AnishTiwari\\AppData\\Roaming\\NuGet\\NuGet.Config"
+        ],
+        "originalTargetFrameworks": [
+          "net8.0"
+        ],
+        "sources": {
+          "https://api.nuget.org/v3/index.json": {}
+        },
+        "frameworks": {
+          "net8.0": {
+            "targetAlias": "net8.0",
+            "projectReferences": {
+              "F:\\c_app\\backend\\src\\SahakariMS.Shared\\SahakariMS.Shared.csproj": {
+                "projectPath": "F:\\c_app\\backend\\src\\SahakariMS.Shared\\SahakariMS.Shared.csproj"
+              }
+            }
+          }
+        },
+        "warningProperties": {
+          "warnAsError": [
+            "NU1605"
+          ]
+        },
+        "restoreAuditProperties": {
+          "enableAudit": "true",
+          "auditLevel": "low",
+          "auditMode": "direct"
+        }
+      },
+      "frameworks": {
+        "net8.0": {
+          "targetAlias": "net8.0",
+          "dependencies": {
+            "MediatR": {
+              "target": "Package",
+              "version": "[12.4.1, )"
+            }
+          },
+          "imports": [
+            "net461",
+            "net462",
+            "net47",
+            "net471",
+            "net472",
+            "net48",
+            "net481"
+          ],
+          "assetTargetFallback": true,
+          "warn": true,
+          "frameworkReferences": {
+            "Microsoft.NETCore.App": {
+              "privateAssets": "all"
+            }
+          },
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\8.0.422/PortableRuntimeIdentifierGraph.json"
+        }
+      }
+    },
+    "F:\\c_app\\backend\\src\\SahakariMS.Infrastructure\\SahakariMS.Infrastructure.csproj": {
+      "version": "1.0.0",
+      "restore": {
+        "projectUniqueName": "F:\\c_app\\backend\\src\\SahakariMS.Infrastructure\\SahakariMS.Infrastructure.csproj",
+        "projectName": "SahakariMS.Infrastructure",
+        "projectPath": "F:\\c_app\\backend\\src\\SahakariMS.Infrastructure\\SahakariMS.Infrastructure.csproj",
+        "packagesPath": "C:\\Users\\AnishTiwari\\.nuget\\packages\\",
+        "outputPath": "F:\\c_app\\backend\\src\\SahakariMS.Infrastructure\\obj\\",
+        "projectStyle": "PackageReference",
+        "configFilePaths": [
+          "C:\\Users\\AnishTiwari\\AppData\\Roaming\\NuGet\\NuGet.Config"
+        ],
+        "originalTargetFrameworks": [
+          "net8.0"
+        ],
+        "sources": {
+          "https://api.nuget.org/v3/index.json": {}
+        },
+        "frameworks": {
+          "net8.0": {
+            "targetAlias": "net8.0",
+            "projectReferences": {
+              "F:\\c_app\\backend\\src\\SahakariMS.Application\\SahakariMS.Application.csproj": {
+                "projectPath": "F:\\c_app\\backend\\src\\SahakariMS.Application\\SahakariMS.Application.csproj"
+              },
+              "F:\\c_app\\backend\\src\\SahakariMS.Domain\\SahakariMS.Domain.csproj": {
+                "projectPath": "F:\\c_app\\backend\\src\\SahakariMS.Domain\\SahakariMS.Domain.csproj"
+              }
+            }
+          }
+        },
+        "warningProperties": {
+          "warnAsError": [
+            "NU1605"
+          ]
+        },
+        "restoreAuditProperties": {
+          "enableAudit": "true",
+          "auditLevel": "low",
+          "auditMode": "direct"
+        }
+      },
+      "frameworks": {
+        "net8.0": {
+          "targetAlias": "net8.0",
+          "dependencies": {
+            "BCrypt.Net-Next": {
+              "target": "Package",
+              "version": "[4.0.3, )"
+            },
+            "Microsoft.AspNetCore.Authentication.JwtBearer": {
+              "target": "Package",
+              "version": "[8.0.13, )"
+            },
+            "Microsoft.EntityFrameworkCore": {
+              "target": "Package",
+              "version": "[8.0.11, )"
+            },
+            "Microsoft.EntityFrameworkCore.Design": {
+              "include": "Runtime, Build, Native, ContentFiles, Analyzers, BuildTransitive",
+              "suppressParent": "All",
+              "target": "Package",
+              "version": "[8.0.11, )"
+            },
+            "Npgsql.EntityFrameworkCore.PostgreSQL": {
+              "target": "Package",
+              "version": "[8.0.11, )"
+            },
+            "Serilog.AspNetCore": {
+              "target": "Package",
+              "version": "[8.0.3, )"
+            },
+            "StackExchange.Redis": {
+              "target": "Package",
+              "version": "[2.8.41, )"
+            }
+          },
+          "imports": [
+            "net461",
+            "net462",
+            "net47",
+            "net471",
+            "net472",
+            "net48",
+            "net481"
+          ],
+          "assetTargetFallback": true,
+          "warn": true,
+          "frameworkReferences": {
+            "Microsoft.NETCore.App": {
+              "privateAssets": "all"
+            }
+          },
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\8.0.422/PortableRuntimeIdentifierGraph.json"
+        }
+      }
+    },
+    "F:\\c_app\\backend\\src\\SahakariMS.Shared\\SahakariMS.Shared.csproj": {
+      "version": "1.0.0",
+      "restore": {
+        "projectUniqueName": "F:\\c_app\\backend\\src\\SahakariMS.Shared\\SahakariMS.Shared.csproj",
+        "projectName": "SahakariMS.Shared",
+        "projectPath": "F:\\c_app\\backend\\src\\SahakariMS.Shared\\SahakariMS.Shared.csproj",
+        "packagesPath": "C:\\Users\\AnishTiwari\\.nuget\\packages\\",
+        "outputPath": "F:\\c_app\\backend\\src\\SahakariMS.Shared\\obj\\",
+        "projectStyle": "PackageReference",
+        "configFilePaths": [
+          "C:\\Users\\AnishTiwari\\AppData\\Roaming\\NuGet\\NuGet.Config"
+        ],
+        "originalTargetFrameworks": [
+          "net8.0"
+        ],
+        "sources": {
+          "https://api.nuget.org/v3/index.json": {}
+        },
+        "frameworks": {
+          "net8.0": {
+            "targetAlias": "net8.0",
+            "projectReferences": {}
+          }
+        },
+        "warningProperties": {
+          "warnAsError": [
+            "NU1605"
+          ]
+        },
+        "restoreAuditProperties": {
+          "enableAudit": "true",
+          "auditLevel": "low",
+          "auditMode": "direct"
+        }
+      },
+      "frameworks": {
+        "net8.0": {
+          "targetAlias": "net8.0",
+          "imports": [
+            "net461",
+            "net462",
+            "net47",
+            "net471",
+            "net472",
+            "net48",
+            "net481"
+          ],
+          "assetTargetFallback": true,
+          "warn": true,
+          "frameworkReferences": {
+            "Microsoft.NETCore.App": {
+              "privateAssets": "all"
+            }
+          },
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\8.0.422/PortableRuntimeIdentifierGraph.json"
+        }
+      }
+    }
+  }
+}

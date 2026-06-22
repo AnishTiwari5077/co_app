@@ -1,0 +1,17 @@
+F:\c_app\backend\src\SahakariMS.Application\obj\Debug\net8.0\SahakariMS.Application.csproj.AssemblyReference.cache
+F:\c_app\backend\src\SahakariMS.Application\obj\Debug\net8.0\SahakariMS.Application.GeneratedMSBuildEditorConfig.editorconfig
+F:\c_app\backend\src\SahakariMS.Application\obj\Debug\net8.0\SahakariMS.Application.AssemblyInfoInputs.cache
+F:\c_app\backend\src\SahakariMS.Application\obj\Debug\net8.0\SahakariMS.Application.AssemblyInfo.cs
+F:\c_app\backend\src\SahakariMS.Application\obj\Debug\net8.0\SahakariMS.Application.csproj.CoreCompileInputs.cache
+F:\c_app\backend\src\SahakariMS.Application\bin\Debug\net8.0\SahakariMS.Application.deps.json
+F:\c_app\backend\src\SahakariMS.Application\bin\Debug\net8.0\SahakariMS.Application.dll
+F:\c_app\backend\src\SahakariMS.Application\bin\Debug\net8.0\SahakariMS.Application.pdb
+F:\c_app\backend\src\SahakariMS.Application\bin\Debug\net8.0\SahakariMS.Domain.dll
+F:\c_app\backend\src\SahakariMS.Application\bin\Debug\net8.0\SahakariMS.Shared.dll
+F:\c_app\backend\src\SahakariMS.Application\bin\Debug\net8.0\SahakariMS.Domain.pdb
+F:\c_app\backend\src\SahakariMS.Application\bin\Debug\net8.0\SahakariMS.Shared.pdb
+F:\c_app\backend\src\SahakariMS.Application\obj\Debug\net8.0\Sahakari.0E0E49A1.Up2Date
+F:\c_app\backend\src\SahakariMS.Application\obj\Debug\net8.0\SahakariMS.Application.dll
+F:\c_app\backend\src\SahakariMS.Application\obj\Debug\net8.0\refint\SahakariMS.Application.dll
+F:\c_app\backend\src\SahakariMS.Application\obj\Debug\net8.0\SahakariMS.Application.pdb
+F:\c_app\backend\src\SahakariMS.Application\obj\Debug\net8.0\ref\SahakariMS.Application.dll
