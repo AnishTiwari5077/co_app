@@ -7,6 +7,8 @@ import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/theme/app_dimensions.dart';
 import '../../../../shared/widgets/app_button.dart';
 import '../../../../shared/widgets/app_text_field.dart';
+import '../providers/member_provider.dart';
+import '../../../../core/api/repositories/member_repository.dart';
 
 class MemberRegistrationPage extends ConsumerStatefulWidget {
   const MemberRegistrationPage({super.key});
@@ -71,15 +73,43 @@ class _MemberRegistrationPageState
 
   Future<void> _submitForm() async {
     if (!_formKey.currentState!.validate()) return;
-    setState(() => _isLoading = true);
-    await Future.delayed(const Duration(seconds: 2));
+    final request = RegisterMemberRequest(
+      firstName: _firstNameCtrl.text.trim(),
+      lastName: _lastNameCtrl.text.trim(),
+      firstNameNp: _firstNameNpCtrl.text.trim(),
+      lastNameNp: _lastNameNpCtrl.text.trim(),
+      phone: _phoneCtrl.text.trim(),
+      email: _emailCtrl.text.trim(),
+      gender: _selectedGender,
+      dateOfBirth: _dobCtrl.text.trim(),
+      occupation: _selectedOccupation,
+      education: _selectedEducation,
+      citizenshipNo: _citizenshipCtrl.text.trim(),
+      panNo: _panCtrl.text.trim(),
+      district: _districtCtrl.text.trim(),
+      municipality: _municipalityCtrl.text.trim(),
+      ward: _wardCtrl.text.trim(),
+      tole: _toleCtrl.text.trim(),
+      nomineeName: _nomineeNameCtrl.text.trim(),
+      nomineeRelation: _nomineeRelationCtrl.text.trim(),
+      nomineePhone: _nomineePhoneCtrl.text.trim(),
+    );
+    final success = await ref.read(registerMemberProvider.notifier).submit(request);
     if (mounted) {
-      setState(() => _isLoading = false);
-      _showSuccessDialog();
+      if (success) {
+        final memberId = ref.read(registerMemberProvider).newMemberId ?? '';
+        _showSuccessDialog(memberId);
+        ref.invalidate(memberListProvider);
+      } else {
+        final error = ref.read(registerMemberProvider).error ?? 'Registration failed';
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(error), backgroundColor: AppColors.error),
+        );
+      }
     }
   }
 
-  void _showSuccessDialog() {
+  void _showSuccessDialog(String memberId) {
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -103,12 +133,14 @@ class _MemberRegistrationPageState
             const SizedBox(height: AppDimensions.md),
             Text('Registration Successful!', style: AppTextStyles.titleLarge),
             const SizedBox(height: AppDimensions.xs),
-            Text(
-              'Member KTM-2081-009 has been registered. Pending manager approval.',
-              style: AppTextStyles.bodyMedium
-                  .copyWith(color: AppColors.textSecondary),
-              textAlign: TextAlign.center,
-            ),
+              Text(
+                memberId.isNotEmpty
+                    ? 'Member registered. ID: ${memberId.substring(0, 8).toUpperCase()}\nPending manager approval.'
+                    : 'Member has been registered.\nPending manager approval.',
+                style: AppTextStyles.bodyMedium
+                    .copyWith(color: AppColors.textSecondary),
+                textAlign: TextAlign.center,
+              ),
             const SizedBox(height: AppDimensions.lg),
             AppButton(
               label: 'Done',
@@ -555,18 +587,23 @@ class _MemberRegistrationPageState
           ],
           Expanded(
             flex: 2,
-            child: AppButton(
-              label: _currentStep == 3 ? 'Submit Registration' : 'Next',
-              onPressed: () {
-                if (_currentStep < 3) {
-                  setState(() => _currentStep++);
-                } else {
-                  _submitForm();
-                }
-              },
-              isLoading: _isLoading,
-              icon: _currentStep == 3 ? Icons.check_rounded : Icons.arrow_forward_rounded,
-            ),
+          child: Consumer(
+            builder: (context, ref, _) {
+              final state = ref.watch(registerMemberProvider);
+              return AppButton(
+                label: _currentStep == 3 ? 'Submit Registration' : 'Next',
+                onPressed: () {
+                  if (_currentStep < 3) {
+                    setState(() => _currentStep++);
+                  } else {
+                    _submitForm();
+                  }
+                },
+                isLoading: state.isLoading,
+                icon: _currentStep == 3 ? Icons.check_rounded : Icons.arrow_forward_rounded,
+              );
+            },
+          ),
           ),
         ],
       ),

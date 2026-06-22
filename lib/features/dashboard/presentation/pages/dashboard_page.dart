@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:go_router/go_router.dart';
@@ -7,39 +7,48 @@ import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/theme/app_dimensions.dart';
 import '../../../../core/router/app_routes.dart';
 import '../../../../shared/widgets/common_widgets.dart';
+import '../../../auth/presentation/providers/auth_provider.dart';
+import '../providers/dashboard_provider.dart';
+import '../../../../core/api/repositories/dashboard_repository.dart';
+
 
 class DashboardPage extends ConsumerWidget {
   const DashboardPage({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final user = ref.watch(authStateProvider).user;
+    final summaryAsync = ref.watch(dashboardSummaryProvider);
     return Scaffold(
       backgroundColor: AppColors.background,
-      body: CustomScrollView(
-        slivers: [
-          _buildAppBar(context),
-          SliverPadding(
-            padding: const EdgeInsets.all(AppDimensions.md),
-            sliver: SliverList(
-              delegate: SliverChildListDelegate([
-                _buildGreeting(),
-                const SizedBox(height: AppDimensions.md),
-                _buildKpiRow(),
-                const SizedBox(height: AppDimensions.md),
-                _buildQuickActions(context),
-                const SizedBox(height: AppDimensions.md),
-                _buildLoanChart(),
-                const SizedBox(height: AppDimensions.md),
-                _buildSavingsChart(),
-                const SizedBox(height: AppDimensions.md),
-                _buildRecentTransactions(),
-                const SizedBox(height: AppDimensions.md),
-                _buildPendingApprovals(context),
-                const SizedBox(height: AppDimensions.xxl),
-              ]),
+      body: RefreshIndicator(
+        onRefresh: () => ref.read(dashboardSummaryProvider.notifier).refresh(),
+        child: CustomScrollView(
+          slivers: [
+            _buildAppBar(context),
+            SliverPadding(
+              padding: const EdgeInsets.all(AppDimensions.md),
+              sliver: SliverList(
+                delegate: SliverChildListDelegate([
+                  _buildGreeting(user),
+                  const SizedBox(height: AppDimensions.md),
+                  _buildKpiRow(summaryAsync),
+                  const SizedBox(height: AppDimensions.md),
+                  _buildQuickActions(context),
+                  const SizedBox(height: AppDimensions.md),
+                  _buildLoanChart(),
+                  const SizedBox(height: AppDimensions.md),
+                  _buildSavingsChart(),
+                  const SizedBox(height: AppDimensions.md),
+                  _buildRecentTransactions(),
+                  const SizedBox(height: AppDimensions.md),
+                  _buildPendingApprovals(context),
+                  const SizedBox(height: AppDimensions.xxl),
+                ]),
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -102,13 +111,19 @@ class DashboardPage extends ConsumerWidget {
     );
   }
 
-  Widget _buildGreeting() {
+  Widget _buildGreeting(dynamic user) {
     final hour = DateTime.now().hour;
     final greeting = hour < 12
         ? 'Good Morning'
         : hour < 17
             ? 'Good Afternoon'
             : 'Good Evening';
+    final name = user?.fullName ?? 'User';
+    final branch = user?.branchName.isNotEmpty == true
+        ? user!.branchName
+        : 'Head Office';
+    final now = DateTime.now();
+    final dateStr = '${_weekday(now.weekday)}, ${now.day} ${_month(now.month)} ${now.year}';
     return Container(
       padding: const EdgeInsets.all(AppDimensions.md),
       decoration: BoxDecoration(
@@ -129,11 +144,11 @@ class DashboardPage extends ConsumerWidget {
                     style: AppTextStyles.bodySmall
                         .copyWith(color: Colors.white70)),
                 const SizedBox(height: AppDimensions.xs / 2),
-                Text('Admin User',
+                Text(name,
                     style: AppTextStyles.headlineSmall
                         .copyWith(color: Colors.white)),
                 const SizedBox(height: AppDimensions.xs),
-                Text('Kathmandu Branch  •  Mon, 22 Jun 2081',
+                Text('$branch  â€¢  $dateStr',
                     style: AppTextStyles.bodySmall
                         .copyWith(color: Colors.white60)),
               ],
@@ -147,70 +162,116 @@ class DashboardPage extends ConsumerWidget {
               shape: BoxShape.circle,
               border: Border.all(color: Colors.white30, width: 2),
             ),
-            child: const Icon(Icons.person_rounded,
-                color: Colors.white, size: 28),
+            child: Center(
+              child: Text(
+                name.isNotEmpty ? name[0].toUpperCase() : 'U',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildKpiRow() {
-    return Column(
-      children: [
-        Row(
+  String _weekday(int w) => ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'][w - 1];
+  String _month(int m) => ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][m - 1];
+
+  Widget _buildKpiRow(AsyncValue<DashboardSummary> summaryAsync) {
+    return summaryAsync.when(
+      loading: () => const Center(
+          child: Padding(
+            padding: EdgeInsets.all(AppDimensions.lg),
+            child: CircularProgressIndicator(),
+          )),
+      error: (e, _) => Container(
+        padding: const EdgeInsets.all(AppDimensions.md),
+        decoration: BoxDecoration(
+          color: AppColors.error.withOpacity(0.05),
+          borderRadius: BorderRadius.circular(AppDimensions.radiusLg),
+          border: Border.all(color: AppColors.error.withOpacity(0.2)),
+        ),
+        child: Row(
           children: [
+            const Icon(Icons.wifi_off_rounded, color: AppColors.error),
+            const SizedBox(width: 8),
             Expanded(
-              child: KpiCard(
-                title: 'Total Members',
-                value: '1,248',
-                icon: Icons.people_rounded,
-                iconColor: AppColors.primary,
-                subtitle: '+12 this month',
-                subtitlePositiveFlag: true,
-              ),
-            ),
-            const SizedBox(width: AppDimensions.sm),
-            Expanded(
-              child: KpiCard(
-                title: 'Total Savings',
-                value: 'NPR 4.5Cr',
-                icon: Icons.savings_rounded,
-                iconColor: AppColors.secondary,
-                subtitle: '+2.3% MoM',
-                subtitlePositiveFlag: true,
-              ),
+              child: Text('Could not load live data. $e',
+                  style: AppTextStyles.bodySmall
+                      .copyWith(color: AppColors.error)),
             ),
           ],
         ),
-        const SizedBox(height: AppDimensions.sm),
-        Row(
-          children: [
-            Expanded(
-              child: KpiCard(
-                title: 'Active Loans',
-                value: 'NPR 7.8Cr',
-                icon: Icons.account_balance_rounded,
-                iconColor: AppColors.accent,
-                subtitle: '342 accounts',
-                subtitlePositiveFlag: true,
+      ),
+      data: (s) => Column(
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: KpiCard(
+                  title: 'Total Members',
+                  value: s.totalMembers.toString(),
+                  icon: Icons.people_rounded,
+                  iconColor: AppColors.primary,
+                  subtitle: '${s.activeMembers} active',
+                  subtitlePositiveFlag: true,
+                ),
               ),
-            ),
-            const SizedBox(width: AppDimensions.sm),
-            Expanded(
-              child: KpiCard(
-                title: 'NPA Loans',
-                value: 'NPR 18L',
-                icon: Icons.warning_amber_rounded,
-                iconColor: AppColors.error,
-                subtitle: '2.3% of portfolio',
-                subtitlePositiveFlag: false,
+              const SizedBox(width: AppDimensions.sm),
+              Expanded(
+                child: KpiCard(
+                  title: 'Total Savings',
+                  value: _formatAmount(s.totalSavings),
+                  icon: Icons.savings_rounded,
+                  iconColor: AppColors.secondary,
+                  subtitle: '${s.activeMembers} accounts',
+                  subtitlePositiveFlag: true,
+                ),
               ),
-            ),
-          ],
-        ),
-      ],
+            ],
+          ),
+          const SizedBox(height: AppDimensions.sm),
+          Row(
+            children: [
+              Expanded(
+                child: KpiCard(
+                  title: 'Active Loans',
+                  value: _formatAmount(s.totalLoans),
+                  icon: Icons.account_balance_rounded,
+                  iconColor: AppColors.accent,
+                  subtitle: '${s.activeLoans} accounts',
+                  subtitlePositiveFlag: true,
+                ),
+              ),
+              const SizedBox(width: AppDimensions.sm),
+              Expanded(
+                child: KpiCard(
+                  title: 'NPA Loans',
+                  value: _formatAmount(s.totalNpa),
+                  icon: Icons.warning_amber_rounded,
+                  iconColor: AppColors.error,
+                  subtitle: s.totalLoans > 0
+                      ? '${(s.totalNpa / s.totalLoans * 100).toStringAsFixed(1)}% of portfolio'
+                      : '0%',
+                  subtitlePositiveFlag: false,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
+  }
+
+  String _formatAmount(double v) {
+    if (v >= 10000000) return 'NPR ${(v / 10000000).toStringAsFixed(1)}Cr';
+    if (v >= 100000) return 'NPR ${(v / 100000).toStringAsFixed(1)}L';
+    if (v >= 1000) return 'NPR ${(v / 1000).toStringAsFixed(1)}K';
+    return 'NPR ${v.toStringAsFixed(0)}';
   }
 
   Widget _buildQuickActions(BuildContext context) {
@@ -507,21 +568,21 @@ class DashboardPage extends ConsumerWidget {
       child: Column(
         children: [
           _ApprovalItem(
-            name: 'Loan Application — Ram Shrestha',
+            name: 'Loan Application â€” Ram Shrestha',
             amount: 'NPR 5,00,000',
             urgency: 'URGENT',
             age: '5h 23m',
           ),
           const Divider(height: 1),
           _ApprovalItem(
-            name: 'Member Registration — Sita Magar',
+            name: 'Member Registration â€” Sita Magar',
             amount: 'New Member',
             urgency: 'NORMAL',
             age: '2h 15m',
           ),
           const Divider(height: 1),
           _ApprovalItem(
-            name: 'Large Withdrawal — Hari Poudel',
+            name: 'Large Withdrawal â€” Hari Poudel',
             amount: 'NPR 2,00,000',
             urgency: 'URGENT',
             age: '4h 10m',
@@ -532,7 +593,7 @@ class DashboardPage extends ConsumerWidget {
   }
 }
 
-// ── Supporting widgets ────────────────────────────────────────────────────────
+// â”€â”€ Supporting widgets â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 class _QuickAction {
   final String label;

@@ -7,6 +7,7 @@ import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/theme/app_dimensions.dart';
 import '../../../../shared/widgets/app_button.dart';
 import '../../../../shared/widgets/app_text_field.dart';
+import '../providers/savings_provider.dart';
 
 class DepositPage extends ConsumerStatefulWidget {
   final String accountId;
@@ -35,15 +36,28 @@ class _DepositPageState extends ConsumerState<DepositPage> {
 
   Future<void> _processDeposit() async {
     if (!_formKey.currentState!.validate()) return;
-    setState(() => _isLoading = true);
-    await Future.delayed(const Duration(seconds: 1));
-    if (mounted) {
-      setState(() => _isLoading = false);
-      _showSuccess();
+    final amount = double.tryParse(_amountCtrl.text) ?? 0;
+    final success = await ref.read(depositProvider.notifier).submit(
+      accountId: widget.accountId,
+      amount: amount,
+      mode: _selectedMode,
+      narration: _narrationCtrl.text.trim(),
+      chequeNo: _chequeCtrl.text.trim(),
+    );
+    if (success && mounted) {
+      final result = ref.read(depositProvider).result;
+      _showSuccess(result);
+    } else if (mounted) {
+      final error = ref.read(depositProvider).error ?? 'Deposit failed';
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error), backgroundColor: AppColors.error),
+      );
     }
   }
 
-  void _showSuccess() {
+  void _showSuccess(dynamic result) {
+    final txnId = result?.transactionId ?? 'TXN-${DateTime.now().millisecondsSinceEpoch}';
+    final balance = result?.balanceAfter ?? 0.0;
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -60,16 +74,26 @@ class _DepositPageState extends ConsumerState<DepositPage> {
             const SizedBox(height: AppDimensions.md),
             Text('Deposit Successful!', style: AppTextStyles.titleLarge),
             const SizedBox(height: AppDimensions.xs),
-            Text('NPR ${_amountCtrl.text} deposited to ${widget.accountId}',
-                style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textSecondary), textAlign: TextAlign.center),
+            Text('NPR ${_amountCtrl.text} deposited to account',
+                style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textSecondary),
+                textAlign: TextAlign.center),
             const SizedBox(height: AppDimensions.xs),
-            Text('Receipt: RCP-2081-00421', style: AppTextStyles.bodySmall.copyWith(color: AppColors.primary)),
+            Text('New Balance: NPR ${balance.toStringAsFixed(2)}',
+                style: AppTextStyles.bodySmall.copyWith(color: AppColors.secondary,
+                    fontWeight: FontWeight.w600)),
+            const SizedBox(height: 4),
+            Text('Receipt: $txnId',
+                style: AppTextStyles.bodySmall.copyWith(color: AppColors.primary)),
             const SizedBox(height: AppDimensions.lg),
             Row(
               children: [
-                Expanded(child: AppButton(label: 'Print Receipt', onPressed: () => Navigator.pop(ctx), variant: ButtonVariant.outlined, icon: Icons.print_rounded)),
+                Expanded(child: AppButton(label: 'Print Receipt', onPressed: () => Navigator.pop(ctx),
+                    variant: ButtonVariant.outlined, icon: Icons.print_rounded)),
                 const SizedBox(width: AppDimensions.sm),
-                Expanded(child: AppButton(label: 'Done', onPressed: () { Navigator.pop(ctx); context.pop(); })),
+                Expanded(child: AppButton(label: 'Done', onPressed: () {
+                  Navigator.pop(ctx);
+                  context.pop();
+                })),
               ],
             ),
           ],
@@ -219,12 +243,17 @@ class _DepositPageState extends ConsumerState<DepositPage> {
           color: AppColors.surface,
           border: Border(top: BorderSide(color: Color(0xFFE8EDF3))),
         ),
-        child: AppButton(
-          label: 'Process Deposit',
-          onPressed: _processDeposit,
-          isLoading: _isLoading,
-          icon: Icons.check_rounded,
-          variant: ButtonVariant.secondary,
+        child: Consumer(
+          builder: (context, ref, _) {
+            final state = ref.watch(depositProvider);
+            return AppButton(
+              label: 'Process Deposit',
+              onPressed: _processDeposit,
+              isLoading: state.isLoading,
+              icon: Icons.check_rounded,
+              variant: ButtonVariant.secondary,
+            );
+          },
         ),
       ),
     );

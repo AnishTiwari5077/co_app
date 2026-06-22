@@ -103,26 +103,41 @@ public class GetDashboardSummaryQueryHandler(IAppDbContext db, ICacheService cac
     public async Task<Result<DashboardSummaryDto>> Handle(GetDashboardSummaryQuery q, CancellationToken ct)
     {
         var cacheKey = $"dashboard:branch:{q.BranchId}";
-        var cached = await cache.GetAsync<DashboardSummaryDto>(cacheKey, ct);
-        if (cached is not null) return Result<DashboardSummaryDto>.Success(cached);
+        try
+        {
+            var cached = await cache.GetAsync<DashboardSummaryDto>(cacheKey, ct);
+            if (cached is not null) return Result<DashboardSummaryDto>.Success(cached);
+        }
+        catch { /* Redis unavailable — skip cache */ }
 
-        var today      = DateTime.UtcNow.Date;
-        var monthStart = new DateTime(today.Year, today.Month, 1);
+        var today      = DateTime.SpecifyKind(DateTime.UtcNow.Date, DateTimeKind.Utc);
+        var monthStart = DateTime.SpecifyKind(new DateTime(today.Year, today.Month, 1), DateTimeKind.Utc);
 
-        var totalMembers     = await db.Members.CountAsync(m => m.BranchId == q.BranchId && m.Status == "Active", ct);
-        var activeLoans      = await db.Loans.CountAsync(l => l.BranchId == q.BranchId && l.Status == "Active", ct);
-        var totalSavings     = await db.SavingAccounts.Where(a => a.BranchId == q.BranchId && a.Status == "Active").SumAsync(a => a.CurrentBalance, ct);
-        var totalOutstanding = await db.Loans.Where(l => l.BranchId == q.BranchId && l.Status == "Active").SumAsync(l => l.OutstandingBalance, ct);
-        var todayDeposits    = await db.SavingTransactions.Where(t => t.BranchId == q.BranchId && t.TransactionType == "Deposit"    && t.TransactionDate >= today).SumAsync(t => t.Amount, ct);
-        var todayWithdrawals = await db.SavingTransactions.Where(t => t.BranchId == q.BranchId && t.TransactionType == "Withdrawal" && t.TransactionDate >= today).SumAsync(t => t.Amount, ct);
-        var npaLoans         = await db.Loans.CountAsync(l => l.BranchId == q.BranchId && l.NpaClassification != "Standard", ct);
-        var newMembers       = await db.Members.CountAsync(m => m.BranchId == q.BranchId && m.CreatedAt >= monthStart, ct);
+        var totalMembers     = await db.Members.CountAsync(m => !m.IsDeleted, ct);
+        var activeMembers    = await db.Members.CountAsync(m => !m.IsDeleted && m.Status == "Active", ct);
+        var activeLoans      = await db.Loans.CountAsync(l => !l.IsDeleted && l.Status == "Active", ct);
+        var totalSavings     = await db.SavingAccounts
+            .Where(a => a.Status == "Active")
+            .SumAsync(a => (decimal?)a.CurrentBalance, ct) ?? 0;
+        var totalOutstanding = await db.Loans
+            .Where(l => l.Status == "Active")
+            .SumAsync(l => (decimal?)l.OutstandingBalance, ct) ?? 0;
+        var todayDeposits    = await db.SavingTransactions
+            .Where(t => t.TransactionType == "Deposit" && t.TransactionDate >= today)
+            .SumAsync(t => (decimal?)t.Amount, ct) ?? 0;
+        var todayWithdrawals = await db.SavingTransactions
+            .Where(t => t.TransactionType == "Withdrawal" && t.TransactionDate >= today)
+            .SumAsync(t => (decimal?)t.Amount, ct) ?? 0;
+        var npaLoans         = await db.Loans.CountAsync(l => !l.IsDeleted && l.NpaClassification != null && l.NpaClassification != "Standard", ct);
+        var newMembers       = await db.Members.CountAsync(m => !m.IsDeleted && m.CreatedAt >= monthStart, ct);
         var npaPercent       = activeLoans > 0 ? Math.Round((decimal)npaLoans / activeLoans * 100, 2) : 0;
 
         var summary = new DashboardSummaryDto(totalMembers, activeLoans, totalSavings, totalOutstanding,
             todayDeposits, todayWithdrawals, 94.5m, npaPercent, newMembers, 0);
 
-        await cache.SetAsync(cacheKey, summary, TimeSpan.FromMinutes(1), ct);
+        try { await cache.SetAsync(cacheKey, summary, TimeSpan.FromMinutes(5), ct); }
+        catch { /* Redis unavailable — skip cache write */ }
+
         return Result<DashboardSummaryDto>.Success(summary);
     }
 }
