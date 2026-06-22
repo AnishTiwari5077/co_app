@@ -7,18 +7,8 @@ import '../../../../core/theme/app_dimensions.dart';
 import '../../../../core/router/app_routes.dart';
 import '../../../../shared/widgets/status_badge.dart';
 import '../../../../shared/widgets/common_widgets.dart';
-
-// ── Mock data ────────────────────────────────────────────────────────────────
-final _mockMembers = [
-  _MemberRow(code: 'KTM-2081-001', name: 'Ram Bahadur Shrestha', phone: '9841000001', status: 'Active', savings: 'NPR 45,000', loans: 'NPR 2,50,000'),
-  _MemberRow(code: 'KTM-2081-002', name: 'Sita Tamang', phone: '9845000002', status: 'Active', savings: 'NPR 12,500', loans: '—'),
-  _MemberRow(code: 'KTM-2081-003', name: 'Hari Poudel', phone: '9861000003', status: 'Pending', savings: 'NPR 5,000', loans: '—'),
-  _MemberRow(code: 'KTM-2081-004', name: 'Kamala Gurung', phone: '9843000004', status: 'Active', savings: 'NPR 1,20,000', loans: 'NPR 5,00,000'),
-  _MemberRow(code: 'KTM-2081-005', name: 'Bikash KC', phone: '9862000005', status: 'Suspended', savings: 'NPR 8,000', loans: 'NPR 80,000'),
-  _MemberRow(code: 'KTM-2081-006', name: 'Rita Magar', phone: '9841000006', status: 'Active', savings: 'NPR 30,000', loans: '—'),
-  _MemberRow(code: 'KTM-2081-007', name: 'Deepak Thapa', phone: '9845000007', status: 'Active', savings: 'NPR 60,000', loans: 'NPR 1,50,000'),
-  _MemberRow(code: 'KTM-2081-008', name: 'Sunita Karki', phone: '9861000008', status: 'Inactive', savings: '—', loans: '—'),
-];
+import '../providers/member_provider.dart';
+import '../../../../core/api/repositories/member_repository.dart';
 
 class MemberListPage extends ConsumerStatefulWidget {
   const MemberListPage({super.key});
@@ -30,19 +20,16 @@ class MemberListPage extends ConsumerStatefulWidget {
 class _MemberListPageState extends ConsumerState<MemberListPage> {
   final _searchCtrl = TextEditingController();
   String _filterStatus = 'All';
-  String _query = '';
 
   final _statuses = ['All', 'Active', 'Pending', 'Suspended', 'Inactive'];
 
-  List<_MemberRow> get _filtered => _mockMembers.where((m) {
-        final matchSearch = _query.isEmpty ||
-            m.name.toLowerCase().contains(_query.toLowerCase()) ||
-            m.code.toLowerCase().contains(_query.toLowerCase()) ||
-            m.phone.contains(_query);
-        final matchStatus =
-            _filterStatus == 'All' || m.status == _filterStatus;
-        return matchSearch && matchStatus;
-      }).toList();
+  @override
+  void initState() {
+    super.initState();
+    _searchCtrl.addListener(() {
+      ref.read(memberListProvider.notifier).search(_searchCtrl.text);
+    });
+  }
 
   @override
   void dispose() {
@@ -50,8 +37,15 @@ class _MemberListPageState extends ConsumerState<MemberListPage> {
     super.dispose();
   }
 
+  void _applyStatusFilter(String status) {
+    setState(() => _filterStatus = status);
+    ref.read(memberListProvider.notifier).filterByStatus(status);
+  }
+
   @override
   Widget build(BuildContext context) {
+    final membersAsync = ref.watch(memberListProvider);
+
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
@@ -60,8 +54,8 @@ class _MemberListPageState extends ConsumerState<MemberListPage> {
         elevation: 0,
         actions: [
           IconButton(
-            icon: const Icon(Icons.filter_list_rounded),
-            onPressed: _showFilterSheet,
+            icon: const Icon(Icons.refresh_rounded),
+            onPressed: () => ref.read(memberListProvider.notifier).refresh(),
           ),
         ],
       ),
@@ -70,7 +64,8 @@ class _MemberListPageState extends ConsumerState<MemberListPage> {
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
         icon: const Icon(Icons.person_add_rounded),
-        label: Text('New Member', style: AppTextStyles.labelLarge.copyWith(color: Colors.white)),
+        label: Text('New Member',
+            style: AppTextStyles.labelLarge.copyWith(color: Colors.white)),
       ),
       body: Column(
         children: [
@@ -81,22 +76,21 @@ class _MemberListPageState extends ConsumerState<MemberListPage> {
                 AppDimensions.md, 0, AppDimensions.md, AppDimensions.md),
             child: TextField(
               controller: _searchCtrl,
-              onChanged: (v) => setState(() => _query = v),
               decoration: InputDecoration(
                 hintText: 'Search by name, code, phone...',
                 prefixIcon: const Icon(Icons.search_rounded, size: 20),
-                suffixIcon: _query.isNotEmpty
+                suffixIcon: _searchCtrl.text.isNotEmpty
                     ? IconButton(
                         icon: const Icon(Icons.close_rounded, size: 18),
                         onPressed: () {
                           _searchCtrl.clear();
-                          setState(() => _query = '');
+                          ref.read(memberListProvider.notifier).search('');
                         })
                     : null,
               ),
             ),
           ),
-          // Status chips
+          // Status filter chips
           SizedBox(
             height: 48,
             child: ListView.separated(
@@ -112,7 +106,7 @@ class _MemberListPageState extends ConsumerState<MemberListPage> {
                 return FilterChip(
                   label: Text(s),
                   selected: selected,
-                  onSelected: (_) => setState(() => _filterStatus = s),
+                  onSelected: (_) => _applyStatusFilter(s),
                   backgroundColor: AppColors.surface,
                   selectedColor: AppColors.primary,
                   labelStyle: AppTextStyles.labelSmall.copyWith(
@@ -126,85 +120,101 @@ class _MemberListPageState extends ConsumerState<MemberListPage> {
               },
             ),
           ),
-          // Count bar
-          Padding(
-            padding: const EdgeInsets.symmetric(
-                horizontal: AppDimensions.md, vertical: AppDimensions.xs),
-            child: Row(
-              children: [
-                Text('${_filtered.length} members',
-                    style: AppTextStyles.bodySmall
-                        .copyWith(color: AppColors.textSecondary)),
-              ],
-            ),
-          ),
-          // List
+          // Member list
           Expanded(
-            child: _filtered.isEmpty
-                ? const EmptyView(
+            child: membersAsync.when(
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (e, _) => Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.error_outline_rounded,
+                        color: AppColors.error, size: 48),
+                    const SizedBox(height: AppDimensions.sm),
+                    Text('Failed to load members',
+                        style: AppTextStyles.titleSmall),
+                    const SizedBox(height: AppDimensions.xs),
+                    Text(e.toString(),
+                        style: AppTextStyles.bodySmall
+                            .copyWith(color: AppColors.textSecondary),
+                        textAlign: TextAlign.center),
+                    const SizedBox(height: AppDimensions.md),
+                    TextButton.icon(
+                      onPressed: () =>
+                          ref.read(memberListProvider.notifier).refresh(),
+                      icon: const Icon(Icons.refresh_rounded),
+                      label: const Text('Retry'),
+                    ),
+                  ],
+                ),
+              ),
+              data: (members) {
+                if (members.isEmpty) {
+                  return const EmptyView(
                     icon: Icons.people_outline_rounded,
                     title: 'No members found',
-                    subtitle: 'Try adjusting your search or filters')
-                : ListView.separated(
-                    padding: const EdgeInsets.fromLTRB(AppDimensions.md, 0,
-                        AppDimensions.md, AppDimensions.xxl),
-                    itemCount: _filtered.length,
-                    separatorBuilder: (_, __) =>
-                        const SizedBox(height: AppDimensions.sm),
-                    itemBuilder: (context, i) =>
-                        _MemberCard(member: _filtered[i]),
-                  ),
+                    subtitle: 'Try adjusting your search or filters',
+                  );
+                }
+                return Column(
+                  children: [
+                    // Count bar
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: AppDimensions.md,
+                          vertical: AppDimensions.xs),
+                      child: Row(
+                        children: [
+                          Text('${members.length} members',
+                              style: AppTextStyles.bodySmall
+                                  .copyWith(color: AppColors.textSecondary)),
+                        ],
+                      ),
+                    ),
+                    Expanded(
+                      child: ListView.separated(
+                        padding: const EdgeInsets.fromLTRB(AppDimensions.md,
+                            0, AppDimensions.md, AppDimensions.xxl),
+                        itemCount: members.length,
+                        separatorBuilder: (_, __) =>
+                            const SizedBox(height: AppDimensions.sm),
+                        itemBuilder: (context, i) =>
+                            _MemberCard(member: members[i]),
+                      ),
+                    ),
+                  ],
+                );
+              },
+            ),
           ),
         ],
-      ),
-    );
-  }
-
-  void _showFilterSheet() {
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(
-            top: Radius.circular(AppDimensions.radiusXl)),
-      ),
-      builder: (ctx) => Padding(
-        padding: const EdgeInsets.all(AppDimensions.lg),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Filter Members', style: AppTextStyles.titleMedium),
-            const SizedBox(height: AppDimensions.md),
-            Wrap(
-              spacing: AppDimensions.sm,
-              children: _statuses.map((s) {
-                final selected = _filterStatus == s;
-                return FilterChip(
-                  label: Text(s),
-                  selected: selected,
-                  onSelected: (_) {
-                    setState(() => _filterStatus = s);
-                    Navigator.pop(ctx);
-                  },
-                );
-              }).toList(),
-            ),
-            const SizedBox(height: AppDimensions.md),
-          ],
-        ),
       ),
     );
   }
 }
 
 class _MemberCard extends StatelessWidget {
-  final _MemberRow member;
+  final MemberListItem member;
   const _MemberCard({required this.member});
 
   @override
   Widget build(BuildContext context) {
+    final initials = member.fullName
+        .split(' ')
+        .where((w) => w.isNotEmpty)
+        .map((w) => w[0].toUpperCase())
+        .take(2)
+        .join();
+
+    final savingsText = member.totalSavings != null && member.totalSavings! > 0
+        ? 'NPR ${member.totalSavings!.toStringAsFixed(0)}'
+        : null;
+    final loansText = member.totalLoans != null && member.totalLoans! > 0
+        ? 'NPR ${member.totalLoans!.toStringAsFixed(0)}'
+        : null;
+
     return GestureDetector(
-      onTap: () => context.go('${AppRoutes.members}/${member.code}'),
+      onTap: () => context.go('${AppRoutes.members}/${member.id}'),
       child: Container(
         padding: const EdgeInsets.all(AppDimensions.md),
         decoration: BoxDecoration(
@@ -222,7 +232,7 @@ class _MemberCard extends StatelessWidget {
                 gradient: LinearGradient(
                   colors: [
                     AppColors.primary.withOpacity(0.7),
-                    AppColors.primaryLight
+                    AppColors.primaryLight,
                   ],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
@@ -231,8 +241,9 @@ class _MemberCard extends StatelessWidget {
               ),
               child: Center(
                 child: Text(
-                  member.name.split(' ').map((w) => w[0]).take(2).join(),
-                  style: AppTextStyles.titleMedium.copyWith(color: Colors.white),
+                  initials,
+                  style: AppTextStyles.titleMedium
+                      .copyWith(color: Colors.white),
                 ),
               ),
             ),
@@ -245,7 +256,7 @@ class _MemberCard extends StatelessWidget {
                   Row(
                     children: [
                       Expanded(
-                        child: Text(member.name,
+                        child: Text(member.fullName,
                             style: AppTextStyles.titleSmall,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis),
@@ -254,25 +265,34 @@ class _MemberCard extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: 2),
-                  Text(member.code,
-                      style: AppTextStyles.bodySmall
-                          .copyWith(color: AppColors.primary, fontWeight: FontWeight.w600)),
-                  const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      const Icon(Icons.savings_outlined,
-                          size: 12, color: AppColors.textSecondary),
-                      const SizedBox(width: 3),
-                      Text(member.savings, style: AppTextStyles.bodySmall),
-                      const SizedBox(width: AppDimensions.sm),
-                      if (member.loans != '—') ...[
-                        const Icon(Icons.account_balance_outlined,
-                            size: 12, color: AppColors.textSecondary),
-                        const SizedBox(width: 3),
-                        Text(member.loans, style: AppTextStyles.bodySmall),
-                      ],
-                    ],
+                  Text(
+                    member.memberCode ?? '—',
+                    style: AppTextStyles.bodySmall.copyWith(
+                        color: AppColors.primary,
+                        fontWeight: FontWeight.w600),
                   ),
+                  if (savingsText != null || loansText != null) ...[
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        if (savingsText != null) ...[
+                          const Icon(Icons.savings_outlined,
+                              size: 12, color: AppColors.textSecondary),
+                          const SizedBox(width: 3),
+                          Text(savingsText,
+                              style: AppTextStyles.bodySmall),
+                        ],
+                        if (loansText != null) ...[
+                          const SizedBox(width: AppDimensions.sm),
+                          const Icon(Icons.account_balance_outlined,
+                              size: 12, color: AppColors.textSecondary),
+                          const SizedBox(width: 3),
+                          Text(loansText,
+                              style: AppTextStyles.bodySmall),
+                        ],
+                      ],
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -283,15 +303,4 @@ class _MemberCard extends StatelessWidget {
       ),
     );
   }
-}
-
-class _MemberRow {
-  final String code, name, phone, status, savings, loans;
-  const _MemberRow(
-      {required this.code,
-      required this.name,
-      required this.phone,
-      required this.status,
-      required this.savings,
-      required this.loans});
 }

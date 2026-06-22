@@ -9,6 +9,7 @@ import '../../../../shared/widgets/app_button.dart';
 import '../../../../shared/widgets/app_text_field.dart';
 import '../providers/member_provider.dart';
 import '../../../../core/api/repositories/member_repository.dart';
+import '../../../auth/presentation/providers/auth_provider.dart';
 
 class MemberRegistrationPage extends ConsumerStatefulWidget {
   const MemberRegistrationPage({super.key});
@@ -71,31 +72,54 @@ class _MemberRegistrationPageState
     super.dispose();
   }
 
+  /// Returns date only if format is yyyy-MM-dd, otherwise null.
+  String? _parseDateSafe(String raw) {
+    if (raw.isEmpty) return null;
+    return RegExp(r'^\d{4}-\d{2}-\d{2}$').hasMatch(raw) ? raw : null;
+  }
+
   Future<void> _submitForm() async {
-    if (!_formKey.currentState!.validate()) return;
+    final firstName = _firstNameCtrl.text.trim();
+    final lastName = _lastNameCtrl.text.trim();
+    final phone = _phoneCtrl.text.trim();
+    if (firstName.isEmpty || lastName.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Please fill in First Name and Last Name'),
+          backgroundColor: Colors.red));
+      return;
+    }
+    if (phone.isEmpty || phone.length != 10) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Please enter a valid 10-digit phone number'),
+          backgroundColor: Colors.red));
+      return;
+    }
+    final branchId = ref.read(authStateProvider).user?.branchId ?? '';
+    if (branchId.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Branch not found. Please re-login.'),
+          backgroundColor: Colors.red));
+      return;
+    }
+    if (mounted) setState(() => _isLoading = true);
     final request = RegisterMemberRequest(
-      firstName: _firstNameCtrl.text.trim(),
-      lastName: _lastNameCtrl.text.trim(),
-      firstNameNp: _firstNameNpCtrl.text.trim(),
-      lastNameNp: _lastNameNpCtrl.text.trim(),
-      phone: _phoneCtrl.text.trim(),
-      email: _emailCtrl.text.trim(),
+      firstName: firstName,
+      lastName: lastName,
+      phoneNumber: phone,
       gender: _selectedGender,
-      dateOfBirth: _dobCtrl.text.trim(),
-      occupation: _selectedOccupation,
-      education: _selectedEducation,
-      citizenshipNo: _citizenshipCtrl.text.trim(),
-      panNo: _panCtrl.text.trim(),
-      district: _districtCtrl.text.trim(),
-      municipality: _municipalityCtrl.text.trim(),
-      ward: _wardCtrl.text.trim(),
-      tole: _toleCtrl.text.trim(),
-      nomineeName: _nomineeNameCtrl.text.trim(),
-      nomineeRelation: _nomineeRelationCtrl.text.trim(),
-      nomineePhone: _nomineePhoneCtrl.text.trim(),
+      email: _emailCtrl.text.trim().isEmpty ? null : _emailCtrl.text.trim(),
+      dateOfBirthAd: _parseDateSafe(_dobCtrl.text.trim()),
+      occupation: _selectedOccupation.isEmpty ? null : _selectedOccupation,
+      citizenshipNumber: _citizenshipCtrl.text.trim().isEmpty ? null : _citizenshipCtrl.text.trim(),
+      addressDistrict: _districtCtrl.text.trim().isEmpty ? null : _districtCtrl.text.trim(),
+      addressMunicipality: _municipalityCtrl.text.trim().isEmpty ? null : _municipalityCtrl.text.trim(),
+      addressWard: _wardCtrl.text.trim().isEmpty ? null : _wardCtrl.text.trim(),
+      addressTole: _toleCtrl.text.trim().isEmpty ? null : _toleCtrl.text.trim(),
+      branchId: branchId,
     );
     final success = await ref.read(registerMemberProvider.notifier).submit(request);
     if (mounted) {
+      setState(() => _isLoading = false);
       if (success) {
         final memberId = ref.read(registerMemberProvider).newMemberId ?? '';
         _showSuccessDialog(memberId);
@@ -319,10 +343,9 @@ class _MemberRegistrationPageState
         const SizedBox(height: AppDimensions.sm),
         AppTextField(
           controller: _dobCtrl,
-          label: 'Date of Birth (BS) *',
-          hint: '2035-05-15',
+          label: 'Date of Birth (AD)',
+          hint: '1990-06-15  (yyyy-MM-dd)',
           prefixIcon: Icons.calendar_today_rounded,
-          validator: (v) => v?.isEmpty == true ? 'Required' : null,
           keyboardType: TextInputType.datetime,
         ),
         const SizedBox(height: AppDimensions.sm),
