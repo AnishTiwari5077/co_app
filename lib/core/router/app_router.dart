@@ -23,16 +23,34 @@ import '../../features/reports/presentation/pages/reports_page.dart';
 import '../../features/settings/presentation/pages/settings_page.dart';
 import '../../features/notifications/presentation/pages/notifications_page.dart';
 import '../widgets/main_shell.dart';
-
 import 'app_routes.dart';
 
-final routerProvider = Provider<GoRouter>((ref) {
-  final authState = ref.watch(authStateProvider);
+/// A ChangeNotifier that listens to Riverpod auth state changes
+/// and notifies GoRouter to re-evaluate its redirect without recreating
+/// the router instance.
+class _AuthNotifier extends ChangeNotifier {
+  _AuthNotifier(this._ref) {
+    _ref.listen<AuthState>(authStateProvider, (_, __) => notifyListeners());
+  }
+  final Ref _ref;
+}
 
-  return GoRouter(
+final routerProvider = Provider<GoRouter>((ref) {
+  final notifier = _AuthNotifier(ref);
+
+  final router = GoRouter(
     initialLocation: AppRoutes.login,
     debugLogDiagnostics: false,
+    refreshListenable: notifier,
+
     redirect: (context, state) {
+      // Read auth state lazily — safe because redirect is only called after
+      // notifier fires (i.e. after authStateProvider emits a new value).
+      final authState = ref.read(authStateProvider);
+
+      // While session is restoring, don't redirect — stay put.
+      if (authState.isLoading) return null;
+
       final isLoggedIn = authState.isAuthenticated;
       final isOnLogin = state.matchedLocation.startsWith(AppRoutes.login) ||
           state.matchedLocation.startsWith(AppRoutes.otp);
@@ -41,6 +59,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       if (isLoggedIn && isOnLogin) return AppRoutes.dashboard;
       return null;
     },
+
     routes: [
       // ── Auth ──────────────────────────────────────────────────────────────
       GoRoute(
@@ -221,6 +240,13 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
     ],
   );
+
+  ref.onDispose(() {
+    notifier.dispose();
+    router.dispose();
+  });
+
+  return router;
 });
 
 CustomTransitionPage<void> _noTransitionPage({

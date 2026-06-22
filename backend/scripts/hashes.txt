@@ -1,0 +1,4 @@
+﻿manager1|$2a$11$WoxFxYdUGujlt5sjT152/.0q7qOM6WaCeEsjgMPynk2KftY18cA7C
+accountant1|$2a$11$0PTvuemQ0JcpQps.NpiL8.R6S3cgN577TMu1snJKj30of1gcKLQDS
+cashier1|$2a$11$y2DMjHgDfP68c3JnHKyPXuGNDApYmT9CmWCbzWe7I9UPAd5UQo0rC
+loanofficer1|$2a$11$fKfMM07J3eMVQSB4yv2NEeNa0JGLml8ETxq.DnS3qAkPmfIBvengS

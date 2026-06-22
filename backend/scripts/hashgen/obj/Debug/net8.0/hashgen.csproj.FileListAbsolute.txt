@@ -15,3 +15,4 @@ F:\c_app\backend\scripts\hashgen\obj\Debug\net8.0\refint\hashgen.dll
 F:\c_app\backend\scripts\hashgen\obj\Debug\net8.0\hashgen.pdb
 F:\c_app\backend\scripts\hashgen\obj\Debug\net8.0\hashgen.genruntimeconfig.cache
 F:\c_app\backend\scripts\hashgen\obj\Debug\net8.0\ref\hashgen.dll
+F:\c_app\backend\scripts\hashgen\obj\Debug\net8.0\hashgen.sourcelink.json

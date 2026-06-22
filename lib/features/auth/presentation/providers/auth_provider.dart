@@ -31,7 +31,9 @@ class AuthState {
 // ─── Auth Notifier ────────────────────────────────────────────────────────────
 class AuthNotifier extends StateNotifier<AuthState> {
   final Dio _dio;
-  AuthNotifier(this._dio) : super(const AuthState()) {
+  // Start with isLoading:true so the router redirect guard fires BEFORE
+  // any ShellRoute can build with an unresolved user.
+  AuthNotifier(this._dio) : super(const AuthState(isLoading: true)) {
     _tryRestoreSession();
   }
 
