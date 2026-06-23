@@ -21,7 +21,6 @@ class _OtpPageState extends ConsumerState<OtpPage> {
       List.generate(6, (_) => TextEditingController());
   final List<FocusNode> _focusNodes = List.generate(6, (_) => FocusNode());
   bool _isLoading = false;
-  int _secondsRemaining = 60;
 
   String get _otp => _controllers.map((c) => c.text).join();
 
@@ -37,13 +36,6 @@ class _OtpPageState extends ConsumerState<OtpPage> {
       _focusNodes[index + 1].requestFocus();
     }
     if (_otp.length == 6) _verifyOtp();
-  }
-
-  void _onBackspace(int index) {
-    if (index > 0 && _controllers[index].text.isEmpty) {
-      _focusNodes[index - 1].requestFocus();
-      _controllers[index - 1].clear();
-    }
   }
 
   Future<void> _verifyOtp() async {

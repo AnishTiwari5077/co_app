@@ -60,7 +60,13 @@ class _MemberListPageState extends ConsumerState<MemberListPage> {
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => context.go('${AppRoutes.members}/register'),
+        onPressed: () async {
+          await context.push('${AppRoutes.members}/register');
+          // Refresh list when returning from registration
+          if (context.mounted) {
+            ref.read(memberListProvider.notifier).refresh();
+          }
+        },
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
         icon: const Icon(Icons.person_add_rounded),
@@ -214,7 +220,14 @@ class _MemberCard extends StatelessWidget {
         : null;
 
     return GestureDetector(
-      onTap: () => context.go('${AppRoutes.members}/${member.id}'),
+      onTap: () async {
+        await context.push('${AppRoutes.members}/${member.id}');
+        // Refresh list when returning from detail (status may have changed)
+        if (context.mounted) {
+          final container = ProviderScope.containerOf(context, listen: false);
+          container.read(memberListProvider.notifier).refresh();
+        }
+      },
       child: Container(
         padding: const EdgeInsets.all(AppDimensions.md),
         decoration: BoxDecoration(
@@ -266,7 +279,7 @@ class _MemberCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    member.memberCode ?? '—',
+                    member.memberCode,
                     style: AppTextStyles.bodySmall.copyWith(
                         color: AppColors.primary,
                         fontWeight: FontWeight.w600),

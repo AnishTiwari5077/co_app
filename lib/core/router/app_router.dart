@@ -16,6 +16,7 @@ import '../../features/savings/presentation/pages/savings_list_page.dart';
 import '../../features/savings/presentation/pages/savings_detail_page.dart';
 import '../../features/savings/presentation/pages/deposit_page.dart';
 import '../../features/savings/presentation/pages/withdrawal_page.dart';
+import '../../features/savings/presentation/pages/open_account_page.dart';
 import '../../features/accounting/presentation/pages/journal_entry_page.dart';
 import '../../features/accounting/presentation/pages/trial_balance_page.dart';
 import '../../features/accounting/presentation/pages/ledger_page.dart';
@@ -159,6 +160,11 @@ final routerProvider = Provider<GoRouter>((ref) {
               child: const SavingsListPage(),
             ),
             routes: [
+              GoRoute(
+                path: 'open',
+                name: 'savings-open',
+                builder: (context, state) => const OpenAccountPage(),
+              ),
               GoRoute(
                 path: ':id',
                 name: 'savings-detail',

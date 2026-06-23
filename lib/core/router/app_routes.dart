@@ -26,6 +26,7 @@ class AppRoutes {
   static String emiSchedule(String id) => '/loans/$id/schedule';
 
   // Savings sub-routes
+  static const String savingsOpen      = '/savings/open';
   static String savingsDetail(String id) => '/savings/$id';
   static String deposit(String id)       => '/savings/$id/deposit';
   static String withdraw(String id)      => '/savings/$id/withdraw';

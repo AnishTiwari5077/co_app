@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'dart:async';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/theme/app_dimensions.dart';
 import '../../../../shared/widgets/app_button.dart';
 import '../../../../shared/widgets/app_text_field.dart';
+import '../../../../core/api/repositories/member_repository.dart';
 
 class LoanApplicationPage extends ConsumerStatefulWidget {
   final String? memberId;
@@ -23,7 +25,14 @@ class _LoanApplicationPageState extends ConsumerState<LoanApplicationPage> {
   bool _isLoading = false;
   bool _emiCalculated = false;
 
+  // ── Member search state ───────────────────────────────────────────────────
   final _memberSearchCtrl = TextEditingController();
+  MemberListItem? _selectedMember;
+  List<MemberListItem> _memberSuggestions = [];
+  bool _searchingMembers = false;
+  bool _showSuggestions = false;
+  Timer? _searchDebounce;
+
   final _amountCtrl = TextEditingController(text: '');
   final _purposeCtrl = TextEditingController();
   final _guarantorCtrl = TextEditingController();
@@ -65,6 +74,50 @@ class _LoanApplicationPageState extends ConsumerState<LoanApplicationPage> {
       _emiCalculated = true;
     });
   }
+
+  // ── Live member search ────────────────────────────────────────────────────
+  void _onMemberSearch(String query) {
+    _searchDebounce?.cancel();
+    if (query.trim().length < 2) {
+      setState(() { _memberSuggestions = []; _showSuggestions = false; });
+      return;
+    }
+    _searchDebounce = Timer(const Duration(milliseconds: 300), () async {
+      setState(() => _searchingMembers = true);
+      try {
+        final repo = ref.read(memberRepositoryProvider);
+        final result = await repo.getMembers(search: query.trim(), pageSize: 8);
+        if (mounted) {
+          setState(() {
+            _memberSuggestions = result.data;
+            _showSuggestions = true;
+            _searchingMembers = false;
+          });
+        }
+      } catch (_) {
+        if (mounted) setState(() => _searchingMembers = false);
+      }
+    });
+  }
+
+  void _selectMember(MemberListItem m) {
+    setState(() {
+      _selectedMember = m;
+      _memberSearchCtrl.text = m.fullName;
+      _showSuggestions = false;
+      _memberSuggestions = [];
+    });
+  }
+
+  void _clearMember() {
+    setState(() {
+      _selectedMember = null;
+      _memberSearchCtrl.clear();
+      _memberSuggestions = [];
+      _showSuggestions = false;
+    });
+  }
+
 
   Future<void> _submitApplication() async {
     if (!_formKey.currentState!.validate()) return;
@@ -122,6 +175,7 @@ class _LoanApplicationPageState extends ConsumerState<LoanApplicationPage> {
 
   @override
   void dispose() {
+    _searchDebounce?.cancel();
     _memberSearchCtrl.dispose();
     _amountCtrl.dispose();
     _purposeCtrl.dispose();
@@ -233,22 +287,105 @@ class _LoanApplicationPageState extends ConsumerState<LoanApplicationPage> {
   }
 
   Widget _buildMemberStep() {
+    final selected = _selectedMember;
     return Column(
       key: const ValueKey('member'),
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text('Select Member', style: AppTextStyles.titleMedium),
         const SizedBox(height: AppDimensions.md),
-        AppTextField(
-          controller: _memberSearchCtrl,
-          label: 'Search Member',
-          hint: 'Name, code or phone...',
-          prefixIcon: Icons.search_rounded,
-          initialValue: widget.memberId,
-          validator: (v) => v?.isEmpty == true ? 'Member required' : null,
-        ),
-        const SizedBox(height: AppDimensions.sm),
-        if (widget.memberId != null) ...[
+
+        // ── Search field with live dropdown ──────────────────────────────────
+        if (selected == null) ...[
+          TextField(
+            controller: _memberSearchCtrl,
+            onChanged: _onMemberSearch,
+            decoration: InputDecoration(
+              labelText: 'Search Member',
+              hintText: 'Type name, code or phone...',
+              prefixIcon: _searchingMembers
+                  ? const Padding(
+                      padding: EdgeInsets.all(12),
+                      child: SizedBox(width: 18, height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2)))
+                  : const Icon(Icons.search_rounded),
+              suffixIcon: _memberSearchCtrl.text.isNotEmpty
+                  ? IconButton(
+                      icon: const Icon(Icons.close_rounded, size: 18),
+                      onPressed: _clearMember)
+                  : null,
+            ),
+          ),
+
+          // Dropdown suggestions
+          if (_showSuggestions && _memberSuggestions.isNotEmpty)
+            Container(
+              margin: const EdgeInsets.only(top: 4),
+              decoration: BoxDecoration(
+                color: AppColors.surface,
+                borderRadius: BorderRadius.circular(AppDimensions.radiusLg),
+                border: Border.all(color: const Color(0xFFE0E7EF)),
+                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.06), blurRadius: 8, offset: const Offset(0, 3))],
+              ),
+              child: ListView.separated(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                padding: EdgeInsets.zero,
+                itemCount: _memberSuggestions.length,
+                separatorBuilder: (_, __) => const Divider(height: 1, indent: 56),
+                itemBuilder: (ctx, i) {
+                  final m = _memberSuggestions[i];
+                  final isActive = m.status == 'Active';
+                  return ListTile(
+                    onTap: () => _selectMember(m),
+                    leading: CircleAvatar(
+                      backgroundColor: isActive
+                          ? AppColors.primary.withOpacity(0.12)
+                          : AppColors.surfaceVariant,
+                      child: Text(
+                        m.fullName.isNotEmpty ? m.fullName[0].toUpperCase() : '?',
+                        style: AppTextStyles.labelLarge.copyWith(
+                          color: isActive ? AppColors.primary : AppColors.textSecondary,
+                        ),
+                      ),
+                    ),
+                    title: Text(m.fullName, style: AppTextStyles.titleSmall),
+                    subtitle: Text(
+                      '${m.memberCode}  •  ${m.phone}',
+                      style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondary),
+                    ),
+                    trailing: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: isActive
+                            ? AppColors.secondary.withOpacity(0.1)
+                            : AppColors.error.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(AppDimensions.radiusSm),
+                      ),
+                      child: Text(
+                        m.status,
+                        style: AppTextStyles.labelSmall.copyWith(
+                          color: isActive ? AppColors.secondary : AppColors.error,
+                          fontSize: 10,
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+
+          if (_showSuggestions && _memberSuggestions.isEmpty && !_searchingMembers)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: AppDimensions.md),
+              child: Center(
+                child: Text('No members found',
+                    style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondary)),
+              ),
+            ),
+        ] else ...[
+
+          // ── Selected member card ──────────────────────────────────────────
           Container(
             padding: const EdgeInsets.all(AppDimensions.md),
             decoration: BoxDecoration(
@@ -258,44 +395,35 @@ class _LoanApplicationPageState extends ConsumerState<LoanApplicationPage> {
             ),
             child: Row(
               children: [
-                Container(
-                  width: 48,
-                  height: 48,
-                  decoration: BoxDecoration(
-                    color: AppColors.primary,
-                    borderRadius: BorderRadius.circular(AppDimensions.radiusMd),
+                CircleAvatar(
+                  backgroundColor: AppColors.primary,
+                  radius: 24,
+                  child: Text(
+                    selected.fullName.isNotEmpty ? selected.fullName[0].toUpperCase() : '?',
+                    style: AppTextStyles.titleMedium.copyWith(color: Colors.white),
                   ),
-                  child: const Icon(Icons.person_rounded, color: Colors.white),
                 ),
                 const SizedBox(width: AppDimensions.sm),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Ram Bahadur Shrestha', style: AppTextStyles.titleSmall),
-                      Text(widget.memberId ?? '',
-                          style: AppTextStyles.bodySmall
-                              .copyWith(color: AppColors.primary)),
-                      Text('Active  •  KYC ✓  •  Shares: 250',
-                          style: AppTextStyles.bodySmall
-                              .copyWith(color: AppColors.textSecondary)),
+                      Text(selected.fullName, style: AppTextStyles.titleSmall),
+                      Text('${selected.memberCode}  •  ${selected.phone}',
+                          style: AppTextStyles.bodySmall.copyWith(color: AppColors.primary)),
+                      Text('Status: ${selected.status}',
+                          style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondary)),
                     ],
                   ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.close_rounded, color: AppColors.textSecondary),
+                  tooltip: 'Change member',
+                  onPressed: _clearMember,
                 ),
                 const Icon(Icons.check_circle_rounded, color: AppColors.secondary),
               ],
             ),
-          ),
-          const SizedBox(height: AppDimensions.md),
-          // Eligibility check
-          _EligibilityCard(
-            checks: [
-              _Check(label: 'Minimum 6 months membership', passed: true),
-              _Check(label: 'KYC verified', passed: true),
-              _Check(label: 'Minimum 10 shares held', passed: true),
-              _Check(label: 'No overdue EMIs', passed: true),
-              _Check(label: 'Age 18-65', passed: true),
-            ],
           ),
         ],
       ],
@@ -505,9 +633,9 @@ class _LoanApplicationPageState extends ConsumerState<LoanApplicationPage> {
         Text('Review & Submit', style: AppTextStyles.titleMedium),
         const SizedBox(height: AppDimensions.md),
         _ReviewSection(title: 'Member', rows: [
-          'Ram Bahadur Shrestha',
-          widget.memberId ?? '—',
-          'KYC Verified',
+          _selectedMember?.fullName ?? widget.memberId ?? '—',
+          _selectedMember?.memberCode ?? '—',
+          'Status: ${_selectedMember?.status ?? '—'}',
         ]),
         const SizedBox(height: AppDimensions.sm),
         _ReviewSection(title: 'Loan Details', rows: [
@@ -570,8 +698,15 @@ class _LoanApplicationPageState extends ConsumerState<LoanApplicationPage> {
           Expanded(
             flex: 2,
             child: AppButton(
-              label: _currentStep == 3 ? 'Submit Application' : 'Next',
+              label: _currentStep == 3 ? 'Submit Application' : 'Next  →',
               onPressed: () {
+                if (_currentStep == 0 && _selectedMember == null) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Please select a member first'),
+                        backgroundColor: AppColors.error),
+                  );
+                  return;
+                }
                 if (_currentStep < 3) {
                   setState(() => _currentStep++);
                 } else {
@@ -588,51 +723,6 @@ class _LoanApplicationPageState extends ConsumerState<LoanApplicationPage> {
   }
 }
 
-// ── Supporting widgets ────────────────────────────────────────────────────────
-
-class _Check {
-  final String label;
-  final bool passed;
-  const _Check({required this.label, required this.passed});
-}
-
-class _EligibilityCard extends StatelessWidget {
-  final List<_Check> checks;
-  const _EligibilityCard({required this.checks});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(AppDimensions.md),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(AppDimensions.radiusLg),
-        border: Border.all(color: const Color(0xFFE8EDF3)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('Eligibility Check', style: AppTextStyles.titleSmall),
-          const SizedBox(height: AppDimensions.sm),
-          ...checks.map((c) => Padding(
-                padding: const EdgeInsets.symmetric(vertical: 3),
-                child: Row(
-                  children: [
-                    Icon(
-                      c.passed ? Icons.check_circle_rounded : Icons.cancel_rounded,
-                      color: c.passed ? AppColors.secondary : AppColors.error,
-                      size: 18,
-                    ),
-                    const SizedBox(width: 8),
-                    Text(c.label, style: AppTextStyles.bodySmall),
-                  ],
-                ),
-              )),
-        ],
-      ),
-    );
-  }
-}
 
 class _ProductStat extends StatelessWidget {
   final String label, value;

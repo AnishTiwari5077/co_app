@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:go_router/go_router.dart';
@@ -10,6 +10,88 @@ import '../../../../shared/widgets/common_widgets.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
 import '../providers/dashboard_provider.dart';
 import '../../../../core/api/repositories/dashboard_repository.dart';
+import '../../../../core/api/api_client.dart';
+
+// ── Activity Models ───────────────────────────────────────────────────────────
+
+class DashboardRecentTxn {
+  final String memberName, transactionType, accountNumber;
+  final double amount;
+  final DateTime transactionDate;
+  DashboardRecentTxn({
+    required this.memberName, required this.transactionType,
+    required this.accountNumber, required this.amount,
+    required this.transactionDate,
+  });
+  bool get isCredit => transactionType != 'Withdrawal';
+  factory DashboardRecentTxn.fromJson(Map<String, dynamic> j) =>
+      DashboardRecentTxn(
+        memberName: j['memberName'] as String? ?? '',
+        transactionType: j['transactionType'] as String? ?? '',
+        accountNumber: j['accountNumber'] as String? ?? '',
+        amount: (j['amount'] as num?)?.toDouble() ?? 0,
+        transactionDate: DateTime.tryParse(j['transactionDate'] as String? ?? '') ?? DateTime.now(),
+      );
+}
+
+class DashboardSchemeDist {
+  final String schemeType;
+  final double totalBalance;
+  final int accountCount;
+  DashboardSchemeDist({required this.schemeType, required this.totalBalance, required this.accountCount});
+  factory DashboardSchemeDist.fromJson(Map<String, dynamic> j) =>
+      DashboardSchemeDist(
+        schemeType: j['schemeType'] as String? ?? '',
+        totalBalance: (j['totalBalance'] as num?)?.toDouble() ?? 0,
+        accountCount: j['accountCount'] as int? ?? 0,
+      );
+}
+
+class DashboardPendingItem {
+  final String title, subtitle, itemType, urgency;
+  final DateTime createdAt;
+  DashboardPendingItem({
+    required this.title, required this.subtitle,
+    required this.itemType, required this.urgency, required this.createdAt,
+  });
+  factory DashboardPendingItem.fromJson(Map<String, dynamic> j) =>
+      DashboardPendingItem(
+        title: j['title'] as String? ?? '',
+        subtitle: j['subtitle'] as String? ?? '',
+        itemType: j['itemType'] as String? ?? '',
+        urgency: j['urgency'] as String? ?? 'NORMAL',
+        createdAt: DateTime.tryParse(j['createdAt'] as String? ?? '') ?? DateTime.now(),
+      );
+}
+
+class DashboardActivity {
+  final List<DashboardRecentTxn> recentTransactions;
+  final List<DashboardSchemeDist> savingsDistribution;
+  final List<DashboardPendingItem> pendingItems;
+  DashboardActivity({required this.recentTransactions, required this.savingsDistribution, required this.pendingItems});
+  factory DashboardActivity.fromJson(Map<String, dynamic> j) => DashboardActivity(
+    recentTransactions: ((j['recentTransactions'] as List?)?.cast<Map<String, dynamic>>() ?? [])
+        .map(DashboardRecentTxn.fromJson).toList(),
+    savingsDistribution: ((j['savingsDistribution'] as List?)?.cast<Map<String, dynamic>>() ?? [])
+        .map(DashboardSchemeDist.fromJson).toList(),
+    pendingItems: ((j['pendingItems'] as List?)?.cast<Map<String, dynamic>>() ?? [])
+        .map(DashboardPendingItem.fromJson).toList(),
+  );
+  factory DashboardActivity.empty() => DashboardActivity(
+    recentTransactions: [], savingsDistribution: [], pendingItems: []);
+}
+
+final dashboardActivityProvider = FutureProvider<DashboardActivity>((ref) async {
+  final dio = ref.watch(dioProvider);
+  try {
+    final res = await dio.get('/api/v1/dashboard/activity');
+    final envelope = res.data as Map<String, dynamic>;
+    final data = envelope['data'] as Map<String, dynamic>? ?? envelope;
+    return DashboardActivity.fromJson(data);
+  } catch (_) {
+    return DashboardActivity.empty();
+  }
+});
 
 
 class DashboardPage extends ConsumerWidget {
@@ -19,10 +101,16 @@ class DashboardPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final user = ref.watch(authStateProvider).user;
     final summaryAsync = ref.watch(dashboardSummaryProvider);
+    final activityAsync = ref.watch(dashboardActivityProvider);
+    final activity = activityAsync.value ?? DashboardActivity.empty();
     return Scaffold(
       backgroundColor: AppColors.background,
       body: RefreshIndicator(
-        onRefresh: () => ref.read(dashboardSummaryProvider.notifier).refresh(),
+        onRefresh: () async {
+          ref.invalidate(dashboardSummaryProvider);
+          ref.invalidate(dashboardActivityProvider);
+          await ref.read(dashboardSummaryProvider.notifier).refresh();
+        },
         child: CustomScrollView(
           slivers: [
             _buildAppBar(context),
@@ -38,11 +126,11 @@ class DashboardPage extends ConsumerWidget {
                   const SizedBox(height: AppDimensions.md),
                   _buildLoanChart(),
                   const SizedBox(height: AppDimensions.md),
-                  _buildSavingsChart(),
+                  _buildSavingsChart(activity.savingsDistribution),
                   const SizedBox(height: AppDimensions.md),
-                  _buildRecentTransactions(),
+                  _buildRecentTransactions(activity.recentTransactions),
                   const SizedBox(height: AppDimensions.md),
-                  _buildPendingApprovals(context),
+                  _buildPendingApprovals(context, activity.pendingItems),
                   const SizedBox(height: AppDimensions.xxl),
                 ]),
               ),
@@ -217,7 +305,7 @@ class DashboardPage extends ConsumerWidget {
                   value: s.totalMembers.toString(),
                   icon: Icons.people_rounded,
                   iconColor: AppColors.primary,
-                  subtitle: '${s.activeMembers} active',
+                  subtitle: '+${s.newMembersThisMonth} this month',
                   subtitlePositiveFlag: true,
                 ),
               ),
@@ -228,7 +316,7 @@ class DashboardPage extends ConsumerWidget {
                   value: _formatAmount(s.totalSavings),
                   icon: Icons.savings_rounded,
                   iconColor: AppColors.secondary,
-                  subtitle: '${s.activeMembers} accounts',
+                  subtitle: '↑ ${_formatAmount(s.todayDeposits)} today',
                   subtitlePositiveFlag: true,
                 ),
               ),
@@ -239,24 +327,22 @@ class DashboardPage extends ConsumerWidget {
             children: [
               Expanded(
                 child: KpiCard(
-                  title: 'Active Loans',
+                  title: 'Loan Portfolio',
                   value: _formatAmount(s.totalLoans),
                   icon: Icons.account_balance_rounded,
                   iconColor: AppColors.accent,
-                  subtitle: '${s.activeLoans} accounts',
+                  subtitle: '${s.activeLoans} active accounts',
                   subtitlePositiveFlag: true,
                 ),
               ),
               const SizedBox(width: AppDimensions.sm),
               Expanded(
                 child: KpiCard(
-                  title: 'NPA Loans',
-                  value: _formatAmount(s.totalNpa),
+                  title: 'NPA Rate',
+                  value: '${s.npaPercent.toStringAsFixed(1)}%',
                   icon: Icons.warning_amber_rounded,
                   iconColor: AppColors.error,
-                  subtitle: s.totalLoans > 0
-                      ? '${(s.totalNpa / s.totalLoans * 100).toStringAsFixed(1)}% of portfolio'
-                      : '0%',
+                  subtitle: 'Recovery: ${s.loanRecoveryRate.toStringAsFixed(1)}%',
                   subtitlePositiveFlag: false,
                 ),
               ),
@@ -353,6 +439,14 @@ class DashboardPage extends ConsumerWidget {
   }
 
   Widget _buildLoanChart() {
+    // Last 6 months labels (current month last)
+    final now = DateTime.now();
+    final monthLabels = List.generate(6, (i) {
+      final m = DateTime(now.year, now.month - 5 + i, 1);
+      const names = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+      return names[m.month - 1];
+    });
+
     return _ChartCard(
       title: 'Loan Portfolio Trend',
       subtitle: 'Last 6 months (NPR Lakhs)',
@@ -360,6 +454,8 @@ class DashboardPage extends ConsumerWidget {
         height: 160,
         child: LineChart(
           LineChartData(
+            minX: 0,
+            maxX: 5,
             gridData: FlGridData(
               show: true,
               drawVerticalLine: false,
@@ -373,13 +469,18 @@ class DashboardPage extends ConsumerWidget {
               bottomTitles: AxisTitles(
                 sideTitles: SideTitles(
                   showTitles: true,
+                  interval: 1,
+                  reservedSize: 22,
                   getTitlesWidget: (value, meta) {
-                    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
-                    if (value.toInt() < months.length) {
-                      return Text(months[value.toInt()],
-                          style: AppTextStyles.bodySmall);
+                    final idx = value.round();
+                    // Only show label exactly at integer spot positions 0–5
+                    if (value != value.roundToDouble() || idx < 0 || idx >= monthLabels.length) {
+                      return const SizedBox.shrink();
                     }
-                    return const SizedBox.shrink();
+                    return Padding(
+                      padding: const EdgeInsets.only(top: 4),
+                      child: Text(monthLabels[idx], style: AppTextStyles.bodySmall),
+                    );
                   },
                 ),
               ),
@@ -420,7 +521,24 @@ class DashboardPage extends ConsumerWidget {
     );
   }
 
-  Widget _buildSavingsChart() {
+  Widget _buildSavingsChart(List<DashboardSchemeDist> distribution) {
+    final colors = [
+      AppColors.primary, AppColors.secondary,
+      AppColors.accent, const Color(0xFF7C3AED), const Color(0xFFEC4899),
+    ];
+    final total = distribution.fold<double>(0, (s, d) => s + d.totalBalance);
+
+    if (distribution.isEmpty || total == 0) {
+      return _ChartCard(
+        title: 'Savings Distribution',
+        subtitle: 'By account type',
+        child: const SizedBox(
+          height: 160,
+          child: Center(child: Text('No savings data yet')),
+        ),
+      );
+    }
+
     return _ChartCard(
       title: 'Savings Distribution',
       subtitle: 'By account type',
@@ -433,40 +551,16 @@ class DashboardPage extends ConsumerWidget {
                 PieChartData(
                   sectionsSpace: 3,
                   centerSpaceRadius: 35,
-                  sections: [
-                    PieChartSectionData(
-                      value: 45,
-                      title: '45%',
-                      color: AppColors.primary,
+                  sections: distribution.asMap().entries.map((e) {
+                    final pct = (e.value.totalBalance / total * 100).round();
+                    return PieChartSectionData(
+                      value: e.value.totalBalance,
+                      title: '$pct%',
+                      color: colors[e.key % colors.length],
                       radius: 40,
-                      titleStyle: AppTextStyles.bodySmall
-                          .copyWith(color: Colors.white),
-                    ),
-                    PieChartSectionData(
-                      value: 30,
-                      title: '30%',
-                      color: AppColors.secondary,
-                      radius: 40,
-                      titleStyle: AppTextStyles.bodySmall
-                          .copyWith(color: Colors.white),
-                    ),
-                    PieChartSectionData(
-                      value: 15,
-                      title: '15%',
-                      color: AppColors.accent,
-                      radius: 40,
-                      titleStyle: AppTextStyles.bodySmall
-                          .copyWith(color: Colors.white),
-                    ),
-                    PieChartSectionData(
-                      value: 10,
-                      title: '10%',
-                      color: const Color(0xFF7C3AED),
-                      radius: 40,
-                      titleStyle: AppTextStyles.bodySmall
-                          .copyWith(color: Colors.white),
-                    ),
-                  ],
+                      titleStyle: AppTextStyles.bodySmall.copyWith(color: Colors.white, fontSize: 10),
+                    );
+                  }).toList(),
                 ),
               ),
             ),
@@ -474,12 +568,14 @@ class DashboardPage extends ConsumerWidget {
             Column(
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _LegendItem(color: AppColors.primary, label: 'Regular', value: '45%'),
-                _LegendItem(color: AppColors.secondary, label: 'Fixed Deposit', value: '30%'),
-                _LegendItem(color: AppColors.accent, label: 'Recurring', value: '15%'),
-                _LegendItem(color: const Color(0xFF7C3AED), label: 'Others', value: '10%'),
-              ],
+              children: distribution.asMap().entries.map((e) {
+                final pct = (e.value.totalBalance / total * 100).round();
+                return _LegendItem(
+                  color: colors[e.key % colors.length],
+                  label: e.value.schemeType,
+                  value: '$pct% (${e.value.accountCount})',
+                );
+              }).toList(),
             ),
           ],
         ),
@@ -487,109 +583,114 @@ class DashboardPage extends ConsumerWidget {
     );
   }
 
-  Widget _buildRecentTransactions() {
-    final transactions = [
-      _TxnItem(name: 'Ram Shrestha', type: 'Deposit', amount: '+NPR 25,000', isCredit: true, time: '10:32 AM'),
-      _TxnItem(name: 'Sita Tamang', type: 'EMI Payment', amount: '-NPR 11,634', isCredit: false, time: '10:15 AM'),
-      _TxnItem(name: 'Hari Poudel', type: 'Withdrawal', amount: '-NPR 10,000', isCredit: false, time: '09:52 AM'),
-      _TxnItem(name: 'Kamala Gurung', type: 'Deposit', amount: '+NPR 50,000', isCredit: true, time: '09:40 AM'),
-    ];
+  String _fmtTime(DateTime dt) {
+    final local = dt.toLocal();
+    final h = local.hour % 12 == 0 ? 12 : local.hour % 12;
+    final m = local.minute.toString().padLeft(2, '0');
+    final ampm = local.hour < 12 ? 'AM' : 'PM';
+    return '$h:$m $ampm';
+  }
 
+  String _fmtCompact(double v) =>
+      v.toStringAsFixed(0).replaceAllMapped(
+          RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]},');
+
+  Widget _buildRecentTransactions(List<DashboardRecentTxn> transactions) {
+    if (transactions.isEmpty) {
+      return _SectionCard(
+        title: 'Recent Transactions',
+        child: const Padding(
+          padding: EdgeInsets.symmetric(vertical: AppDimensions.lg),
+          child: Center(child: Text('No transactions yet')),
+        ),
+      );
+    }
     return _SectionCard(
       title: 'Recent Transactions',
       child: Column(
-        children: transactions.map((t) => _buildTxnRow(t)).toList(),
-      ),
-    );
-  }
-
-  Widget _buildTxnRow(_TxnItem txn) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: AppDimensions.sm),
-      child: Row(
-        children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: txn.isCredit
-                  ? AppColors.secondary.withOpacity(0.1)
-                  : AppColors.error.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(AppDimensions.radiusMd),
-            ),
-            child: Icon(
-              txn.isCredit
-                  ? Icons.arrow_downward_rounded
-                  : Icons.arrow_upward_rounded,
-              color: txn.isCredit ? AppColors.secondary : AppColors.error,
-              size: 18,
-            ),
-          ),
-          const SizedBox(width: AppDimensions.sm),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(txn.name, style: AppTextStyles.titleSmall),
-                Text(txn.type,
-                    style: AppTextStyles.bodySmall
-                        .copyWith(color: AppColors.textSecondary)),
-              ],
-            ),
-          ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
+        children: transactions.map((t) => Padding(
+          padding: const EdgeInsets.symmetric(vertical: AppDimensions.sm),
+          child: Row(
             children: [
-              Text(
-                txn.amount,
-                style: AppTextStyles.amountSmall.copyWith(
-                  color:
-                      txn.isCredit ? AppColors.creditAmount : AppColors.debitAmount,
+              Container(
+                width: 40, height: 40,
+                decoration: BoxDecoration(
+                  color: t.isCredit
+                      ? AppColors.secondary.withValues(alpha: 0.1)
+                      : AppColors.error.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(AppDimensions.radiusMd),
+                ),
+                child: Icon(
+                  t.isCredit ? Icons.arrow_downward_rounded : Icons.arrow_upward_rounded,
+                  color: t.isCredit ? AppColors.secondary : AppColors.error,
+                  size: 18,
                 ),
               ),
-              Text(txn.time,
-                  style: AppTextStyles.bodySmall
-                      .copyWith(color: AppColors.textSecondary)),
+              const SizedBox(width: AppDimensions.sm),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(t.memberName, style: AppTextStyles.titleSmall,
+                        maxLines: 1, overflow: TextOverflow.ellipsis),
+                    Text(t.transactionType,
+                        style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondary)),
+                  ],
+                ),
+              ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    '${t.isCredit ? '+' : '-'}NPR ${_fmtCompact(t.amount)}',
+                    style: AppTextStyles.amountSmall.copyWith(
+                      color: t.isCredit ? AppColors.creditAmount : AppColors.debitAmount,
+                    ),
+                  ),
+                  Text(_fmtTime(t.transactionDate),
+                      style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondary)),
+                ],
+              ),
             ],
           ),
-        ],
+        )).toList(),
       ),
     );
   }
 
-  Widget _buildPendingApprovals(BuildContext context) {
+  Widget _buildPendingApprovals(BuildContext context, List<DashboardPendingItem> items) {
     return _SectionCard(
       title: 'Pending Approvals',
       titleAction: TextButton(
-        onPressed: () {},
-        child:
-            Text('View All', style: AppTextStyles.labelSmall.copyWith(color: AppColors.primary)),
+        onPressed: () => context.go(AppRoutes.members),
+        child: Text('View All', style: AppTextStyles.labelSmall.copyWith(color: AppColors.primary)),
       ),
-      child: Column(
-        children: [
-          _ApprovalItem(
-            name: 'Loan Application â€” Ram Shrestha',
-            amount: 'NPR 5,00,000',
-            urgency: 'URGENT',
-            age: '5h 23m',
-          ),
-          const Divider(height: 1),
-          _ApprovalItem(
-            name: 'Member Registration â€” Sita Magar',
-            amount: 'New Member',
-            urgency: 'NORMAL',
-            age: '2h 15m',
-          ),
-          const Divider(height: 1),
-          _ApprovalItem(
-            name: 'Large Withdrawal â€” Hari Poudel',
-            amount: 'NPR 2,00,000',
-            urgency: 'URGENT',
-            age: '4h 10m',
-          ),
-        ],
-      ),
+      child: items.isEmpty
+          ? const Padding(
+              padding: EdgeInsets.symmetric(vertical: AppDimensions.lg),
+              child: Center(child: Text('No pending approvals 🎉')),
+            )
+          : Column(
+              children: items.asMap().entries.map((e) => Column(
+                children: [
+                  if (e.key > 0) const Divider(height: 1),
+                  _ApprovalItem(
+                    name: e.value.title,
+                    amount: e.value.subtitle,
+                    urgency: e.value.urgency,
+                    age: _timeAgo(e.value.createdAt),
+                  ),
+                ],
+              )).toList(),
+            ),
     );
+  }
+
+  String _timeAgo(DateTime dt) {
+    final diff = DateTime.now().difference(dt);
+    if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
+    if (diff.inHours < 24) return '${diff.inHours}h ago';
+    return '${diff.inDays}d ago';
   }
 }
 

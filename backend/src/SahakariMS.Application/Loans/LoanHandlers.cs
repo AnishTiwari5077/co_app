@@ -183,3 +183,58 @@ public class GetEmiScheduleQueryHandler(IAppDbContext db)
         return Result<List<EmiScheduleDto>>.Success(schedule);
     }
 }
+
+// ── Get Loans Query ───────────────────────────────────────────────────────────
+
+public record LoanListDto(
+    Guid Id, string LoanNumber, string MemberName, string ProductName,
+    decimal AppliedAmount, decimal OutstandingBalance, decimal EmiAmount,
+    string Status, DateOnly? NextEmiDate, int OverdueDays);
+
+public record GetLoansQuery(
+    int Page = 1, int PageSize = 20, string? Search = null,
+    string? Status = null, Guid? BranchId = null)
+    : IRequest<Result<PagedResult<LoanListDto>>>;
+
+public class GetLoansQueryHandler(IAppDbContext db)
+    : IRequestHandler<GetLoansQuery, Result<PagedResult<LoanListDto>>>
+{
+    public async Task<Result<PagedResult<LoanListDto>>> Handle(GetLoansQuery q, CancellationToken ct)
+    {
+        var query = db.Loans.AsNoTracking()
+            .Include(l => l.Member)
+            .Include(l => l.Product)
+            .Where(l => !l.IsDeleted);
+
+        if (!string.IsNullOrEmpty(q.Search))
+            query = query.Where(l =>
+                l.LoanNumber.Contains(q.Search) ||
+                l.Member.FirstName.Contains(q.Search) ||
+                l.Member.LastName.Contains(q.Search));
+
+        if (!string.IsNullOrEmpty(q.Status))
+            query = query.Where(l => l.Status == q.Status);
+
+        if (q.BranchId.HasValue)
+            query = query.Where(l => l.BranchId == q.BranchId);
+
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var total = await query.CountAsync(ct);
+        var items = await query
+            .OrderByDescending(l => l.CreatedAt)
+            .Skip((q.Page - 1) * q.PageSize).Take(Math.Min(q.PageSize, 100))
+            .Select(l => new LoanListDto(
+                l.Id, l.LoanNumber,
+                l.Member.FirstName + (l.Member.MiddleName != null ? " " + l.Member.MiddleName : "") + " " + l.Member.LastName,
+                l.Product.ProductName,
+                l.AppliedAmount, l.OutstandingBalance, l.EmiAmount,
+                l.Status, l.NextEmiDate,
+                l.Status == "Active" && l.NextEmiDate.HasValue && l.NextEmiDate.Value < today
+                    ? today.DayNumber - l.NextEmiDate.Value.DayNumber : 0))
+            .ToListAsync(ct);
+
+        return Result<PagedResult<LoanListDto>>.Success(
+            PagedResult<LoanListDto>.Create(items, q.Page, q.PageSize, total));
+    }
+}
+

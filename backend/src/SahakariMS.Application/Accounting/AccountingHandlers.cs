@@ -14,6 +14,8 @@ public record TrialBalanceDto(DateOnly AsOfDate, string BranchName,
     List<TrialBalanceRowDto> Accounts, decimal TotalDebit, decimal TotalCredit, bool IsBalanced);
 public record TrialBalanceRowDto(string AccountCode, string AccountName, string AccountType,
     decimal DebitBalance, decimal CreditBalance);
+public record ChartOfAccountDto(Guid Id, string AccountCode, string AccountName,
+    string AccountType, string AccountGroup, decimal CurrentBalance, bool AllowDirectPosting);
 public record DashboardSummaryDto(
     int TotalMembers, int ActiveLoans, decimal TotalSavingsBalance,
     decimal TotalLoanOutstanding, decimal TodayDeposits, decimal TodayWithdrawals,
@@ -139,5 +141,121 @@ public class GetDashboardSummaryQueryHandler(IAppDbContext db, ICacheService cac
         catch { /* Redis unavailable — skip cache write */ }
 
         return Result<DashboardSummaryDto>.Success(summary);
+    }
+}
+
+// ── Get Chart of Accounts Query ────────────────────────────────────────────────
+
+public record GetChartOfAccountsQuery(string? Search = null, string? AccountType = null, bool PostableOnly = true)
+    : IRequest<Result<List<ChartOfAccountDto>>>;
+
+public class GetChartOfAccountsQueryHandler(IAppDbContext db)
+    : IRequestHandler<GetChartOfAccountsQuery, Result<List<ChartOfAccountDto>>>
+{
+    public async Task<Result<List<ChartOfAccountDto>>> Handle(GetChartOfAccountsQuery q, CancellationToken ct)
+    {
+        var query = db.ChartOfAccounts.AsNoTracking().Where(a => a.IsActive && !a.IsDeleted);
+
+        if (q.PostableOnly)
+            query = query.Where(a => a.AllowDirectPosting);
+
+        if (!string.IsNullOrEmpty(q.Search))
+            query = query.Where(a =>
+                a.AccountCode.Contains(q.Search) ||
+                a.AccountName.Contains(q.Search));
+
+        if (!string.IsNullOrEmpty(q.AccountType))
+            query = query.Where(a => a.AccountType == q.AccountType);
+
+        var items = await query
+            .OrderBy(a => a.AccountCode)
+            .Select(a => new ChartOfAccountDto(
+                a.Id, a.AccountCode, a.AccountName,
+                a.AccountType, a.AccountGroup, a.CurrentBalance, a.AllowDirectPosting))
+            .ToListAsync(ct);
+
+        return Result<List<ChartOfAccountDto>>.Success(items);
+    }
+}
+
+// ── Dashboard Activity Query ───────────────────────────────────────────────────
+
+public record DashboardRecentTxnDto(
+    string MemberName, string TransactionType, decimal Amount,
+    string AccountNumber, DateTime TransactionDate);
+
+public record DashboardSchemeDistDto(string SchemeType, decimal TotalBalance, int AccountCount);
+
+public record DashboardPendingItemDto(
+    string Title, string Subtitle, string ItemType, string Urgency, DateTime CreatedAt);
+
+public record DashboardActivityDto(
+    IReadOnlyList<DashboardRecentTxnDto> RecentTransactions,
+    IReadOnlyList<DashboardSchemeDistDto> SavingsDistribution,
+    IReadOnlyList<DashboardPendingItemDto> PendingItems);
+
+public record GetDashboardActivityQuery() : IRequest<Result<DashboardActivityDto>>;
+
+public class GetDashboardActivityQueryHandler(IAppDbContext db)
+    : IRequestHandler<GetDashboardActivityQuery, Result<DashboardActivityDto>>
+{
+    public async Task<Result<DashboardActivityDto>> Handle(GetDashboardActivityQuery q, CancellationToken ct)
+    {
+        // ── Recent transactions (last 10 across all savings accounts) ──────────
+        var recentTxns = await db.SavingTransactions.AsNoTracking()
+            .Where(t => !t.IsDeleted && !t.IsReversed)
+            .OrderByDescending(t => t.TransactionDate)
+            .Take(10)
+            .Select(t => new DashboardRecentTxnDto(
+                t.Account!.Member!.FirstName + " " + t.Account.Member.LastName,
+                t.TransactionType,
+                t.Amount,
+                t.Account.AccountNumber,
+                t.TransactionDate))
+            .ToListAsync(ct);
+
+        // ── Savings distribution by scheme type ───────────────────────────────
+        var dist = await db.SavingAccounts.AsNoTracking()
+            .Where(a => !a.IsDeleted && a.Status == "Active")
+            .GroupBy(a => a.Scheme!.SchemeType)
+            .Select(g => new DashboardSchemeDistDto(
+                g.Key ?? "Other",
+                g.Sum(a => a.CurrentBalance),
+                g.Count()))
+            .ToListAsync(ct);
+
+        // ── Pending approvals (pending members + pending loan applications) ───
+        var pendingMembers = await db.Members.AsNoTracking()
+            .Where(m => !m.IsDeleted && m.Status == "Pending")
+            .OrderByDescending(m => m.CreatedAt)
+            .Take(5)
+            .Select(m => new DashboardPendingItemDto(
+                "Member Registration – " + m.FirstName + " " + m.LastName,
+                "New Member",
+                "Member",
+                "NORMAL",
+                m.CreatedAt))
+            .ToListAsync(ct);
+
+        var pendingLoans = await db.Loans.AsNoTracking()
+            .Where(l => !l.IsDeleted && l.Status == "Pending")
+            .OrderByDescending(l => l.CreatedAt)
+            .Take(5)
+            .Select(l => new DashboardPendingItemDto(
+                "Loan Application – " + l.Member!.FirstName + " " + l.Member.LastName,
+                "NPR " + l.AppliedAmount.ToString("N0"),
+                "Loan",
+                l.AppliedAmount >= 500000 ? "URGENT" : "NORMAL",
+                l.CreatedAt))
+            .ToListAsync(ct);
+
+        var pending = pendingLoans
+            .Concat(pendingMembers)
+            .OrderByDescending(p => p.CreatedAt)
+            .Take(5)
+            .ToList();
+
+        return Result<DashboardActivityDto>.Success(
+            new DashboardActivityDto(recentTxns, dist, pending));
     }
 }

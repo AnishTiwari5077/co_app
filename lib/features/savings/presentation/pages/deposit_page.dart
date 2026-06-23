@@ -7,6 +7,7 @@ import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/theme/app_dimensions.dart';
 import '../../../../shared/widgets/app_button.dart';
 import '../../../../shared/widgets/app_text_field.dart';
+import '../../../../core/api/api_client.dart';
 import '../providers/savings_provider.dart';
 
 class DepositPage extends ConsumerStatefulWidget {
@@ -22,9 +23,39 @@ class _DepositPageState extends ConsumerState<DepositPage> {
   final _amountCtrl = TextEditingController();
   final _narrationCtrl = TextEditingController();
   final _chequeCtrl = TextEditingController();
-  bool _isLoading = false;
   String _selectedMode = 'Cash';
   final _modes = ['Cash', 'Cheque', 'Bank Transfer', 'Online'];
+
+  // Real account info
+  String _accountNumber = '';
+  String _memberName = '';
+  double _currentBalance = 0;
+  bool _loadingAccount = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchAccountInfo();
+  }
+
+  Future<void> _fetchAccountInfo() async {
+    try {
+      final dio = ref.read(dioProvider);
+      final res = await dio.get('/api/v1/savings/accounts/${widget.accountId}');
+      final envelope = res.data as Map<String, dynamic>;
+      final data = envelope['data'] as Map<String, dynamic>? ?? envelope;
+      if (mounted) {
+        setState(() {
+          _accountNumber = data['accountNumber'] as String? ?? widget.accountId;
+          _memberName = data['memberName'] as String? ?? '';
+          _currentBalance = (data['balance'] as num?)?.toDouble() ?? 0;
+          _loadingAccount = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) setState(() => _loadingAccount = false);
+    }
+  }
 
   @override
   void dispose() {
@@ -56,7 +87,7 @@ class _DepositPageState extends ConsumerState<DepositPage> {
   }
 
   void _showSuccess(dynamic result) {
-    final txnId = result?.transactionId ?? 'TXN-${DateTime.now().millisecondsSinceEpoch}';
+    final receiptNo = result?.receiptNumber ?? 'RCP-${DateTime.now().millisecondsSinceEpoch}';
     final balance = result?.balanceAfter ?? 0.0;
     showDialog(
       context: context,
@@ -82,7 +113,7 @@ class _DepositPageState extends ConsumerState<DepositPage> {
                 style: AppTextStyles.bodySmall.copyWith(color: AppColors.secondary,
                     fontWeight: FontWeight.w600)),
             const SizedBox(height: 4),
-            Text('Receipt: $txnId',
+            Text('Receipt: $receiptNo',
                 style: AppTextStyles.bodySmall.copyWith(color: AppColors.primary)),
             const SizedBox(height: AppDimensions.lg),
             Row(
@@ -120,7 +151,7 @@ class _DepositPageState extends ConsumerState<DepositPage> {
         child: ListView(
           padding: const EdgeInsets.all(AppDimensions.md),
           children: [
-            // Account info
+            // Account info header
             Container(
               padding: const EdgeInsets.all(AppDimensions.md),
               decoration: BoxDecoration(
@@ -134,14 +165,23 @@ class _DepositPageState extends ConsumerState<DepositPage> {
                   const Icon(Icons.savings_rounded, color: Colors.white, size: 32),
                   const SizedBox(width: AppDimensions.md),
                   Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(widget.accountId, style: AppTextStyles.titleSmall.copyWith(color: Colors.white)),
-                        Text('Ram Bahadur Shrestha', style: AppTextStyles.bodySmall.copyWith(color: Colors.white70)),
-                        Text('Current Balance: NPR 45,000.00', style: AppTextStyles.bodySmall.copyWith(color: Colors.white70)),
-                      ],
-                    ),
+                    child: _loadingAccount
+                        ? const SizedBox(
+                            height: 48,
+                            child: Center(child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)))
+                        : Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(_accountNumber,
+                                  style: AppTextStyles.titleSmall.copyWith(color: Colors.white)),
+                              Text(_memberName,
+                                  style: AppTextStyles.bodySmall.copyWith(color: Colors.white70)),
+                              Text(
+                                'Current Balance: NPR ${_currentBalance.toStringAsFixed(2).replaceAllMapped(RegExp(r"(\d{1,3})(?=(\d{3})+(?!\d))"), (m) => "${m[1]},")}',
+                                style: AppTextStyles.bodySmall.copyWith(color: Colors.white70),
+                              ),
+                            ],
+                          ),
                   ),
                 ],
               ),

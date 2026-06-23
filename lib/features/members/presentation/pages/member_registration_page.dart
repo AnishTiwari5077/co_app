@@ -10,6 +10,7 @@ import '../../../../shared/widgets/app_text_field.dart';
 import '../providers/member_provider.dart';
 import '../../../../core/api/repositories/member_repository.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
+import '../../../dashboard/presentation/providers/dashboard_provider.dart';
 
 class MemberRegistrationPage extends ConsumerStatefulWidget {
   const MemberRegistrationPage({super.key});
@@ -23,7 +24,6 @@ class _MemberRegistrationPageState
     extends ConsumerState<MemberRegistrationPage> {
   final _formKey = GlobalKey<FormState>();
   int _currentStep = 0;
-  bool _isLoading = false;
 
   // Controllers
   final _firstNameCtrl = TextEditingController();
@@ -101,7 +101,6 @@ class _MemberRegistrationPageState
           backgroundColor: Colors.red));
       return;
     }
-    if (mounted) setState(() => _isLoading = true);
     final request = RegisterMemberRequest(
       firstName: firstName,
       lastName: lastName,
@@ -119,11 +118,12 @@ class _MemberRegistrationPageState
     );
     final success = await ref.read(registerMemberProvider.notifier).submit(request);
     if (mounted) {
-      setState(() => _isLoading = false);
+      setState(() {});
       if (success) {
         final memberId = ref.read(registerMemberProvider).newMemberId ?? '';
         _showSuccessDialog(memberId);
         ref.invalidate(memberListProvider);
+        ref.invalidate(dashboardSummaryProvider); // refresh dashboard KPIs
       } else {
         final error = ref.read(registerMemberProvider).error ?? 'Registration failed';
         ScaffoldMessenger.of(context).showSnackBar(

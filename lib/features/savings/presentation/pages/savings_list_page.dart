@@ -7,15 +7,76 @@ import '../../../../core/theme/app_dimensions.dart';
 import '../../../../core/router/app_routes.dart';
 import '../../../../shared/widgets/status_badge.dart';
 import '../../../../shared/widgets/common_widgets.dart';
+import '../../../../core/api/api_client.dart';
 
-final _mockAccounts = [
-  _AccountRow(no: 'SAV-2079-00001', memberName: 'Ram Bahadur Shrestha', type: 'Regular Savings', balance: 'NPR 45,000', status: 'Active', lastTxn: '15 Ashad 2081'),
-  _AccountRow(no: 'SAV-2079-00002', memberName: 'Sita Tamang', type: 'Regular Savings', balance: 'NPR 12,500', status: 'Active', lastTxn: '10 Ashad 2081'),
-  _AccountRow(no: 'FD-2080-00123', memberName: 'Ram Bahadur Shrestha', type: 'Fixed Deposit', balance: 'NPR 2,00,000', status: 'Active', lastTxn: '01 Poush 2080'),
-  _AccountRow(no: 'RD-2081-00045', memberName: 'Kamala Gurung', type: 'Recurring Deposit', balance: 'NPR 30,000', status: 'Active', lastTxn: '01 Ashad 2081'),
-  _AccountRow(no: 'SAV-2080-00088', memberName: 'Deepak Thapa', type: 'Regular Savings', balance: 'NPR 60,000', status: 'Active', lastTxn: '05 Ashad 2081'),
-  _AccountRow(no: 'SAV-2078-00015', memberName: 'Sunita Karki', type: 'Regular Savings', balance: '—', status: 'Dormant', lastTxn: '12 Mangsir 2079'),
-];
+// ── Model ─────────────────────────────────────────────────────────────────────
+
+class SavingAccountItem {
+  final String id, accountNumber, memberName, accountType, status;
+  final double balance;
+  final String? lastTransactionDate;
+
+  SavingAccountItem({
+    required this.id, required this.accountNumber, required this.memberName,
+    required this.accountType, required this.balance,
+    required this.status, this.lastTransactionDate,
+  });
+
+  factory SavingAccountItem.fromJson(Map<String, dynamic> j) => SavingAccountItem(
+    id: j['id'] as String? ?? '',
+    accountNumber: j['accountNumber'] as String? ?? '',
+    memberName: j['memberName'] as String? ?? '',
+    accountType: j['accountType'] as String? ?? 'Regular',
+    balance: (j['balance'] as num?)?.toDouble() ?? 0,
+    status: j['status'] as String? ?? 'Active',
+    lastTransactionDate: j['lastTransactionDate'] as String?,
+  );
+}
+
+// ── Provider ──────────────────────────────────────────────────────────────────
+
+class _SavingsState {
+  final List<SavingAccountItem> items;
+  final bool isLoading;
+  final String? error;
+  const _SavingsState({this.items = const [], this.isLoading = false, this.error});
+  _SavingsState copyWith({List<SavingAccountItem>? items, bool? isLoading, String? error}) =>
+      _SavingsState(
+        items: items ?? this.items,
+        isLoading: isLoading ?? this.isLoading,
+        error: error,
+      );
+}
+
+class _SavingsNotifier extends StateNotifier<_SavingsState> {
+  final dynamic _dio;
+  _SavingsNotifier(this._dio) : super(const _SavingsState()) {
+    load();
+  }
+
+  Future<void> load({String? search, String? accountType}) async {
+    state = state.copyWith(isLoading: true, error: null);
+    try {
+      final response = await _dio.get('/api/v1/savings/accounts', queryParameters: {
+        'pageSize': 50,
+        if (search != null && search.isNotEmpty) 'search': search,
+        if (accountType != null) 'accountType': accountType,
+      });
+      final envelope = response.data as Map<String, dynamic>;
+      final raw = (envelope['data'] as List<dynamic>? ?? []);
+      final items = raw.map((e) => SavingAccountItem.fromJson(e as Map<String, dynamic>)).toList();
+      state = state.copyWith(isLoading: false, items: items);
+    } catch (e) {
+      state = state.copyWith(isLoading: false, error: e.toString());
+    }
+  }
+}
+
+final _savingsListProvider = StateNotifierProvider.autoDispose<_SavingsNotifier, _SavingsState>((ref) {
+  return _SavingsNotifier(ref.watch(dioProvider));
+});
+
+// ── Page ──────────────────────────────────────────────────────────────────────
 
 class SavingsListPage extends ConsumerStatefulWidget {
   const SavingsListPage({super.key});
@@ -45,12 +106,35 @@ class _SavingsListPageState extends ConsumerState<SavingsListPage>
 
   @override
   Widget build(BuildContext context) {
+    final state = ref.watch(_savingsListProvider);
+    final all = state.items;
+
+    List<SavingAccountItem> _filter(List<SavingAccountItem> src) {
+      if (_query.isEmpty) return src;
+      final q = _query.toLowerCase();
+      return src.where((a) =>
+        a.accountNumber.toLowerCase().contains(q) ||
+        a.memberName.toLowerCase().contains(q)).toList();
+    }
+
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
         title: Text('Savings', style: AppTextStyles.titleLarge),
         backgroundColor: AppColors.surface,
         elevation: 0,
+        actions: [
+          TextButton.icon(
+            onPressed: () async {
+              await context.push('/savings/open');
+              // Refresh list when returning from open account page
+              if (mounted) ref.read(_savingsListProvider.notifier).load();
+            },
+            icon: const Icon(Icons.add_rounded, size: 18),
+            label: const Text('Open Account'),
+            style: TextButton.styleFrom(foregroundColor: AppColors.secondary),
+          ),
+        ],
         bottom: TabBar(
           controller: _tabController,
           labelColor: AppColors.primary,
@@ -66,113 +150,177 @@ class _SavingsListPageState extends ConsumerState<SavingsListPage>
           ],
         ),
       ),
-      body: Column(
+      body: state.isLoading && all.isEmpty
+          ? const Center(child: CircularProgressIndicator())
+          : state.error != null && all.isEmpty
+              ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.wifi_off_rounded, color: AppColors.error, size: 48),
+                      const SizedBox(height: AppDimensions.md),
+                      Text('Could not load savings', style: AppTextStyles.titleMedium),
+                      const SizedBox(height: AppDimensions.xs),
+                      Text(state.error!, style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondary)),
+                      const SizedBox(height: AppDimensions.md),
+                      TextButton.icon(
+                        onPressed: () => ref.read(_savingsListProvider.notifier).load(),
+                        icon: const Icon(Icons.refresh_rounded),
+                        label: const Text('Retry'),
+                      ),
+                    ],
+                  ),
+                )
+              : Column(
+                  children: [
+                    _buildSummary(all),
+                    Container(
+                      color: AppColors.surface,
+                      padding: const EdgeInsets.fromLTRB(
+                          AppDimensions.md, 0, AppDimensions.md, AppDimensions.md),
+                      child: TextField(
+                        controller: _searchCtrl,
+                        onChanged: (v) => setState(() => _query = v),
+                        decoration: InputDecoration(
+                          hintText: 'Search by account no. or member...',
+                          prefixIcon: const Icon(Icons.search_rounded, size: 20),
+                          suffixIcon: _query.isNotEmpty
+                              ? IconButton(
+                                  icon: const Icon(Icons.close_rounded, size: 18),
+                                  onPressed: () {
+                                    _searchCtrl.clear();
+                                    setState(() => _query = '');
+                                  })
+                              : null,
+                        ),
+                      ),
+                    ),
+                    Expanded(
+                      child: RefreshIndicator(
+                        onRefresh: () => ref.read(_savingsListProvider.notifier).load(),
+                        child: TabBarView(
+                          controller: _tabController,
+                          children: [
+                            _buildList(_filter(all)),
+                            _buildList(_filter(all.where((a) => a.accountType == 'Regular').toList())),
+                            _buildList(_filter(all.where((a) => a.accountType == 'FixedDeposit').toList())),
+                            _buildList(_filter(all.where((a) => a.accountType == 'RecurringDeposit').toList())),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+    floatingActionButton: FloatingActionButton.extended(
+      onPressed: () async {
+        await context.push('/savings/open');
+        if (mounted) ref.read(_savingsListProvider.notifier).load();
+      },
+      backgroundColor: AppColors.secondary,
+      foregroundColor: Colors.white,
+      icon: const Icon(Icons.add_rounded),
+      label: const Text('Open Account'),
+    ),
+    );
+  }
+
+  Widget _buildSummary(List<SavingAccountItem> all) {
+    final totalSavings = all.fold<double>(0, (s, a) => s + a.balance);
+    final activeCount = all.where((a) => a.status == 'Active').length;
+    final fdTotal = all.where((a) => a.accountType == 'FixedDeposit')
+        .fold<double>(0, (s, a) => s + a.balance);
+    return Container(
+      color: AppColors.surface,
+      padding: const EdgeInsets.all(AppDimensions.md),
+      child: Row(
         children: [
-          // Summary bar
-          Container(
-            color: AppColors.surface,
-            padding: const EdgeInsets.all(AppDimensions.md),
-            child: Row(
-              children: [
-                _SumCard(label: 'Total Savings', value: 'NPR 4.5Cr', color: AppColors.secondary),
-                const SizedBox(width: AppDimensions.sm),
-                _SumCard(label: 'Active Accounts', value: '1,245', color: AppColors.primary),
-                const SizedBox(width: AppDimensions.sm),
-                _SumCard(label: 'FD Portfolio', value: 'NPR 1.2Cr', color: AppColors.accent),
-              ],
-            ),
-          ),
-          // Search
-          Container(
-            color: AppColors.surface,
-            padding: const EdgeInsets.fromLTRB(
-                AppDimensions.md, 0, AppDimensions.md, AppDimensions.md),
-            child: TextField(
-              controller: _searchCtrl,
-              onChanged: (v) => setState(() => _query = v),
-              decoration: InputDecoration(
-                hintText: 'Search by account no. or member...',
-                prefixIcon: const Icon(Icons.search_rounded, size: 20),
-                suffixIcon: _query.isNotEmpty
-                    ? IconButton(
-                        icon: const Icon(Icons.close_rounded, size: 18),
-                        onPressed: () {
-                          _searchCtrl.clear();
-                          setState(() => _query = '');
-                        })
-                    : null,
-              ),
-            ),
-          ),
-          Expanded(
-            child: TabBarView(
-              controller: _tabController,
-              children: [
-                _buildList(_mockAccounts),
-                _buildList(_mockAccounts.where((a) => a.type == 'Regular Savings').toList()),
-                _buildList(_mockAccounts.where((a) => a.type == 'Fixed Deposit').toList()),
-                _buildList(_mockAccounts.where((a) => a.type == 'Recurring Deposit').toList()),
-              ],
-            ),
-          ),
+          _SumCard(label: 'Total Savings', value: _fmt(totalSavings), color: AppColors.secondary),
+          const SizedBox(width: AppDimensions.sm),
+          _SumCard(label: 'Active Accounts', value: '$activeCount', color: AppColors.primary),
+          const SizedBox(width: AppDimensions.sm),
+          _SumCard(label: 'FD Portfolio', value: _fmt(fdTotal), color: AppColors.accent),
         ],
       ),
     );
   }
 
-  Widget _buildList(List<_AccountRow> accounts) {
-    final filtered = _query.isEmpty
-        ? accounts
-        : accounts.where((a) =>
-            a.no.toLowerCase().contains(_query.toLowerCase()) ||
-            a.memberName.toLowerCase().contains(_query.toLowerCase())).toList();
-
-    if (filtered.isEmpty) {
+  Widget _buildList(List<SavingAccountItem> accounts) {
+    if (accounts.isEmpty) {
       return const EmptyView(
           icon: Icons.savings_outlined,
           title: 'No accounts found',
           subtitle: 'Try adjusting your search');
     }
-
     return ListView.separated(
       padding: const EdgeInsets.all(AppDimensions.md),
-      itemCount: filtered.length,
+      itemCount: accounts.length,
       separatorBuilder: (_, __) => const SizedBox(height: AppDimensions.sm),
-      itemBuilder: (context, i) => _AccountCard(account: filtered[i]),
+      itemBuilder: (context, i) => _AccountCard(account: accounts[i]),
     );
+  }
+
+  String _fmt(double v) {
+    if (v >= 10000000) return 'NPR ${(v / 10000000).toStringAsFixed(1)}Cr';
+    if (v >= 100000) return 'NPR ${(v / 100000).toStringAsFixed(1)}L';
+    if (v >= 1000) return 'NPR ${(v / 1000).toStringAsFixed(0)}K';
+    return 'NPR ${v.toStringAsFixed(0)}';
   }
 }
 
 class _AccountCard extends StatelessWidget {
-  final _AccountRow account;
+  final SavingAccountItem account;
   const _AccountCard({required this.account});
 
   Color get _typeColor {
-    switch (account.type) {
-      case 'Fixed Deposit':
-        return AppColors.accent;
-      case 'Recurring Deposit':
-        return const Color(0xFF7C3AED);
-      default:
-        return AppColors.secondary;
+    switch (account.accountType) {
+      case 'FixedDeposit': return AppColors.accent;
+      case 'RecurringDeposit': return const Color(0xFF7C3AED);
+      default: return AppColors.secondary;
     }
   }
 
   IconData get _typeIcon {
-    switch (account.type) {
-      case 'Fixed Deposit':
-        return Icons.lock_clock_outlined;
-      case 'Recurring Deposit':
-        return Icons.repeat_rounded;
-      default:
-        return Icons.savings_rounded;
+    switch (account.accountType) {
+      case 'FixedDeposit': return Icons.lock_clock_outlined;
+      case 'RecurringDeposit': return Icons.repeat_rounded;
+      default: return Icons.savings_rounded;
     }
+  }
+
+  String get _typeLabel {
+    switch (account.accountType) {
+      case 'FixedDeposit': return 'Fixed Deposit';
+      case 'RecurringDeposit': return 'Recurring Deposit';
+      default: return 'Regular Savings';
+    }
+  }
+
+  String _fmtBalance(double v) {
+    final s = v.toStringAsFixed(2);
+    final parts = s.split('.');
+    final intPart = parts[0];
+    if (intPart.length <= 3) return 'NPR $s';
+    final buf = StringBuffer('NPR ');
+    for (int i = 0; i < intPart.length; i++) {
+      if (i != 0 && (intPart.length - i) % 2 == 0 && intPart.length > 3) buf.write(',');
+      buf.write(intPart[i]);
+    }
+    buf.write('.${parts[1]}');
+    return buf.toString();
+  }
+
+  String _fmtDate(String? iso) {
+    if (iso == null) return '—';
+    try {
+      final d = DateTime.parse(iso);
+      return '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year}';
+    } catch (_) { return iso; }
   }
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: () => context.go('${AppRoutes.savings}/${account.no}'),
+      onTap: () => context.push('${AppRoutes.savings}/${account.id}'),
       child: Container(
         padding: const EdgeInsets.all(AppDimensions.md),
         decoration: BoxDecoration(
@@ -202,16 +350,15 @@ class _AccountCard extends StatelessWidget {
                       overflow: TextOverflow.ellipsis),
                   Row(
                     children: [
-                      Text(account.no,
+                      Text(account.accountNumber,
                           style: AppTextStyles.bodySmall
                               .copyWith(color: AppColors.primary, fontWeight: FontWeight.w600)),
                       const Text(' • ', style: TextStyle(color: AppColors.textSecondary)),
-                      Text(account.type, style: AppTextStyles.bodySmall),
+                      Text(_typeLabel, style: AppTextStyles.bodySmall),
                     ],
                   ),
-                  Text('Last: ${account.lastTxn}',
-                      style: AppTextStyles.bodySmall
-                          .copyWith(color: AppColors.textSecondary)),
+                  Text('Last: ${_fmtDate(account.lastTransactionDate)}',
+                      style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondary)),
                 ],
               ),
             ),
@@ -220,7 +367,7 @@ class _AccountCard extends StatelessWidget {
               children: [
                 StatusBadge(status: account.status),
                 const SizedBox(height: 4),
-                Text(account.balance,
+                Text(_fmtBalance(account.balance),
                     style: AppTextStyles.amountSmall
                         .copyWith(color: AppColors.secondary, fontWeight: FontWeight.w700)),
               ],
@@ -258,16 +405,4 @@ class _SumCard extends StatelessWidget {
       ),
     );
   }
-}
-
-class _AccountRow {
-  final String no, memberName, type, balance, status, lastTxn;
-  const _AccountRow({
-    required this.no,
-    required this.memberName,
-    required this.type,
-    required this.balance,
-    required this.status,
-    required this.lastTxn,
-  });
 }

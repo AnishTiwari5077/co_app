@@ -90,7 +90,7 @@ public class GetMemberByIdQueryHandler(IAppDbContext db)
 
 public record RegisterMemberCommand(RegisterMemberRequest Request, Guid ActorId) : IRequest<Result<Guid>>;
 
-public class RegisterMemberCommandHandler(IAppDbContext db, IUnitOfWork uow, ISequenceGenerator seq)
+public class RegisterMemberCommandHandler(IAppDbContext db, IUnitOfWork uow, ISequenceGenerator seq, ICacheService cache)
     : IRequestHandler<RegisterMemberCommand, Result<Guid>>
 {
     public async Task<Result<Guid>> Handle(RegisterMemberCommand cmd, CancellationToken ct)
@@ -115,6 +115,8 @@ public class RegisterMemberCommandHandler(IAppDbContext db, IUnitOfWork uow, ISe
         };
         await db.Members.AddAsync(member, ct);
         await uow.SaveChangesAsync(ct);
+        // Bust dashboard cache so pending approvals + total members reflect immediately
+        try { await cache.RemoveByPrefixAsync("dashboard:", ct); } catch { /* ignore */ }
         return Result<Guid>.Success(member.Id);
     }
 }
@@ -123,7 +125,7 @@ public class RegisterMemberCommandHandler(IAppDbContext db, IUnitOfWork uow, ISe
 
 public record ApproveMemberCommand(Guid MemberId, Guid ActorId) : IRequest<Result>;
 
-public class ApproveMemberCommandHandler(IAppDbContext db, IUnitOfWork uow) : IRequestHandler<ApproveMemberCommand, Result>
+public class ApproveMemberCommandHandler(IAppDbContext db, IUnitOfWork uow, ICacheService cache) : IRequestHandler<ApproveMemberCommand, Result>
 {
     public async Task<Result> Handle(ApproveMemberCommand cmd, CancellationToken ct)
     {
@@ -134,6 +136,8 @@ public class ApproveMemberCommandHandler(IAppDbContext db, IUnitOfWork uow) : IR
         member.MembershipDate = DateOnly.FromDateTime(DateTime.UtcNow);
         member.UpdatedBy = cmd.ActorId;
         await uow.SaveChangesAsync(ct);
+        // Bust dashboard cache — active member count + pending approvals must refresh
+        try { await cache.RemoveByPrefixAsync("dashboard:", ct); } catch { /* ignore */ }
         return Result.Success();
     }
 }

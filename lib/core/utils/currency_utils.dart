@@ -4,7 +4,7 @@ import 'package:intl/intl.dart';
 class CurrencyUtils {
   CurrencyUtils._();
 
-  static final _compact  = NumberFormat.compact(locale: 'en_IN');
+
   static final _currency = NumberFormat('#,##,##0.00', 'en_IN');
   static final _plain    = NumberFormat('#,##,##0', 'en_IN');
 

@@ -105,6 +105,52 @@ public class MembersController(IMediator mediator) : ControllerBase
 [Authorize]
 public class SavingsController(IMediator mediator) : ControllerBase
 {
+    /// <summary>GET /savings/accounts — list all savings accounts.</summary>
+    [HttpGet]
+    [Authorize(Roles = "ADMIN,MANAGER,CASHIER")]
+    public async Task<IActionResult> GetSavingAccounts(
+        [FromQuery] int page = 1, [FromQuery] int pageSize = 20,
+        [FromQuery] string? search = null, [FromQuery] string? accountType = null,
+        [FromQuery] Guid? branchId = null, CancellationToken ct = default)
+    {
+        var result = await mediator.Send(new Application.Savings.GetSavingAccountsQuery(page, pageSize, search, accountType, branchId), ct);
+        if (!result.IsSuccess) return BadRequest(ApiResponse<object>.Fail(result.ErrorCode!, result.ErrorMessage!));
+        return Ok(ApiResponse<IReadOnlyList<Application.Savings.SavingAccountListDto>>.OkPaged(
+            result.Value!.Data, result.Value.Page, result.Value.PageSize, result.Value.TotalCount));
+    }
+
+    /// <summary>GET /savings/accounts/by-number/{accountNumber} — resolve account number like SAV-2083-00001 to full detail.</summary>
+    [HttpGet("by-number/{accountNumber}")]
+    [Authorize(Roles = "ADMIN,MANAGER,CASHIER")]
+    public async Task<IActionResult> GetSavingAccountByNumber(string accountNumber, CancellationToken ct)
+    {
+        var result = await mediator.Send(new Application.Savings.GetSavingAccountByNumberQuery(accountNumber), ct);
+        if (!result.IsSuccess) return NotFound(ApiResponse<object>.Fail(result.ErrorCode!, result.ErrorMessage!));
+        return Ok(ApiResponse<Application.Savings.SavingAccountDetailDto>.Ok(result.Value!));
+    }
+
+    /// <summary>GET /savings/accounts/{id} — get full account detail.</summary>
+    [HttpGet("{id:guid}")]
+    [Authorize(Roles = "ADMIN,MANAGER,CASHIER")]
+    public async Task<IActionResult> GetSavingAccountDetail(Guid id, CancellationToken ct)
+    {
+        var result = await mediator.Send(new Application.Savings.GetSavingAccountDetailQuery(id), ct);
+        if (!result.IsSuccess) return NotFound(ApiResponse<object>.Fail(result.ErrorCode!, result.ErrorMessage!));
+        return Ok(ApiResponse<Application.Savings.SavingAccountDetailDto>.Ok(result.Value!));
+    }
+
+    /// <summary>GET /savings/accounts/{id}/transactions — paginated transaction history.</summary>
+    [HttpGet("{id:guid}/transactions")]
+    [Authorize(Roles = "ADMIN,MANAGER,CASHIER")]
+    public async Task<IActionResult> GetTransactions(
+        Guid id, [FromQuery] int page = 1, [FromQuery] int pageSize = 30, CancellationToken ct = default)
+    {
+        var result = await mediator.Send(new Application.Savings.GetSavingTransactionsQuery(id, page, pageSize), ct);
+        if (!result.IsSuccess) return NotFound(ApiResponse<object>.Fail(result.ErrorCode!, result.ErrorMessage!));
+        return Ok(ApiResponse<IReadOnlyList<Application.Savings.SavingTransactionDto>>.OkPaged(
+            result.Value!.Data, result.Value.Page, result.Value.PageSize, result.Value.TotalCount));
+    }
+
     /// <summary>
     /// POST /savings/accounts/{id}/deposit
     /// Only Admin, Manager, and Cashier can process deposits.
@@ -132,9 +178,38 @@ public class SavingsController(IMediator mediator) : ControllerBase
         return Ok(ApiResponse<Application.Savings.TransactionResponse>.Ok(result.Value!));
     }
 
+    /// <summary>POST /savings/accounts — open a new savings account for a member.</summary>
+    [HttpPost]
+    [Authorize(Roles = "ADMIN,MANAGER,CASHIER")]
+    public async Task<IActionResult> OpenAccount([FromBody] Application.Savings.OpenSavingAccountRequest request, CancellationToken ct)
+    {
+        var branchId = Guid.TryParse(User.FindFirst("branchId")?.Value, out var b) ? b : Guid.Empty;
+        var result = await mediator.Send(new Application.Savings.OpenSavingAccountCommand(request, branchId, GetCurrentUserId()), ct);
+        if (!result.IsSuccess) return BadRequest(ApiResponse<object>.Fail(result.ErrorCode!, result.ErrorMessage!));
+        return Created($"/api/v1/savings/accounts/{result.Value!.AccountId}",
+            ApiResponse<Application.Savings.OpenSavingAccountResponse>.Ok(result.Value!));
+    }
+
     private Guid GetCurrentUserId() =>
         Guid.TryParse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value, out var id)
             ? id : Guid.Empty;
+}
+
+// ── Savings Schemes Controller ───────────────────────────────────────────────────
+[ApiController]
+[Route("api/v1/savings/schemes")]
+[Authorize]
+public class SavingSchemesController(IMediator mediator) : ControllerBase
+{
+    /// <summary>GET /savings/schemes — list all active savings schemes for UI pickers.</summary>
+    [HttpGet]
+    [Authorize(Roles = "ADMIN,MANAGER,CASHIER")]
+    public async Task<IActionResult> GetSchemes(CancellationToken ct)
+    {
+        var result = await mediator.Send(new Application.Savings.GetSavingSchemesQuery(), ct);
+        if (!result.IsSuccess) return BadRequest(ApiResponse<object>.Fail(result.ErrorCode!, result.ErrorMessage!));
+        return Ok(ApiResponse<List<Application.Savings.SavingSchemeDto>>.Ok(result.Value!));
+    }
 }
 
 // ── Loans Controller ──────────────────────────────────────────────────────────
@@ -143,6 +218,20 @@ public class SavingsController(IMediator mediator) : ControllerBase
 [Authorize]
 public class LoansController(IMediator mediator) : ControllerBase
 {
+    /// <summary>GET /loans — list all loans.</summary>
+    [HttpGet]
+    [Authorize(Roles = "ADMIN,MANAGER,LOAN_OFFICER,CASHIER")]
+    public async Task<IActionResult> GetLoans(
+        [FromQuery] int page = 1, [FromQuery] int pageSize = 20,
+        [FromQuery] string? search = null, [FromQuery] string? status = null,
+        [FromQuery] Guid? branchId = null, CancellationToken ct = default)
+    {
+        var result = await mediator.Send(new Application.Loans.GetLoansQuery(page, pageSize, search, status, branchId), ct);
+        if (!result.IsSuccess) return BadRequest(ApiResponse<object>.Fail(result.ErrorCode!, result.ErrorMessage!));
+        return Ok(ApiResponse<IReadOnlyList<Application.Loans.LoanListDto>>.OkPaged(
+            result.Value!.Data, result.Value.Page, result.Value.PageSize, result.Value.TotalCount));
+    }
+
     /// <summary>POST /loans — Admin, Manager, and Loan Officer can apply for loans.</summary>
     [HttpPost]
     [Authorize(Roles = "ADMIN,MANAGER,LOAN_OFFICER")]
@@ -207,6 +296,17 @@ public record DisburseLoanBody(decimal DisbursedAmount, string Mode, DateOnly Da
 [Authorize(Roles = "ADMIN,MANAGER,ACCOUNTANT")] // entire controller restricted
 public class AccountingController(IMediator mediator) : ControllerBase
 {
+    /// <summary>GET /accounting/chart-of-accounts — load postable accounts for journal entry dropdowns.</summary>
+    [HttpGet("chart-of-accounts")]
+    public async Task<IActionResult> GetChartOfAccounts(
+        [FromQuery] string? search = null, [FromQuery] string? accountType = null,
+        [FromQuery] bool postableOnly = true, CancellationToken ct = default)
+    {
+        var result = await mediator.Send(new Application.Accounting.GetChartOfAccountsQuery(search, accountType, postableOnly), ct);
+        if (!result.IsSuccess) return BadRequest(ApiResponse<object>.Fail(result.ErrorCode!, result.ErrorMessage!));
+        return Ok(ApiResponse<List<Application.Accounting.ChartOfAccountDto>>.Ok(result.Value!));
+    }
+
     /// <summary>POST /accounting/vouchers — Admin, Manager, Accountant can create journal entries.</summary>
     [HttpPost("vouchers")]
     public async Task<IActionResult> CreateVoucher([FromBody] Application.Accounting.CreateVoucherRequest request, CancellationToken ct)
@@ -232,6 +332,7 @@ public class AccountingController(IMediator mediator) : ControllerBase
             ? id : Guid.Empty;
 }
 
+
 // ── Dashboard Controller ──────────────────────────────────────────────────────
 [ApiController]
 [Route("api/v1/dashboard")]
@@ -245,5 +346,14 @@ public class DashboardController(IMediator mediator) : ControllerBase
         var result = await mediator.Send(new Application.Accounting.GetDashboardSummaryQuery(branchId), ct);
         if (!result.IsSuccess) return BadRequest(ApiResponse<object>.Fail(result.ErrorCode!, result.ErrorMessage!));
         return Ok(ApiResponse<Application.Accounting.DashboardSummaryDto>.Ok(result.Value!));
+    }
+
+    /// <summary>GET /dashboard/activity — recent transactions, savings distribution, pending approvals.</summary>
+    [HttpGet("activity")]
+    public async Task<IActionResult> GetActivity(CancellationToken ct)
+    {
+        var result = await mediator.Send(new Application.Accounting.GetDashboardActivityQuery(), ct);
+        if (!result.IsSuccess) return BadRequest(ApiResponse<object>.Fail(result.ErrorCode!, result.ErrorMessage!));
+        return Ok(ApiResponse<Application.Accounting.DashboardActivityDto>.Ok(result.Value!));
     }
 }

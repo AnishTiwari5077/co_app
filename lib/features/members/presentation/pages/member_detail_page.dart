@@ -4,9 +4,98 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/theme/app_dimensions.dart';
-import '../../../../core/router/app_routes.dart';
 import '../../../../shared/widgets/status_badge.dart';
 import '../../../../shared/widgets/common_widgets.dart';
+import '../../../../core/api/api_client.dart';
+import 'package:dio/dio.dart';
+import '../providers/member_provider.dart';
+import '../../../dashboard/presentation/providers/dashboard_provider.dart';
+import '../../../dashboard/presentation/pages/dashboard_page.dart';
+
+// ── Data models ───────────────────────────────────────────────────────────────
+
+class MemberDetail {
+  final String id, memberCode, firstName, lastName, fullName;
+  final String? middleName, gender, dateOfBirthAd, citizenshipNumber;
+  final String phoneNumber;
+  final String? email, addressDistrict, addressMunicipality;
+  final String status;
+  final bool kycVerified;
+  final String? photoUrl;
+  final List<SavingAccountSummary> savingAccounts;
+  final List<LoanSummary> loans;
+
+  MemberDetail({
+    required this.id, required this.memberCode,
+    required this.firstName, required this.lastName,
+    this.middleName, this.gender, this.dateOfBirthAd,
+    this.citizenshipNumber, required this.phoneNumber,
+    this.email, this.addressDistrict, this.addressMunicipality,
+    required this.status, required this.kycVerified, this.photoUrl,
+    required this.savingAccounts, required this.loans,
+  }) : fullName = [firstName, if (middleName != null && middleName.isNotEmpty) middleName, lastName].join(' ');
+
+  factory MemberDetail.fromJson(Map<String, dynamic> j) => MemberDetail(
+    id: j['id'] as String? ?? '',
+    memberCode: j['memberCode'] as String? ?? '',
+    firstName: j['firstName'] as String? ?? '',
+    middleName: j['middleName'] as String?,
+    lastName: j['lastName'] as String? ?? '',
+    gender: j['gender'] as String?,
+    dateOfBirthAd: j['dateOfBirthAd'] as String?,
+    citizenshipNumber: j['citizenshipNumber'] as String?,
+    phoneNumber: j['phoneNumber'] as String? ?? '',
+    email: j['email'] as String?,
+    addressDistrict: j['addressDistrict'] as String?,
+    addressMunicipality: j['addressMunicipality'] as String?,
+    status: j['status'] as String? ?? 'Pending',
+    kycVerified: j['kycVerified'] as bool? ?? false,
+    photoUrl: j['photoUrl'] as String?,
+    savingAccounts: (j['savingAccounts'] as List<dynamic>? ?? [])
+        .map((e) => SavingAccountSummary.fromJson(e as Map<String, dynamic>))
+        .toList(),
+    loans: (j['loans'] as List<dynamic>? ?? [])
+        .map((e) => LoanSummary.fromJson(e as Map<String, dynamic>))
+        .toList(),
+  );
+}
+
+class SavingAccountSummary {
+  final String id, accountNumber, status;
+  final double balance;
+  SavingAccountSummary({required this.id, required this.accountNumber, required this.balance, required this.status});
+  factory SavingAccountSummary.fromJson(Map<String, dynamic> j) => SavingAccountSummary(
+    id: j['id'] as String? ?? '',
+    accountNumber: j['accountNumber'] as String? ?? '',
+    balance: (j['balance'] as num?)?.toDouble() ?? 0,
+    status: j['status'] as String? ?? 'Active',
+  );
+}
+
+class LoanSummary {
+  final String id, loanNumber, status;
+  final double outstanding;
+  LoanSummary({required this.id, required this.loanNumber, required this.outstanding, required this.status});
+  factory LoanSummary.fromJson(Map<String, dynamic> j) => LoanSummary(
+    id: j['id'] as String? ?? '',
+    loanNumber: j['loanNumber'] as String? ?? '',
+    outstanding: (j['outstanding'] as num?)?.toDouble() ?? 0,
+    status: j['status'] as String? ?? 'Active',
+  );
+}
+
+// ── Provider ──────────────────────────────────────────────────────────────────
+
+final memberDetailProvider = FutureProvider.autoDispose
+    .family<MemberDetail, String>((ref, memberId) async {
+  final dio = ref.read(dioProvider);
+  final response = await dio.get('/api/v1/members/$memberId');
+  final envelope = response.data as Map<String, dynamic>;
+  final data = envelope['data'] as Map<String, dynamic>? ?? envelope;
+  return MemberDetail.fromJson(data);
+});
+
+// ── Page ──────────────────────────────────────────────────────────────────────
 
 class MemberDetailPage extends ConsumerStatefulWidget {
   final String memberId;
@@ -32,47 +121,121 @@ class _MemberDetailPageState extends ConsumerState<MemberDetailPage>
     super.dispose();
   }
 
+  bool _isActivating = false;
+
+  Future<void> _activateMember(String memberId) async {
+    setState(() => _isActivating = true);
+    try {
+      final dio = ref.read(dioProvider);
+      await dio.post('/api/v1/members/$memberId/approve');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Row(
+              children: [
+                Icon(Icons.check_circle_rounded, color: Colors.white),
+                SizedBox(width: 8),
+                Text('Member activated successfully!'),
+              ],
+            ),
+            backgroundColor: AppColors.secondary,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        ref.invalidate(memberDetailProvider(memberId));
+        ref.invalidate(memberListProvider);        // ← list reflects new status instantly
+        ref.invalidate(dashboardSummaryProvider);  // ← dashboard KPIs update
+        ref.invalidate(dashboardActivityProvider); // ← pending approvals update
+      }
+    } on DioException catch (e) {
+      if (mounted) {
+        final msg = (e.response?.data as Map<String, dynamic>?)?['message']
+                as String? ??
+            'Failed to activate member';
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(msg), backgroundColor: AppColors.error),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isActivating = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      body: NestedScrollView(
-        headerSliverBuilder: (context, innerScrolled) => [
-          _buildSliverHeader(),
-          SliverPersistentHeader(
-            pinned: true,
-            delegate: _TabBarDelegate(
-              TabBar(
-                controller: _tabController,
-                labelColor: AppColors.primary,
-                unselectedLabelColor: AppColors.textSecondary,
-                indicatorColor: AppColors.primary,
-                indicatorSize: TabBarIndicatorSize.tab,
-                labelStyle: AppTextStyles.labelLarge,
-                tabs: const [
-                  Tab(text: 'Profile'),
-                  Tab(text: 'Savings'),
-                  Tab(text: 'Loans'),
-                  Tab(text: 'Shares'),
-                ],
+    final memberAsync = ref.watch(memberDetailProvider(widget.memberId));
+
+    return memberAsync.when(
+      loading: () => const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      ),
+      error: (e, _) => Scaffold(
+        appBar: AppBar(
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back_ios_new_rounded),
+            onPressed: () => context.pop(),
+          ),
+        ),
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.error_outline_rounded, size: 48, color: AppColors.error),
+              const SizedBox(height: AppDimensions.md),
+              Text('Failed to load member', style: AppTextStyles.titleMedium),
+              const SizedBox(height: AppDimensions.xs),
+              Text('$e', style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondary),
+                  textAlign: TextAlign.center),
+              const SizedBox(height: AppDimensions.md),
+              TextButton.icon(
+                onPressed: () => ref.invalidate(memberDetailProvider(widget.memberId)),
+                icon: const Icon(Icons.refresh_rounded),
+                label: const Text('Retry'),
+              ),
+            ],
+          ),
+        ),
+      ),
+      data: (member) => Scaffold(
+        backgroundColor: AppColors.background,
+        body: NestedScrollView(
+          headerSliverBuilder: (context, innerScrolled) => [
+            _buildSliverHeader(member),
+            SliverPersistentHeader(
+              pinned: true,
+              delegate: _TabBarDelegate(
+                TabBar(
+                  controller: _tabController,
+                  labelColor: AppColors.primary,
+                  unselectedLabelColor: AppColors.textSecondary,
+                  indicatorColor: AppColors.primary,
+                  indicatorSize: TabBarIndicatorSize.tab,
+                  labelStyle: AppTextStyles.labelLarge,
+                  tabs: const [
+                    Tab(text: 'Profile'),
+                    Tab(text: 'Savings'),
+                    Tab(text: 'Loans'),
+                    Tab(text: 'Shares'),
+                  ],
+                ),
               ),
             ),
-          ),
-        ],
-        body: TabBarView(
-          controller: _tabController,
-          children: [
-            _ProfileTab(memberId: widget.memberId),
-            _SavingsTab(),
-            _LoansTab(),
-            _SharesTab(),
           ],
+          body: TabBarView(
+            controller: _tabController,
+            children: [
+              _ProfileTab(member: member),
+              _SavingsTab(accounts: member.savingAccounts),
+              _LoansTab(loans: member.loans),
+              const _SharesTab(),
+            ],
+          ),
         ),
       ),
     );
   }
 
-  SliverAppBar _buildSliverHeader() {
+  SliverAppBar _buildSliverHeader(MemberDetail member) {
     return SliverAppBar(
       expandedHeight: 200,
       pinned: true,
@@ -83,14 +246,50 @@ class _MemberDetailPageState extends ConsumerState<MemberDetailPage>
         onPressed: () => context.pop(),
       ),
       actions: [
+        // Show Activate button only for Pending members
+        if (member.status == 'Pending')
+          _isActivating
+              ? const Padding(
+                  padding: EdgeInsets.all(12),
+                  child: SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                        strokeWidth: 2, color: Colors.white),
+                  ),
+                )
+              : TextButton.icon(
+                  onPressed: () => _showActivateConfirm(member),
+                  icon: const Icon(Icons.check_circle_outline_rounded,
+                      color: Colors.white, size: 18),
+                  label: const Text('Activate',
+                      style: TextStyle(
+                          color: Colors.white, fontWeight: FontWeight.w600)),
+                  style: TextButton.styleFrom(
+                    backgroundColor: Colors.white.withOpacity(0.15),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8)),
+                  ),
+                ),
         IconButton(
           icon: const Icon(Icons.edit_outlined, color: Colors.white),
           onPressed: () {},
         ),
         PopupMenuButton<String>(
           icon: const Icon(Icons.more_vert, color: Colors.white),
-          onSelected: (value) {},
+          onSelected: (value) {
+            if (value == 'activate') _showActivateConfirm(member);
+          },
           itemBuilder: (ctx) => [
+            if (member.status == 'Pending')
+              const PopupMenuItem(
+                  value: 'activate',
+                  child: ListTile(
+                    leading: Icon(Icons.check_circle_rounded,
+                        color: AppColors.secondary),
+                    title: Text('Activate Member'),
+                    contentPadding: EdgeInsets.zero,
+                  )),
             const PopupMenuItem(value: 'suspend', child: Text('Suspend Member')),
             const PopupMenuItem(value: 'close', child: Text('Close Account')),
             const PopupMenuItem(value: 'export', child: Text('Export Profile')),
@@ -117,12 +316,10 @@ class _MemberDetailPageState extends ConsumerState<MemberDetailPage>
                     height: 72,
                     decoration: BoxDecoration(
                       color: Colors.white.withOpacity(0.2),
-                      borderRadius:
-                          BorderRadius.circular(AppDimensions.radiusXl),
+                      borderRadius: BorderRadius.circular(AppDimensions.radiusXl),
                       border: Border.all(color: Colors.white30, width: 2),
                     ),
-                    child: const Icon(Icons.person_rounded,
-                        color: Colors.white, size: 36),
+                    child: const Icon(Icons.person_rounded, color: Colors.white, size: 36),
                   ),
                   const SizedBox(width: AppDimensions.md),
                   Expanded(
@@ -130,41 +327,35 @@ class _MemberDetailPageState extends ConsumerState<MemberDetailPage>
                       mainAxisAlignment: MainAxisAlignment.center,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Ram Bahadur Shrestha',
-                            style: AppTextStyles.headlineSmall
-                                .copyWith(color: Colors.white)),
+                        Text(member.fullName,
+                            style: AppTextStyles.headlineSmall.copyWith(color: Colors.white)),
                         const SizedBox(height: 2),
-                        Text(widget.memberId,
-                            style: AppTextStyles.bodyMedium
-                                .copyWith(color: Colors.white70)),
+                        Text(member.memberCode,
+                            style: AppTextStyles.bodyMedium.copyWith(color: Colors.white70)),
                         const SizedBox(height: 6),
                         Row(
                           children: [
                             Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 8, vertical: 2),
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                               decoration: BoxDecoration(
                                 color: AppColors.secondary.withOpacity(0.8),
-                                borderRadius: BorderRadius.circular(
-                                    AppDimensions.radiusRound),
+                                borderRadius: BorderRadius.circular(AppDimensions.radiusRound),
                               ),
-                              child: Text('Active',
-                                  style: AppTextStyles.labelSmall
-                                      .copyWith(color: Colors.white)),
+                              child: Text(member.status,
+                                  style: AppTextStyles.labelSmall.copyWith(color: Colors.white)),
                             ),
-                            const SizedBox(width: 8),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 8, vertical: 2),
-                              decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.2),
-                                borderRadius: BorderRadius.circular(
-                                    AppDimensions.radiusRound),
+                            if (member.kycVerified) ...[
+                              const SizedBox(width: 8),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withOpacity(0.2),
+                                  borderRadius: BorderRadius.circular(AppDimensions.radiusRound),
+                                ),
+                                child: Text('KYC ✓',
+                                    style: AppTextStyles.labelSmall.copyWith(color: Colors.white)),
                               ),
-                              child: Text('KYC ✓',
-                                  style: AppTextStyles.labelSmall
-                                      .copyWith(color: Colors.white)),
-                            ),
+                            ],
                           ],
                         ),
                       ],
@@ -178,11 +369,74 @@ class _MemberDetailPageState extends ConsumerState<MemberDetailPage>
       ),
     );
   }
+
+  void _showActivateConfirm(MemberDetail member) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Row(
+          children: [
+            Icon(Icons.check_circle_rounded, color: AppColors.secondary),
+            SizedBox(width: 8),
+            Text('Activate Member'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Are you sure you want to activate:',
+                style: AppTextStyles.bodyMedium),
+            const SizedBox(height: 8),
+            Text(member.fullName,
+                style: AppTextStyles.titleSmall
+                    .copyWith(color: AppColors.primary)),
+            Text(member.memberCode,
+                style: AppTextStyles.bodySmall
+                    .copyWith(color: AppColors.textSecondary)),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: AppColors.secondary.withOpacity(0.08),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                'This will set their status to Active and allow them to use all cooperative services.',
+                style: AppTextStyles.bodySmall
+                    .copyWith(color: AppColors.secondary),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton.icon(
+            style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.secondary,
+                foregroundColor: Colors.white),
+            onPressed: () {
+              Navigator.pop(ctx);
+              _activateMember(member.id);
+            },
+            icon: const Icon(Icons.check_rounded, size: 18),
+            label: const Text('Activate'),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
+// ── Profile Tab ───────────────────────────────────────────────────────────────
+
 class _ProfileTab extends StatelessWidget {
-  final String memberId;
-  const _ProfileTab({required this.memberId});
+  final MemberDetail member;
+  const _ProfileTab({required this.member});
 
   @override
   Widget build(BuildContext context) {
@@ -190,46 +444,35 @@ class _ProfileTab extends StatelessWidget {
       padding: const EdgeInsets.all(AppDimensions.md),
       children: [
         _InfoSection(title: 'Personal Information', rows: [
-          InfoRow(label: 'Full Name', value: 'Ram Bahadur Shrestha'),
-          InfoRow(label: 'Full Name (NP)', value: 'राम बहादुर श्रेष्ठ'),
-          InfoRow(label: 'Date of Birth', value: '15 Falgun 2035 (27 Feb 1979)'),
-          InfoRow(label: 'Age', value: '46 years'),
-          InfoRow(label: 'Gender', value: 'Male'),
-          InfoRow(label: 'Blood Group', value: 'B+'),
-          InfoRow(label: 'Marital Status', value: 'Married'),
-          InfoRow(label: 'Occupation', value: 'Business'),
-          InfoRow(label: 'Education', value: 'Bachelor\'s Degree'),
+          InfoRow(label: 'Full Name', value: member.fullName),
+          if (member.gender != null) InfoRow(label: 'Gender', value: member.gender!),
+          if (member.dateOfBirthAd != null) InfoRow(label: 'Date of Birth (AD)', value: member.dateOfBirthAd!),
         ]),
         const SizedBox(height: AppDimensions.md),
         _InfoSection(title: 'Contact Information', rows: [
-          InfoRow(label: 'Primary Phone', value: '9841000001'),
-          InfoRow(label: 'Secondary Phone', value: '01-4400001'),
-          InfoRow(label: 'Email', value: 'ram.shrestha@email.com'),
+          InfoRow(label: 'Phone', value: member.phoneNumber),
+          if (member.email != null) InfoRow(label: 'Email', value: member.email!),
         ]),
-        const SizedBox(height: AppDimensions.md),
-        _InfoSection(title: 'Address', rows: [
-          InfoRow(label: 'Province', value: 'Bagmati Province'),
-          InfoRow(label: 'District', value: 'Kathmandu'),
-          InfoRow(label: 'Municipality', value: 'Kathmandu Metropolitan City'),
-          InfoRow(label: 'Ward', value: '5'),
-          InfoRow(label: 'Tole', value: 'Maharajgunj'),
-        ]),
-        const SizedBox(height: AppDimensions.md),
-        _InfoSection(title: 'Identity Documents', rows: [
-          InfoRow(label: 'Citizenship No.', value: '23-01-75-00001'),
-          InfoRow(label: 'Issued District', value: 'Kathmandu'),
-          InfoRow(label: 'Issued Date', value: '2075-01-20'),
-          InfoRow(label: 'PAN No.', value: '***-***-***'),
-        ]),
+        if (member.addressDistrict != null || member.addressMunicipality != null) ...[
+          const SizedBox(height: AppDimensions.md),
+          _InfoSection(title: 'Address', rows: [
+            if (member.addressDistrict != null)
+              InfoRow(label: 'District', value: member.addressDistrict!),
+            if (member.addressMunicipality != null)
+              InfoRow(label: 'Municipality', value: member.addressMunicipality!),
+          ]),
+        ],
+        if (member.citizenshipNumber != null) ...[
+          const SizedBox(height: AppDimensions.md),
+          _InfoSection(title: 'Identity Documents', rows: [
+            InfoRow(label: 'Citizenship No.', value: member.citizenshipNumber!),
+          ]),
+        ],
         const SizedBox(height: AppDimensions.md),
         _InfoSection(title: 'Membership Details', rows: [
-          InfoRow(label: 'Member Code', value: memberId),
-          InfoRow(label: 'Membership Date', value: '15 Shrawan 2079'),
-          InfoRow(label: 'Membership Fee', value: 'NPR 500'),
-          InfoRow(label: 'KYC Status', value: 'Verified ✓'),
-          InfoRow(label: 'KYC Verified By', value: 'Suman Adhikari (Manager)'),
-          InfoRow(label: 'Approved By', value: 'Suman Adhikari'),
-          InfoRow(label: 'Branch', value: 'Kathmandu Head Office'),
+          InfoRow(label: 'Member Code', value: member.memberCode),
+          InfoRow(label: 'Status', value: member.status),
+          InfoRow(label: 'KYC Status', value: member.kycVerified ? 'Verified ✓' : 'Pending'),
         ]),
         const SizedBox(height: AppDimensions.xxl),
       ],
@@ -237,125 +480,184 @@ class _ProfileTab extends StatelessWidget {
   }
 }
 
+// ── Savings Tab ───────────────────────────────────────────────────────────────
+
 class _SavingsTab extends StatelessWidget {
+  final List<SavingAccountSummary> accounts;
+  const _SavingsTab({required this.accounts});
+
   @override
   Widget build(BuildContext context) {
+    if (accounts.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.savings_outlined, size: 48, color: AppColors.textSecondary.withOpacity(0.4)),
+            const SizedBox(height: AppDimensions.sm),
+            Text('No savings accounts', style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textSecondary)),
+          ],
+        ),
+      );
+    }
     return ListView(
       padding: const EdgeInsets.all(AppDimensions.md),
-      children: [
-        _SavingsAccountCard(
-          accountNo: 'SAV-2079-00001',
-          type: 'Regular Savings',
-          balance: 'NPR 45,000.00',
-          interestRate: '7.5%',
-          status: 'Active',
-          openDate: '15 Shrawan 2079',
-        ),
-        const SizedBox(height: AppDimensions.sm),
-        _SavingsAccountCard(
-          accountNo: 'FD-2080-00123',
-          type: 'Fixed Deposit',
-          balance: 'NPR 2,00,000.00',
-          interestRate: '11%',
-          status: 'Active',
-          openDate: '01 Poush 2080',
-          maturityDate: '01 Poush 2081',
-        ),
-      ],
-    );
-  }
-}
-
-class _LoansTab extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return ListView(
-      padding: const EdgeInsets.all(AppDimensions.md),
-      children: [
-        _LoanAccountCard(
-          loanNo: 'LN-2080-00089',
-          type: 'Personal Loan',
-          principal: 'NPR 2,50,000',
-          outstanding: 'NPR 1,80,234',
-          emi: 'NPR 11,634',
-          nextEmiDate: '01 Shrawan 2081',
-          status: 'Active',
-        ),
-      ],
-    );
-  }
-}
-
-class _SharesTab extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(AppDimensions.md),
-      child: Column(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(AppDimensions.md),
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [AppColors.primary, AppColors.primaryLight],
-              ),
-              borderRadius: BorderRadius.circular(AppDimensions.radiusXl),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Share Account',
-                    style: AppTextStyles.bodySmall
-                        .copyWith(color: Colors.white70)),
-                const SizedBox(height: AppDimensions.sm),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Column(
+      children: accounts.map((a) => Padding(
+        padding: const EdgeInsets.only(bottom: AppDimensions.sm),
+        child: Container(
+          padding: const EdgeInsets.all(AppDimensions.md),
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(AppDimensions.radiusLg),
+            border: Border.all(color: const Color(0xFFE8EDF3)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: AppColors.secondary.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(AppDimensions.radiusMd),
+                    ),
+                    child: const Icon(Icons.savings_rounded, color: AppColors.secondary, size: 20),
+                  ),
+                  const SizedBox(width: AppDimensions.sm),
+                  Expanded(
+                    child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('250',
-                            style: AppTextStyles.headlineMedium
-                                .copyWith(color: Colors.white)),
-                        Text('Shares Held',
-                            style: AppTextStyles.bodySmall
-                                .copyWith(color: Colors.white70)),
+                        Text('Savings Account', style: AppTextStyles.titleSmall),
+                        Text(a.accountNumber,
+                            style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondary)),
                       ],
                     ),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        Text('NPR 25,000',
-                            style: AppTextStyles.headlineSmall
-                                .copyWith(color: Colors.white)),
-                        Text('Total Value',
-                            style: AppTextStyles.bodySmall
-                                .copyWith(color: Colors.white70)),
-                      ],
-                    ),
-                  ],
-                ),
-                const Divider(color: Colors.white24, height: AppDimensions.lg),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text('@ NPR 100 / share',
-                        style: AppTextStyles.bodySmall
-                            .copyWith(color: Colors.white70)),
-                    Text('Last dividend: 15%',
-                        style: AppTextStyles.bodySmall
-                            .copyWith(color: Colors.white70)),
-                  ],
-                ),
-              ],
-            ),
+                  ),
+                  StatusBadge(status: a.status),
+                ],
+              ),
+              const SizedBox(height: AppDimensions.md),
+              Text('NPR ${_fmt(a.balance)}',
+                  style: AppTextStyles.amountMedium.copyWith(color: AppColors.secondary)),
+            ],
           ),
-          const SizedBox(height: AppDimensions.md),
-          _InfoSection(title: 'Dividend History', rows: [
-            InfoRow(label: 'FY 2080/81', value: 'NPR 3,750 (15%)'),
-            InfoRow(label: 'FY 2079/80', value: 'NPR 3,000 (12%)'),
-            InfoRow(label: 'FY 2078/79', value: 'NPR 2,500 (10%)'),
-          ]),
+        ),
+      )).toList(),
+    );
+  }
+
+  String _fmt(double v) {
+    if (v >= 10000000) return '${(v / 10000000).toStringAsFixed(2)} Cr';
+    if (v >= 100000) return '${(v / 100000).toStringAsFixed(2)} L';
+    final s = v.toStringAsFixed(2);
+    final parts = s.split('.');
+    final intPart = parts[0];
+    final dec = parts[1];
+    final buf = StringBuffer();
+    for (int i = 0; i < intPart.length; i++) {
+      if (i != 0 && (intPart.length - i) % 2 == 0 && intPart.length > 3) buf.write(',');
+      buf.write(intPart[i]);
+    }
+    return '${buf.toString()}.$dec';
+  }
+}
+
+// ── Loans Tab ─────────────────────────────────────────────────────────────────
+
+class _LoansTab extends StatelessWidget {
+  final List<LoanSummary> loans;
+  const _LoansTab({required this.loans});
+
+  @override
+  Widget build(BuildContext context) {
+    if (loans.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.account_balance_outlined, size: 48, color: AppColors.textSecondary.withOpacity(0.4)),
+            const SizedBox(height: AppDimensions.sm),
+            Text('No loans', style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textSecondary)),
+          ],
+        ),
+      );
+    }
+    return ListView(
+      padding: const EdgeInsets.all(AppDimensions.md),
+      children: loans.map((l) => Padding(
+        padding: const EdgeInsets.only(bottom: AppDimensions.sm),
+        child: Container(
+          padding: const EdgeInsets.all(AppDimensions.md),
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(AppDimensions.radiusLg),
+            border: Border.all(color: const Color(0xFFE8EDF3)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(AppDimensions.radiusMd),
+                    ),
+                    child: const Icon(Icons.account_balance_rounded, color: AppColors.primary, size: 20),
+                  ),
+                  const SizedBox(width: AppDimensions.sm),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Loan', style: AppTextStyles.titleSmall),
+                        Text(l.loanNumber,
+                            style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondary)),
+                      ],
+                    ),
+                  ),
+                  StatusBadge(status: l.status),
+                ],
+              ),
+              const SizedBox(height: AppDimensions.md),
+              Row(
+                children: [
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Outstanding',
+                          style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondary)),
+                      Text('NPR ${l.outstanding.toStringAsFixed(2)}',
+                          style: AppTextStyles.amountSmall),
+                    ],
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      )).toList(),
+    );
+  }
+}
+
+// ── Shares Tab (static for now — no backend endpoint yet) ────────────────────
+
+class _SharesTab extends StatelessWidget {
+  const _SharesTab();
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.pie_chart_outline_rounded, size: 48, color: AppColors.textSecondary.withOpacity(0.4)),
+          const SizedBox(height: AppDimensions.sm),
+          Text('Share data not available', style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textSecondary)),
         ],
       ),
     );
@@ -392,181 +694,6 @@ class _InfoSection extends StatelessWidget {
   }
 }
 
-class _SavingsAccountCard extends StatelessWidget {
-  final String accountNo, type, balance, interestRate, status, openDate;
-  final String? maturityDate;
-  const _SavingsAccountCard({
-    required this.accountNo,
-    required this.type,
-    required this.balance,
-    required this.interestRate,
-    required this.status,
-    required this.openDate,
-    this.maturityDate,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(AppDimensions.md),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(AppDimensions.radiusLg),
-        border: Border.all(color: const Color(0xFFE8EDF3)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: AppColors.secondary.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(AppDimensions.radiusMd),
-                ),
-                child: const Icon(Icons.savings_rounded,
-                    color: AppColors.secondary, size: 20),
-              ),
-              const SizedBox(width: AppDimensions.sm),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(type, style: AppTextStyles.titleSmall),
-                    Text(accountNo,
-                        style: AppTextStyles.bodySmall
-                            .copyWith(color: AppColors.textSecondary)),
-                  ],
-                ),
-              ),
-              StatusBadge(status: status),
-            ],
-          ),
-          const SizedBox(height: AppDimensions.md),
-          Text(balance,
-              style: AppTextStyles.amountMedium
-                  .copyWith(color: AppColors.secondary)),
-          const SizedBox(height: AppDimensions.xs),
-          Row(
-            children: [
-              Text('Rate: $interestRate',
-                  style: AppTextStyles.bodySmall
-                      .copyWith(color: AppColors.textSecondary)),
-              const Spacer(),
-              Text('Opened: $openDate',
-                  style: AppTextStyles.bodySmall
-                      .copyWith(color: AppColors.textSecondary)),
-            ],
-          ),
-          if (maturityDate != null) ...[
-            const SizedBox(height: 4),
-            Text('Matures: $maturityDate',
-                style: AppTextStyles.bodySmall
-                    .copyWith(color: AppColors.warning, fontWeight: FontWeight.w600)),
-          ],
-        ],
-      ),
-    );
-  }
-}
-
-class _LoanAccountCard extends StatelessWidget {
-  final String loanNo, type, principal, outstanding, emi, nextEmiDate, status;
-  const _LoanAccountCard({
-    required this.loanNo,
-    required this.type,
-    required this.principal,
-    required this.outstanding,
-    required this.emi,
-    required this.nextEmiDate,
-    required this.status,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(AppDimensions.md),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(AppDimensions.radiusLg),
-        border: Border.all(color: const Color(0xFFE8EDF3)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: AppColors.primary.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(AppDimensions.radiusMd),
-                ),
-                child: const Icon(Icons.account_balance_rounded,
-                    color: AppColors.primary, size: 20),
-              ),
-              const SizedBox(width: AppDimensions.sm),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(type, style: AppTextStyles.titleSmall),
-                    Text(loanNo,
-                        style: AppTextStyles.bodySmall
-                            .copyWith(color: AppColors.textSecondary)),
-                  ],
-                ),
-              ),
-              StatusBadge(status: status),
-            ],
-          ),
-          const SizedBox(height: AppDimensions.md),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              _AmountCell(label: 'Principal', value: principal),
-              _AmountCell(label: 'Outstanding', value: outstanding),
-              _AmountCell(label: 'EMI', value: emi),
-            ],
-          ),
-          const SizedBox(height: AppDimensions.sm),
-          const Divider(height: 1),
-          const SizedBox(height: AppDimensions.sm),
-          Row(
-            children: [
-              const Icon(Icons.calendar_today_rounded,
-                  size: 14, color: AppColors.warning),
-              const SizedBox(width: 4),
-              Text('Next EMI: $nextEmiDate',
-                  style: AppTextStyles.bodySmall
-                      .copyWith(color: AppColors.warning, fontWeight: FontWeight.w600)),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _AmountCell extends StatelessWidget {
-  final String label, value;
-  const _AmountCell({required this.label, required this.value});
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(label,
-            style: AppTextStyles.bodySmall
-                .copyWith(color: AppColors.textSecondary)),
-        Text(value, style: AppTextStyles.amountSmall),
-      ],
-    );
-  }
-}
-
 class _TabBarDelegate extends SliverPersistentHeaderDelegate {
   final TabBar tabBar;
   const _TabBarDelegate(this.tabBar);
@@ -577,12 +704,8 @@ class _TabBarDelegate extends SliverPersistentHeaderDelegate {
   double get maxExtent => tabBar.preferredSize.height;
 
   @override
-  Widget build(
-      BuildContext context, double shrinkOffset, bool overlapsContent) {
-    return Container(
-      color: AppColors.surface,
-      child: tabBar,
-    );
+  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
+    return Container(color: AppColors.surface, child: tabBar);
   }
 
   @override

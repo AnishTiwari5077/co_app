@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../theme/app_colors.dart';
 import '../router/app_routes.dart';
+import '../api/api_client.dart';
 import '../../features/auth/presentation/providers/auth_provider.dart';
 import '../../shared/models/entities.dart';
 
@@ -354,56 +355,129 @@ class _UserMenuButton extends StatelessWidget {
 
 
 // ─── Quick Transaction Bottom Sheet ──────────────────────────────────────────
-class _QuickTransactionSheet extends StatelessWidget {
+class _QuickTransactionSheet extends ConsumerStatefulWidget {
   const _QuickTransactionSheet();
+  @override
+  ConsumerState<_QuickTransactionSheet> createState() => _QuickTransactionSheetState();
+}
 
-  void _askAccountAndNavigate(BuildContext context, String actionType) {
-    final ctrl = TextEditingController();
+class _QuickTransactionSheetState extends ConsumerState<_QuickTransactionSheet> {
+  List<_AccountOption> _accounts = [];
+  bool _loading = true;
+  String _search = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadAccounts();
+  }
+
+  Future<void> _loadAccounts() async {
+    try {
+      final dio = ref.read(dioProvider);
+      final res = await dio.get('/api/v1/savings/accounts', queryParameters: {'pageSize': 100, 'status': 'Active'});
+      final envelope = res.data as Map<String, dynamic>;
+      final raw = (envelope['data'] as List<dynamic>? ?? []);
+      if (mounted) {
+        setState(() {
+          _accounts = raw.map((e) {
+            final m = e as Map<String, dynamic>;
+            return _AccountOption(
+              id: m['id'] as String? ?? '',
+              accountNumber: m['accountNumber'] as String? ?? '',
+              memberName: m['memberName'] as String? ?? '',
+              balance: (m['balance'] as num?)?.toDouble() ?? 0,
+            );
+          }).toList();
+          _loading = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  void _selectAndNavigate(BuildContext ctx, _AccountOption account, String type) {
+    Navigator.pop(ctx); // close sheet
+    final route = type == 'deposit'
+        ? '/savings/${account.id}/deposit'
+        : '/savings/${account.id}/withdraw';
+    ctx.push(route);
+  }
+
+  void _showPicker(BuildContext ctx, String type) {
     showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text(actionType == 'deposit' ? 'Deposit' : 'Withdrawal',
-            style: const TextStyle(fontWeight: FontWeight.bold)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text(
-              'Enter the savings account number:',
-              style: TextStyle(fontSize: 13, color: Colors.black54),
+      context: ctx,
+      builder: (dCtx) => StatefulBuilder(builder: (dCtx, setDState) {
+        final filtered = _search.isEmpty
+            ? _accounts
+            : _accounts.where((a) =>
+                a.accountNumber.toLowerCase().contains(_search.toLowerCase()) ||
+                a.memberName.toLowerCase().contains(_search.toLowerCase())).toList();
+
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Text(type == 'deposit' ? 'Select Account to Deposit' : 'Select Account to Withdraw'),
+          contentPadding: const EdgeInsets.fromLTRB(8, 12, 8, 0),
+          content: SizedBox(
+            width: double.maxFinite,
+            height: 380,
+            child: Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  child: TextField(
+                    autofocus: true,
+                    decoration: InputDecoration(
+                      hintText: 'Search member or account no...',
+                      prefixIcon: const Icon(Icons.search_rounded, size: 18),
+                      isDense: true,
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                    onChanged: (v) => setDState(() => _search = v),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Expanded(
+                  child: _loading
+                      ? const Center(child: CircularProgressIndicator())
+                      : filtered.isEmpty
+                          ? const Center(child: Text('No active accounts found'))
+                          : ListView.separated(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              itemCount: filtered.length,
+                              separatorBuilder: (_, __) => const Divider(height: 1),
+                              itemBuilder: (_, i) {
+                                final a = filtered[i];
+                                return ListTile(
+                                  dense: true,
+                                  leading: CircleAvatar(
+                                    radius: 18,
+                                    backgroundColor: const Color(0xFF059669).withOpacity(0.1),
+                                    child: const Icon(Icons.savings_rounded, size: 16, color: Color(0xFF059669)),
+                                  ),
+                                  title: Text(a.memberName, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                                  subtitle: Text(a.accountNumber, style: const TextStyle(fontSize: 11, color: Colors.black54)),
+                                  trailing: Text(
+                                    'NPR ${a.balance.toStringAsFixed(0).replaceAllMapped(RegExp(r"(\\d{1,3})(?=(\\d{3})+(?!\\d))"), (m) => "${m[1]},")}',
+                                    style: const TextStyle(fontSize: 12, color: Color(0xFF059669), fontWeight: FontWeight.w600),
+                                  ),
+                                  onTap: () {
+                                    Navigator.pop(dCtx);
+                                    _selectAndNavigate(ctx, a, type);
+                                  },
+                                );
+                              },
+                            ),
+                ),
+              ],
             ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: ctrl,
-              autofocus: true,
-              decoration: InputDecoration(
-                hintText: 'e.g. SAV-2079-00001',
-                prefixIcon: const Icon(Icons.savings_outlined),
-                border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12)),
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('Cancel')),
-          FilledButton(
-            onPressed: () {
-              final id = ctrl.text.trim();
-              if (id.isEmpty) return;
-              Navigator.pop(ctx);
-              Navigator.pop(context);
-              final route = actionType == 'deposit'
-                  ? '/savings/$id/deposit'
-                  : '/savings/$id/withdraw';
-              context.push(route);
-            },
-            child: const Text('Continue'),
           ),
-        ],
-      ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(dCtx), child: const Text('Cancel')),
+          ],
+        );
+      }),
     );
   }
 
@@ -437,7 +511,7 @@ class _QuickTransactionSheet extends StatelessWidget {
             bgColor: const Color(0xFFDCFCE7),
             title: 'Deposit',
             subtitle: 'Credit funds to a savings account',
-            onTap: () => _askAccountAndNavigate(context, 'deposit'),
+            onTap: () => _showPicker(context, 'deposit'),
           ),
           const SizedBox(height: 12),
           _ActionTile(
@@ -446,12 +520,18 @@ class _QuickTransactionSheet extends StatelessWidget {
             bgColor: const Color(0xFFFEE2E2),
             title: 'Withdraw',
             subtitle: 'Debit funds from a savings account',
-            onTap: () => _askAccountAndNavigate(context, 'withdraw'),
+            onTap: () => _showPicker(context, 'withdraw'),
           ),
         ],
       ),
     );
   }
+}
+
+class _AccountOption {
+  final String id, accountNumber, memberName;
+  final double balance;
+  const _AccountOption({required this.id, required this.accountNumber, required this.memberName, required this.balance});
 }
 
 class _ActionTile extends StatelessWidget {

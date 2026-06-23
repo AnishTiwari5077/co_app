@@ -16,7 +16,7 @@ final dioProvider = Provider<Dio>((ref) {
   ));
 
   dio.interceptors.addAll([
-    AuthInterceptor(ref),
+    AuthInterceptor(),
     LoggingInterceptor(),
     ErrorInterceptor(),
   ]);
@@ -26,8 +26,7 @@ final dioProvider = Provider<Dio>((ref) {
 
 /// Injects JWT token into every request and handles 401 auto-refresh.
 class AuthInterceptor extends Interceptor {
-  final Ref _ref;
-  AuthInterceptor(this._ref);
+  // No ref needed — uses SharedPreferences directly
 
   @override
   Future<void> onRequest(

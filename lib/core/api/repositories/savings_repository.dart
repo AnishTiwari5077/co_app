@@ -2,30 +2,50 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../api_client.dart';
 
+// ── Response model — matches backend TransactionResponse exactly ─────────────
+
 class TransactionResponse {
-  final String transactionId, accountNo, type;
-  final double amount, balanceAfter;
+  final String transactionId;
+  final String receiptNumber;
+  final double amount;
+  final double balanceAfter;
   final DateTime transactionDate;
+
   TransactionResponse({
-    required this.transactionId, required this.accountNo,
-    required this.type, required this.amount,
-    required this.balanceAfter, required this.transactionDate,
+    required this.transactionId,
+    required this.receiptNumber,
+    required this.amount,
+    required this.balanceAfter,
+    required this.transactionDate,
   });
+
   factory TransactionResponse.fromJson(Map<String, dynamic> j) =>
       TransactionResponse(
-        transactionId: j['transactionId'] as String? ?? '',
-        accountNo: j['accountNo'] as String? ?? '',
-        type: j['type'] as String? ?? '',
-        amount: (j['amount'] as num?)?.toDouble() ?? 0,
-        balanceAfter: (j['balanceAfter'] as num?)?.toDouble() ?? 0,
-        transactionDate: DateTime.tryParse(j['transactionDate'] as String? ?? '') ?? DateTime.now(),
+        transactionId: j['transactionId'] as String? ??
+            j['TransactionId'] as String? ?? '',
+        receiptNumber: j['receiptNumber'] as String? ??
+            j['ReceiptNumber'] as String? ?? '',
+        amount: (j['amount'] as num? ?? j['Amount'] as num?)?.toDouble() ?? 0,
+        balanceAfter:
+            (j['balanceAfter'] as num? ?? j['BalanceAfter'] as num?)
+                ?.toDouble() ??
+                0,
+        transactionDate: DateTime.tryParse(
+                j['transactionDate'] as String? ??
+                    j['TransactionDate'] as String? ??
+                    '') ??
+            DateTime.now(),
       );
 }
+
+// ── Repository ────────────────────────────────────────────────────────────────
 
 class SavingsRepository {
   final Dio _dio;
   SavingsRepository(this._dio);
 
+  /// POST /api/v1/savings/accounts/{id}/deposit
+  /// Backend DepositRequest: { Amount, DepositMode, Narration?, CollectedBy? }
   Future<TransactionResponse> deposit({
     required String accountId,
     required double amount,
@@ -37,9 +57,8 @@ class SavingsRepository {
       '/api/v1/savings/accounts/$accountId/deposit',
       data: {
         'amount': amount,
-        'mode': mode,
+        'depositMode': mode,                          // ← correct field name
         if (narration != null && narration.isNotEmpty) 'narration': narration,
-        if (chequeNo != null && chequeNo.isNotEmpty) 'chequeNo': chequeNo,
       },
     );
     final envelope = response.data as Map<String, dynamic>;
@@ -47,6 +66,8 @@ class SavingsRepository {
     return TransactionResponse.fromJson(data);
   }
 
+  /// POST /api/v1/savings/accounts/{id}/withdraw
+  /// Backend WithdrawRequest: { Amount, WithdrawalMode, Narration?, VerifiedById? }
   Future<TransactionResponse> withdraw({
     required String accountId,
     required double amount,
@@ -58,9 +79,8 @@ class SavingsRepository {
       '/api/v1/savings/accounts/$accountId/withdraw',
       data: {
         'amount': amount,
-        'mode': mode,
+        'withdrawalMode': mode,                       // ← correct field name
         if (narration != null && narration.isNotEmpty) 'narration': narration,
-        if (chequeNo != null && chequeNo.isNotEmpty) 'chequeNo': chequeNo,
       },
     );
     final envelope = response.data as Map<String, dynamic>;
