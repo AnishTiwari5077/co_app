@@ -11,6 +11,7 @@ import '../../../auth/presentation/providers/auth_provider.dart';
 import '../providers/dashboard_provider.dart';
 import '../../../../core/api/repositories/dashboard_repository.dart';
 import '../../../../core/api/api_client.dart';
+import '../../../../core/widgets/main_shell.dart';
 
 // ── Activity Models ───────────────────────────────────────────────────────────
 
@@ -217,7 +218,7 @@ class DashboardPage extends ConsumerWidget {
             ],
           ),
         ),
-        const SizedBox(width: AppDimensions.xs),
+        const AppBarUserBadge(),
       ],
     );
   }

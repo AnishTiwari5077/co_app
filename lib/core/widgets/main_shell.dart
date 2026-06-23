@@ -95,17 +95,7 @@ class MainShell extends ConsumerWidget {
     }
 
     return Scaffold(
-      body: Stack(
-        children: [
-          child,
-          // User menu in top-right — tap to see profile & logout
-          Positioned(
-            top: 0,
-            right: 0,
-            child: SafeArea(child: _UserMenuButton(user: user, ref: ref)),
-          ),
-        ],
-      ),
+      body: child,
       bottomNavigationBar: Container(
         decoration: const BoxDecoration(
           border: Border(top: BorderSide(color: AppColors.outline, width: 1)),
@@ -350,6 +340,21 @@ class _UserMenuButton extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+/// A self-contained ADMIN badge widget that can be placed in any AppBar's
+/// `actions` list. It reads auth state internally — no props needed.
+class AppBarUserBadge extends ConsumerWidget {
+  const AppBarUserBadge({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final authState = ref.watch(authStateProvider);
+    if (!authState.isAuthenticated || authState.user == null) {
+      return const SizedBox.shrink();
+    }
+    return _UserMenuButton(user: authState.user!, ref: ref);
   }
 }
 

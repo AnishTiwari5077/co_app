@@ -10,6 +10,7 @@ import '../../../../core/theme/app_dimensions.dart';
 import '../../../../shared/widgets/app_button.dart';
 import '../../../../shared/widgets/app_text_field.dart';
 import '../../../../core/api/api_client.dart';
+import '../../../../core/widgets/main_shell.dart';
 import 'voucher_pdf_generator.dart';
 
 // ── Chart of Account model ────────────────────────────────────────────────────
@@ -610,6 +611,7 @@ class _JournalEntryPageState extends ConsumerState<JournalEntryPage>
             child: Text('Trial Balance',
                 style: AppTextStyles.labelLarge.copyWith(color: AppColors.primary)),
           ),
+          const AppBarUserBadge(),
         ],
         bottom: TabBar(
           controller: _tabController,

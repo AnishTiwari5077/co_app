@@ -8,6 +8,7 @@ import '../../../../core/router/app_routes.dart';
 import '../../../../shared/widgets/status_badge.dart';
 import '../../../../shared/widgets/common_widgets.dart';
 import '../../../../core/api/api_client.dart';
+import '../../../../core/widgets/main_shell.dart';
 
 // ── Model ─────────────────────────────────────────────────────────────────────
 
@@ -123,17 +124,8 @@ class _SavingsListPageState extends ConsumerState<SavingsListPage>
         title: const Text('Savings', style: AppTextStyles.titleLarge),
         backgroundColor: AppColors.surface,
         elevation: 0,
-        actions: [
-          TextButton.icon(
-            onPressed: () async {
-              await context.push('/savings/open');
-              // Refresh list when returning from open account page
-              if (mounted) ref.read(_savingsListProvider.notifier).load();
-            },
-            icon: const Icon(Icons.add_rounded, size: 18),
-            label: const Text('Open Account'),
-            style: TextButton.styleFrom(foregroundColor: AppColors.secondary),
-          ),
+        actions: const [
+          AppBarUserBadge(),
         ],
         bottom: TabBar(
           controller: _tabController,

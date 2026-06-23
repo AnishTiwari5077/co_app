@@ -9,6 +9,7 @@ import '../../../../shared/widgets/status_badge.dart';
 import '../../../../shared/widgets/common_widgets.dart';
 import '../providers/member_provider.dart';
 import '../../../../core/api/repositories/member_repository.dart';
+import '../../../../core/widgets/main_shell.dart';
 
 class MemberListPage extends ConsumerStatefulWidget {
   const MemberListPage({super.key});
@@ -57,6 +58,7 @@ class _MemberListPageState extends ConsumerState<MemberListPage> {
             icon: const Icon(Icons.refresh_rounded),
             onPressed: () => ref.read(memberListProvider.notifier).refresh(),
           ),
+          const AppBarUserBadge(),
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(

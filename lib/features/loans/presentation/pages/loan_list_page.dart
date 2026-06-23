@@ -8,6 +8,7 @@ import '../../../../core/router/app_routes.dart';
 import '../../../../shared/widgets/status_badge.dart';
 import '../../../../shared/widgets/common_widgets.dart';
 import '../../../../core/api/api_client.dart';
+import '../../../../core/widgets/main_shell.dart';
 
 // ── Model ─────────────────────────────────────────────────────────────────────
 
@@ -136,6 +137,7 @@ class _LoanListPageState extends ConsumerState<LoanListPage>
         title: const Text('Loans', style: AppTextStyles.titleLarge),
         backgroundColor: AppColors.surface,
         elevation: 0,
+        actions: const [AppBarUserBadge()],
         bottom: TabBar(
           controller: _tabController,
           labelColor: AppColors.primary,

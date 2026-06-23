@@ -5,6 +5,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/theme/app_dimensions.dart';
 import '../../../../core/api/api_client.dart';
+import '../../../../core/widgets/main_shell.dart';
 import 'reports_pdf_generator.dart';
 
 // ── Providers ─────────────────────────────────────────────────────────────────
@@ -60,6 +61,7 @@ class ReportsPage extends ConsumerWidget {
               ref.invalidate(_savingsReportProvider);
             },
           ),
+          const AppBarUserBadge(),
         ],
       ),
       body: ListView(
