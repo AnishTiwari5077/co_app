@@ -207,12 +207,12 @@ class _JournalEntryPageState extends ConsumerState<JournalEntryPage>
     setState(() => _isPosting = true);
     try {
       final dio = ref.read(dioProvider);
-      // Parse date: YYYY-MM-DD
-      final dateParts = _voucherDateCtrl.text.split('-');
-      final today = DateOnly(
-          int.tryParse(dateParts.elementAtOrNull(0) ?? '') ?? DateTime.now().year,
-          int.tryParse(dateParts.elementAtOrNull(1) ?? '') ?? DateTime.now().month,
-          int.tryParse(dateParts.elementAtOrNull(2) ?? '') ?? DateTime.now().day);
+      // Parse date string directly — format is YYYY-MM-DD
+      final dateParts = _voucherDateCtrl.text.trim().split('-');
+      final y = dateParts.elementAtOrNull(0) ?? '${DateTime.now().year - 57}';
+      final m = (dateParts.elementAtOrNull(1) ?? '${DateTime.now().month}').padLeft(2, '0');
+      final d = (dateParts.elementAtOrNull(2) ?? '${DateTime.now().day}').padLeft(2, '0');
+      final voucherDateStr = '$y-$m-$d';
 
       final entries = _entries
           .where((e) => e.account != null && e.amount > 0)
@@ -226,7 +226,7 @@ class _JournalEntryPageState extends ConsumerState<JournalEntryPage>
 
       await dio.post('/api/v1/accounting/vouchers', data: {
         'voucherType': _selectedVoucherType,
-        'voucherDate': '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}',
+        'voucherDate': voucherDateStr,
         'narration': narration,
         'entries': entries,
       });
@@ -275,7 +275,7 @@ class _JournalEntryPageState extends ConsumerState<JournalEntryPage>
         elevation: 0,
         actions: [
           TextButton(
-            onPressed: () => context.go('/accounting/trial-balance'),
+            onPressed: () => context.push('/accounting/trial-balance'),
             child: Text('Trial Balance',
                 style: AppTextStyles.labelLarge.copyWith(color: AppColors.primary)),
           ),

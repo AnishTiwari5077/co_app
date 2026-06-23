@@ -3,12 +3,36 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'dart:async';
+import 'package:dio/dio.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/theme/app_dimensions.dart';
 import '../../../../shared/widgets/app_button.dart';
 import '../../../../shared/widgets/app_text_field.dart';
 import '../../../../core/api/repositories/member_repository.dart';
+import '../../../../core/api/api_client.dart';
+
+// ── Loan Product model ────────────────────────────────────────────────────────
+class _LoanProduct {
+  final String id, name, loanType;
+  final double interestRate, minAmount, maxAmount;
+  final int minTenureMonths, maxTenureMonths;
+  const _LoanProduct({
+    required this.id, required this.name, required this.loanType,
+    required this.interestRate, required this.minAmount, required this.maxAmount,
+    required this.minTenureMonths, required this.maxTenureMonths,
+  });
+  factory _LoanProduct.fromJson(Map<String, dynamic> j) => _LoanProduct(
+    id: j['id'] as String? ?? '',
+    name: j['productName'] as String? ?? j['name'] as String? ?? '',
+    loanType: j['loanType'] as String? ?? '',
+    interestRate: (j['interestRate'] as num?)?.toDouble() ?? 14,
+    minAmount: (j['minAmount'] as num?)?.toDouble() ?? 10000,
+    maxAmount: (j['maxAmount'] as num?)?.toDouble() ?? 500000,
+    minTenureMonths: j['minTenureMonths'] as int? ?? 3,
+    maxTenureMonths: j['maxTenureMonths'] as int? ?? 60,
+  );
+}
 
 class LoanApplicationPage extends ConsumerStatefulWidget {
   final String? memberId;
@@ -25,6 +49,12 @@ class _LoanApplicationPageState extends ConsumerState<LoanApplicationPage> {
   bool _isLoading = false;
   bool _emiCalculated = false;
 
+  // ── Products (loaded from API) ────────────────────────────────────────────
+  List<_LoanProduct> _products = [];
+  bool _loadingProducts = true;
+  String? _productError;
+  _LoanProduct? _selectedProduct;
+
   // ── Member search state ───────────────────────────────────────────────────
   final _memberSearchCtrl = TextEditingController();
   MemberListItem? _selectedMember;
@@ -39,33 +69,70 @@ class _LoanApplicationPageState extends ConsumerState<LoanApplicationPage> {
   final _collateralCtrl = TextEditingController();
   final _collateralValueCtrl = TextEditingController();
 
-  String _selectedProduct = 'Personal Loan';
   int _selectedTenure = 12;
   double _calculatedEmi = 0;
   double _totalInterest = 0;
 
-  final _products = ['Personal Loan', 'Business Loan', 'Agriculture Loan', 'Home Loan', 'Microfinance Loan'];
   final _tenures = [3, 6, 12, 18, 24, 36, 48, 60];
-  final _productRates = {
-    'Personal Loan': 14.0,
-    'Business Loan': 13.0,
-    'Agriculture Loan': 11.0,
-    'Home Loan': 12.0,
-    'Microfinance Loan': 15.0,
-  };
-  final _productMaxAmounts = {
-    'Personal Loan': 500000,
-    'Business Loan': 5000000,
-    'Agriculture Loan': 1000000,
-    'Home Loan': 10000000,
-    'Microfinance Loan': 200000,
-  };
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadProducts();
+      if (widget.memberId != null && widget.memberId!.isNotEmpty) {
+        _loadMemberById(widget.memberId!);
+      }
+    });
+  }
+
+  Future<void> _loadProducts() async {
+    if (mounted) setState(() { _loadingProducts = true; _productError = null; });
+    try {
+      final dio = ref.read(dioProvider);
+      final res = await dio.get('/api/v1/loans/products');
+      dynamic rawList;
+      final body = res.data;
+      if (body is Map<String, dynamic>) {
+        rawList = body['data'];
+      } else if (body is List) {
+        rawList = body;
+      }
+      final raw = (rawList as List<dynamic>? ?? []);
+      if (mounted) {
+        setState(() {
+          _products = raw.map((e) => _LoanProduct.fromJson(e as Map<String, dynamic>)).toList();
+          _selectedProduct = _products.isNotEmpty ? _products.first : null;
+          _loadingProducts = false;
+          _productError = _products.isEmpty ? 'No products found in database' : null;
+        });
+      }
+    } catch (e) {
+      if (mounted) setState(() { _loadingProducts = false; _productError = e.toString(); });
+    }
+  }
+
+  Future<void> _loadMemberById(String id) async {
+    try {
+      final dio = ref.read(dioProvider);
+      final res = await dio.get('/api/v1/members/$id');
+      final data = (res.data as Map<String, dynamic>)['data'] as Map<String, dynamic>? ?? {};
+      final m = MemberListItem.fromJson(data);
+      if (mounted) {
+        setState(() {
+          _selectedMember = m;
+          _memberSearchCtrl.text = m.fullName;
+        });
+      }
+    } catch (_) {}
+  }
 
   void _calculateEmi() {
+    final product = _selectedProduct;
+    if (product == null) return;
     final principal = double.tryParse(_amountCtrl.text.replaceAll(',', '')) ?? 0;
     if (principal <= 0) return;
-
-    final rate = (_productRates[_selectedProduct] ?? 14) / 12 / 100;
+    final rate = product.interestRate / 12 / 100;
     final n = _selectedTenure;
     final emi = principal * rate * (1 + rate).pow(n) / ((1 + rate).pow(n) - 1);
     setState(() {
@@ -121,15 +188,66 @@ class _LoanApplicationPageState extends ConsumerState<LoanApplicationPage> {
 
   Future<void> _submitApplication() async {
     if (!_formKey.currentState!.validate()) return;
+    final member = _selectedMember;
+    final product = _selectedProduct;
+    if (member == null) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Please select a member'), backgroundColor: AppColors.error));
+      return;
+    }
+    if (product == null) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Please select a loan product'), backgroundColor: AppColors.error));
+      return;
+    }
     setState(() => _isLoading = true);
-    await Future.delayed(const Duration(seconds: 2));
-    if (mounted) {
-      setState(() => _isLoading = false);
-      _showSuccessDialog();
+    try {
+      final dio = ref.read(dioProvider);
+      final amount = double.tryParse(_amountCtrl.text.replaceAll(',', '')) ?? 0;
+      final res = await dio.post('/api/v1/loans', data: {
+        'memberId': member.id,
+        'loanProductId': product.id,
+        'requestedAmount': amount,
+        'tenureMonths': _selectedTenure,
+        'loanPurpose': _purposeCtrl.text.trim(),
+        if (_collateralCtrl.text.isNotEmpty) 'collaterals': [
+          {
+            'type': 'Other',
+            'description': _collateralCtrl.text.trim(),
+            'estimatedValue': double.tryParse(_collateralValueCtrl.text) ?? 0,
+          }
+        ],
+      });
+      final loanId = (res.data as Map<String, dynamic>?)?['id'] as String? ?? '';
+      if (mounted) {
+        setState(() => _isLoading = false);
+        _showSuccessDialog(loanId);
+      }
+    } on DioException catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+        // Extract exact error from backend response envelope
+        final respData = e.response?.data;
+        String msg = 'Failed to submit application';
+        if (respData is Map<String, dynamic>) {
+          final err = respData['error'] as Map<String, dynamic>?;
+          msg = err?['message'] as String?
+              ?? respData['message'] as String?
+              ?? e.message
+              ?? msg;
+        } else {
+          msg = e.message ?? msg;
+        }
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(msg), backgroundColor: AppColors.error,
+                duration: const Duration(seconds: 6)));
+      }
+    } catch (_) {
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
-  void _showSuccessDialog() {
+  void _showSuccessDialog(String loanId) {
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -154,17 +272,22 @@ class _LoanApplicationPageState extends ConsumerState<LoanApplicationPage> {
             Text('Loan Applied!', style: AppTextStyles.titleLarge),
             const SizedBox(height: AppDimensions.xs),
             Text(
-              'Application LN-2081-00042 submitted. Awaiting manager approval.',
+              'Application submitted successfully.\nAwaiting manager approval.',
               style: AppTextStyles.bodyMedium
                   .copyWith(color: AppColors.textSecondary),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: AppDimensions.lg),
             AppButton(
-              label: 'View Application',
+              label: loanId.isNotEmpty ? 'View Application' : 'Done',
               onPressed: () {
                 Navigator.pop(ctx);
-                context.pop();
+                if (loanId.isNotEmpty) {
+                  context.pop();
+                  context.push('/loans/$loanId');
+                } else {
+                  context.pop();
+                }
               },
             ),
           ],
@@ -431,8 +554,44 @@ class _LoanApplicationPageState extends ConsumerState<LoanApplicationPage> {
   }
 
   Widget _buildProductStep() {
-    final rate = _productRates[_selectedProduct] ?? 14;
-    final maxAmount = _productMaxAmounts[_selectedProduct] ?? 500000;
+    final product = _selectedProduct;
+    if (_loadingProducts) {
+      return const Center(child: Padding(
+        padding: EdgeInsets.all(48),
+        child: CircularProgressIndicator(),
+      ));
+    }
+    if (_products.isEmpty) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(AppDimensions.xl),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.inventory_2_outlined,
+                  size: 52, color: AppColors.textSecondary.withOpacity(0.4)),
+              const SizedBox(height: AppDimensions.md),
+              Text('No loan products available',
+                  style: AppTextStyles.titleSmall
+                      .copyWith(color: AppColors.textSecondary)),
+              if (_productError != null) ...[
+                const SizedBox(height: AppDimensions.xs),
+                Text(_productError!,
+                    style: AppTextStyles.bodySmall
+                        .copyWith(color: AppColors.error),
+                    textAlign: TextAlign.center),
+              ],
+              const SizedBox(height: AppDimensions.md),
+              OutlinedButton.icon(
+                onPressed: _loadProducts,
+                icon: const Icon(Icons.refresh_rounded),
+                label: const Text('Retry'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
 
     return Column(
       key: const ValueKey('product'),
@@ -445,11 +604,14 @@ class _LoanApplicationPageState extends ConsumerState<LoanApplicationPage> {
           spacing: AppDimensions.sm,
           runSpacing: AppDimensions.sm,
           children: _products.map((p) {
-            final selected = _selectedProduct == p;
+            final selected = _selectedProduct?.id == p.id;
             return GestureDetector(
               onTap: () => setState(() {
                 _selectedProduct = p;
                 _emiCalculated = false;
+                // Reset tenure to valid range
+                if (_selectedTenure < p.minTenureMonths) _selectedTenure = p.minTenureMonths;
+                if (_selectedTenure > p.maxTenureMonths) _selectedTenure = p.maxTenureMonths;
               }),
               child: Container(
                 padding: const EdgeInsets.symmetric(
@@ -461,7 +623,7 @@ class _LoanApplicationPageState extends ConsumerState<LoanApplicationPage> {
                     color: selected ? AppColors.primary : const Color(0xFFE0E7EF),
                   ),
                 ),
-                child: Text(p,
+                child: Text(p.name,
                     style: AppTextStyles.labelLarge.copyWith(
                       color: selected ? Colors.white : AppColors.textPrimary,
                     )),
@@ -470,22 +632,26 @@ class _LoanApplicationPageState extends ConsumerState<LoanApplicationPage> {
           }).toList(),
         ),
         const SizedBox(height: AppDimensions.md),
-        // Product info
-        Container(
-          padding: const EdgeInsets.all(AppDimensions.sm),
-          decoration: BoxDecoration(
-            color: AppColors.surfaceVariant,
-            borderRadius: BorderRadius.circular(AppDimensions.radiusMd),
+        if (product != null) ...[
+          Container(
+            padding: const EdgeInsets.all(AppDimensions.sm),
+            decoration: BoxDecoration(
+              color: AppColors.surfaceVariant,
+              borderRadius: BorderRadius.circular(AppDimensions.radiusMd),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                _ProductStat(label: 'Interest Rate', value: '${product.interestRate}% p.a.'),
+                _ProductStat(label: 'Max Amount',
+                    value: product.maxAmount >= 100000
+                        ? 'NPR ${(product.maxAmount / 100000).toStringAsFixed(0)}L'
+                        : 'NPR ${product.maxAmount.toStringAsFixed(0)}'),
+                _ProductStat(label: 'Max Tenure', value: '${product.maxTenureMonths}m'),
+              ],
+            ),
           ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              _ProductStat(label: 'Interest Rate', value: '${rate}% p.a.'),
-              _ProductStat(label: 'Max Amount', value: 'NPR ${(maxAmount / 100000).toStringAsFixed(0)}L'),
-              _ProductStat(label: 'Max Tenure', value: '60 months'),
-            ],
-          ),
-        ),
+        ],
         const SizedBox(height: AppDimensions.md),
         AppTextField(
           controller: _amountCtrl,
@@ -496,9 +662,10 @@ class _LoanApplicationPageState extends ConsumerState<LoanApplicationPage> {
           inputFormatters: [FilteringTextInputFormatter.digitsOnly],
           validator: (v) {
             if (v?.isEmpty == true) return 'Amount required';
-            final amt = int.tryParse(v!) ?? 0;
-            if (amt < 10000) return 'Minimum NPR 10,000';
-            if (amt > maxAmount) return 'Maximum NPR ${maxAmount.toString()}';
+            final amt = double.tryParse(v!) ?? 0;
+            if (product == null) return null;
+            if (amt < product.minAmount) return 'Minimum NPR ${product.minAmount.toStringAsFixed(0)}';
+            if (amt > product.maxAmount) return 'Maximum NPR ${product.maxAmount.toStringAsFixed(0)}';
             return null;
           },
           onChanged: (v) => setState(() => _emiCalculated = false),
@@ -521,7 +688,10 @@ class _LoanApplicationPageState extends ConsumerState<LoanApplicationPage> {
             Wrap(
               spacing: AppDimensions.xs,
               runSpacing: AppDimensions.xs,
-              children: _tenures.map((t) {
+              children: _tenures
+                  .where((t) => product == null ||
+                      (t >= product.minTenureMonths && t <= product.maxTenureMonths))
+                  .map((t) {
                 final selected = _selectedTenure == t;
                 return GestureDetector(
                   onTap: () => setState(() {
@@ -639,10 +809,10 @@ class _LoanApplicationPageState extends ConsumerState<LoanApplicationPage> {
         ]),
         const SizedBox(height: AppDimensions.sm),
         _ReviewSection(title: 'Loan Details', rows: [
-          'Product: $_selectedProduct',
+          'Product: ${_selectedProduct?.name ?? '—'}',
           'Amount: NPR ${_amountCtrl.text}',
           'Tenure: $_selectedTenure months',
-          'Rate: ${_productRates[_selectedProduct]}% p.a.',
+          'Rate: ${_selectedProduct?.interestRate ?? '—'}% p.a.',
           if (_emiCalculated) 'EMI: NPR ${_calculatedEmi.toStringAsFixed(0)}',
         ]),
         const SizedBox(height: AppDimensions.sm),

@@ -84,7 +84,7 @@ class MainShell extends ConsumerWidget {
 
     final user = authState.user!;
     final tabs = _tabsFor(user);
-    final location = GoRouterState.of(context).matchedLocation;
+    final location = GoRouterState.of(context).uri.path;
 
     int selectedIndex = 0;
     for (int i = 0; i < tabs.length; i++) {

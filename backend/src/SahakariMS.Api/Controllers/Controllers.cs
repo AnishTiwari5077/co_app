@@ -232,6 +232,16 @@ public class LoansController(IMediator mediator) : ControllerBase
             result.Value!.Data, result.Value.Page, result.Value.PageSize, result.Value.TotalCount));
     }
 
+    /// <summary>GET /loans/products — list active loan products for the application form.</summary>
+    [HttpGet("products")]
+    [Authorize(Roles = "ADMIN,MANAGER,LOAN_OFFICER,CASHIER")]
+    public async Task<IActionResult> GetLoanProducts(CancellationToken ct)
+    {
+        var result = await mediator.Send(new Application.Loans.GetLoanProductsQuery(), ct);
+        if (!result.IsSuccess) return BadRequest(ApiResponse<object>.Fail(result.ErrorCode!, result.ErrorMessage!));
+        return Ok(ApiResponse<List<Application.Loans.LoanProductDto>>.Ok(result.Value!));
+    }
+
     /// <summary>POST /loans — Admin, Manager, and Loan Officer can apply for loans.</summary>
     [HttpPost]
     [Authorize(Roles = "ADMIN,MANAGER,LOAN_OFFICER")]
@@ -282,6 +292,28 @@ public class LoansController(IMediator mediator) : ControllerBase
         return Ok(ApiResponse<List<Application.Loans.EmiScheduleDto>>.Ok(result.Value!));
     }
 
+    /// <summary>GET /loans/{id} — full loan detail with guarantors, collaterals, stats.</summary>
+    [HttpGet("{id:guid}")]
+    [Authorize(Roles = "ADMIN,MANAGER,LOAN_OFFICER,CASHIER")]
+    public async Task<IActionResult> GetLoanDetail(Guid id, CancellationToken ct)
+    {
+        var result = await mediator.Send(new Application.Loans.GetLoanDetailQuery(id), ct);
+        if (!result.IsSuccess) return NotFound(ApiResponse<object>.Fail(result.ErrorCode!, result.ErrorMessage!));
+        return Ok(ApiResponse<Application.Loans.LoanDetailDto>.Ok(result.Value!));
+    }
+
+    /// <summary>GET /loans/{id}/payments — paginated payment history for a loan.</summary>
+    [HttpGet("{id:guid}/payments")]
+    [Authorize(Roles = "ADMIN,MANAGER,LOAN_OFFICER,CASHIER")]
+    public async Task<IActionResult> GetLoanPayments(
+        Guid id, [FromQuery] int page = 1, [FromQuery] int pageSize = 30, CancellationToken ct = default)
+    {
+        var result = await mediator.Send(new Application.Loans.GetLoanPaymentsQuery(id, page, pageSize), ct);
+        if (!result.IsSuccess) return NotFound(ApiResponse<object>.Fail(result.ErrorCode!, result.ErrorMessage!));
+        return Ok(ApiResponse<IReadOnlyList<Application.Loans.LoanPaymentDto>>.OkPaged(
+            result.Value!.Data, result.Value.Page, result.Value.PageSize, result.Value.TotalCount));
+    }
+
     private Guid GetCurrentUserId() =>
         Guid.TryParse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value, out var id)
             ? id : Guid.Empty;
@@ -325,6 +357,28 @@ public class AccountingController(IMediator mediator) : ControllerBase
         var result = await mediator.Send(new Application.Accounting.GetTrialBalanceQuery(bid, asOfDate ?? DateOnly.FromDateTime(DateTime.UtcNow)), ct);
         if (!result.IsSuccess) return BadRequest(ApiResponse<object>.Fail(result.ErrorCode!, result.ErrorMessage!));
         return Ok(ApiResponse<Application.Accounting.TrialBalanceDto>.Ok(result.Value!));
+    }
+
+    /// <summary>GET /accounting/vouchers — paginated voucher list with entries.</summary>
+    [HttpGet("vouchers")]
+    public async Task<IActionResult> GetVouchers(
+        [FromQuery] int page = 1, [FromQuery] int pageSize = 30,
+        [FromQuery] string? voucherType = null, CancellationToken ct = default)
+    {
+        var result = await mediator.Send(new Application.Accounting.GetVouchersQuery(page, pageSize, voucherType), ct);
+        if (!result.IsSuccess) return BadRequest(ApiResponse<object>.Fail(result.ErrorCode!, result.ErrorMessage!));
+        return Ok(ApiResponse<IReadOnlyList<Application.Accounting.VoucherListDto>>.OkPaged(
+            result.Value!.Data, result.Value.Page, result.Value.PageSize, result.Value.TotalCount));
+    }
+
+    /// <summary>GET /accounting/ledger/{accountId} — full ledger for a chart-of-account with running balance.</summary>
+    [HttpGet("ledger/{accountId:guid}")]
+    public async Task<IActionResult> GetLedger(
+        Guid accountId, [FromQuery] DateOnly? fromDate, [FromQuery] DateOnly? toDate, CancellationToken ct = default)
+    {
+        var result = await mediator.Send(new Application.Accounting.GetLedgerQuery(accountId, fromDate, toDate), ct);
+        if (!result.IsSuccess) return NotFound(ApiResponse<object>.Fail(result.ErrorCode!, result.ErrorMessage!));
+        return Ok(ApiResponse<Application.Accounting.LedgerDto>.Ok(result.Value!));
     }
 
     private Guid GetCurrentUserId() =>

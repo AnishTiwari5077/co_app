@@ -152,7 +152,10 @@ class _LoanListPageState extends ConsumerState<LoanListPage>
         ),
       ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => context.go('${AppRoutes.loans}/apply'),
+        onPressed: () async {
+          await context.push('${AppRoutes.loans}/apply');
+          if (mounted) ref.read(_loanListProvider.notifier).load();
+        },
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
         icon: const Icon(Icons.add_card_rounded),
@@ -276,7 +279,7 @@ class _LoanCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final isOverdue = loan.overdueDays > 0;
     return GestureDetector(
-      onTap: () => context.go('${AppRoutes.loans}/${loan.id}'),
+      onTap: () => context.push('${AppRoutes.loans}/${loan.id}'),
       child: Container(
         padding: const EdgeInsets.all(AppDimensions.md),
         decoration: BoxDecoration(

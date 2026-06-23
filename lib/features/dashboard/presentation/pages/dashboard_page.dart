@@ -120,7 +120,7 @@ class DashboardPage extends ConsumerWidget {
                 delegate: SliverChildListDelegate([
                   _buildGreeting(user),
                   const SizedBox(height: AppDimensions.md),
-                  _buildKpiRow(summaryAsync),
+                  _buildKpiRow(context, summaryAsync),
                   const SizedBox(height: AppDimensions.md),
                   _buildQuickActions(context),
                   const SizedBox(height: AppDimensions.md),
@@ -269,7 +269,7 @@ class DashboardPage extends ConsumerWidget {
   String _weekday(int w) => ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'][w - 1];
   String _month(int m) => ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][m - 1];
 
-  Widget _buildKpiRow(AsyncValue<DashboardSummary> summaryAsync) {
+  Widget _buildKpiRow(BuildContext context, AsyncValue<DashboardSummary> summaryAsync) {
     return summaryAsync.when(
       loading: () => const Center(
           child: Padding(
@@ -300,24 +300,30 @@ class DashboardPage extends ConsumerWidget {
           Row(
             children: [
               Expanded(
-                child: KpiCard(
-                  title: 'Total Members',
-                  value: s.totalMembers.toString(),
-                  icon: Icons.people_rounded,
-                  iconColor: AppColors.primary,
-                  subtitle: '+${s.newMembersThisMonth} this month',
-                  subtitlePositiveFlag: true,
+                child: GestureDetector(
+                  onTap: () => context.go(AppRoutes.members),
+                  child: KpiCard(
+                    title: 'Total Members',
+                    value: s.totalMembers.toString(),
+                    icon: Icons.people_rounded,
+                    iconColor: AppColors.primary,
+                    subtitle: '+${s.newMembersThisMonth} this month',
+                    subtitlePositiveFlag: true,
+                  ),
                 ),
               ),
               const SizedBox(width: AppDimensions.sm),
               Expanded(
-                child: KpiCard(
-                  title: 'Total Savings',
-                  value: _formatAmount(s.totalSavings),
-                  icon: Icons.savings_rounded,
-                  iconColor: AppColors.secondary,
-                  subtitle: '↑ ${_formatAmount(s.todayDeposits)} today',
-                  subtitlePositiveFlag: true,
+                child: GestureDetector(
+                  onTap: () => context.go(AppRoutes.savings),
+                  child: KpiCard(
+                    title: 'Total Savings',
+                    value: _formatAmount(s.totalSavings),
+                    icon: Icons.savings_rounded,
+                    iconColor: AppColors.secondary,
+                    subtitle: '↑ ${_formatAmount(s.todayDeposits)} today',
+                    subtitlePositiveFlag: true,
+                  ),
                 ),
               ),
             ],
@@ -326,13 +332,16 @@ class DashboardPage extends ConsumerWidget {
           Row(
             children: [
               Expanded(
-                child: KpiCard(
-                  title: 'Loan Portfolio',
-                  value: _formatAmount(s.totalLoans),
-                  icon: Icons.account_balance_rounded,
-                  iconColor: AppColors.accent,
-                  subtitle: '${s.activeLoans} active accounts',
-                  subtitlePositiveFlag: true,
+                child: GestureDetector(
+                  onTap: () => context.go(AppRoutes.loans),
+                  child: KpiCard(
+                    title: 'Loan Portfolio',
+                    value: _formatAmount(s.totalLoans),
+                    icon: Icons.account_balance_rounded,
+                    iconColor: AppColors.accent,
+                    subtitle: '${s.activeLoans} active accounts',
+                    subtitlePositiveFlag: true,
+                  ),
                 ),
               ),
               const SizedBox(width: AppDimensions.sm),

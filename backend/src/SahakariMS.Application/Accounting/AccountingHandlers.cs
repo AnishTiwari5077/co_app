@@ -259,3 +259,102 @@ public class GetDashboardActivityQueryHandler(IAppDbContext db)
             new DashboardActivityDto(recentTxns, dist, pending));
     }
 }
+
+// ── Get Vouchers Query ────────────────────────────────────────────────────────
+
+public record VoucherEntryDto(string AccountCode, string AccountName, string EntryType, decimal Amount, string? Narration);
+public record VoucherListDto(Guid Id, string VoucherNumber, string VoucherType, DateOnly VoucherDate,
+    string? Narration, string Status, decimal TotalAmount, List<VoucherEntryDto> Entries);
+
+public record GetVouchersQuery(int Page = 1, int PageSize = 30, string? VoucherType = null)
+    : IRequest<Result<PagedResult<VoucherListDto>>>;
+
+public class GetVouchersQueryHandler(IAppDbContext db)
+    : IRequestHandler<GetVouchersQuery, Result<PagedResult<VoucherListDto>>>
+{
+    public async Task<Result<PagedResult<VoucherListDto>>> Handle(GetVouchersQuery q, CancellationToken ct)
+    {
+        var query = db.Vouchers.AsNoTracking()
+            .Include(v => v.Entries).ThenInclude(e => e.Account)
+            .Where(v => !v.IsDeleted);
+
+        if (!string.IsNullOrEmpty(q.VoucherType))
+            query = query.Where(v => v.VoucherType == q.VoucherType);
+
+        var total = await query.CountAsync(ct);
+        var items = await query
+            .OrderByDescending(v => v.VoucherDate)
+            .ThenByDescending(v => v.CreatedAt)
+            .Skip((q.Page - 1) * q.PageSize).Take(Math.Min(q.PageSize, 100))
+            .ToListAsync(ct);
+
+        var dtos = items.Select(v => new VoucherListDto(
+            v.Id, v.VoucherNumber, v.VoucherType, v.VoucherDate,
+            v.Narration, v.Status,
+            v.Entries.Where(e => e.EntryType == "Debit").Sum(e => e.Amount),
+            v.Entries.Select(e => new VoucherEntryDto(
+                e.Account?.AccountCode ?? "",
+                e.Account?.AccountName ?? "",
+                e.EntryType, e.Amount, e.Narration)).ToList()
+        )).ToList();
+
+        return Result<PagedResult<VoucherListDto>>.Success(
+            PagedResult<VoucherListDto>.Create(dtos, q.Page, q.PageSize, total));
+    }
+}
+
+// ── Get Ledger Query ──────────────────────────────────────────────────────────
+
+public record LedgerEntryDto(string VoucherNumber, string VoucherType, DateOnly VoucherDate,
+    string? Narration, string EntryType, decimal Amount, decimal RunningBalance);
+
+public record LedgerDto(string AccountCode, string AccountName, string AccountType,
+    decimal OpeningBalance, decimal CurrentBalance,
+    List<LedgerEntryDto> Entries, decimal TotalDebit, decimal TotalCredit);
+
+public record GetLedgerQuery(Guid AccountId, DateOnly? FromDate = null, DateOnly? ToDate = null)
+    : IRequest<Result<LedgerDto>>;
+
+public class GetLedgerQueryHandler(IAppDbContext db)
+    : IRequestHandler<GetLedgerQuery, Result<LedgerDto>>
+{
+    public async Task<Result<LedgerDto>> Handle(GetLedgerQuery q, CancellationToken ct)
+    {
+        var account = await db.ChartOfAccounts.AsNoTracking()
+            .FirstOrDefaultAsync(a => a.Id == q.AccountId && !a.IsDeleted, ct);
+        if (account is null)
+            return Result<LedgerDto>.Failure("ACCOUNT_NOT_FOUND", "Account not found.");
+
+        var entryQuery = db.VoucherEntries.AsNoTracking()
+            .Include(e => e.Voucher)
+            .Where(e => e.AccountId == q.AccountId && !e.IsDeleted);
+
+        if (q.FromDate.HasValue)
+            entryQuery = entryQuery.Where(e => e.Voucher!.VoucherDate >= q.FromDate.Value);
+        if (q.ToDate.HasValue)
+            entryQuery = entryQuery.Where(e => e.Voucher!.VoucherDate <= q.ToDate.Value);
+
+        var rawEntries = await entryQuery
+            .OrderBy(e => e.Voucher!.VoucherDate)
+            .ThenBy(e => e.CreatedAt)
+            .ToListAsync(ct);
+
+        // Build running balance
+        var runningBalance = 0m;
+        var entries = rawEntries.Select(e =>
+        {
+            var delta = e.EntryType == "Debit" ? e.Amount : -e.Amount;
+            runningBalance += delta;
+            return new LedgerEntryDto(
+                e.Voucher!.VoucherNumber, e.Voucher.VoucherType, e.Voucher.VoucherDate,
+                e.Narration ?? e.Voucher.Narration, e.EntryType, e.Amount, runningBalance);
+        }).ToList();
+
+        var totalDebit = rawEntries.Where(e => e.EntryType == "Debit").Sum(e => e.Amount);
+        var totalCredit = rawEntries.Where(e => e.EntryType == "Credit").Sum(e => e.Amount);
+
+        return Result<LedgerDto>.Success(new LedgerDto(
+            account.AccountCode, account.AccountName, account.AccountType,
+            0, account.CurrentBalance, entries, totalDebit, totalCredit));
+    }
+}

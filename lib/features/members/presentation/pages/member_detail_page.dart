@@ -226,7 +226,7 @@ class _MemberDetailPageState extends ConsumerState<MemberDetailPage>
             children: [
               _ProfileTab(member: member),
               _SavingsTab(accounts: member.savingAccounts),
-              _LoansTab(loans: member.loans),
+              _LoansTab(loans: member.loans, memberId: member.id),
               const _SharesTab(),
             ],
           ),
@@ -568,78 +568,110 @@ class _SavingsTab extends StatelessWidget {
 
 class _LoansTab extends StatelessWidget {
   final List<LoanSummary> loans;
-  const _LoansTab({required this.loans});
+  final String memberId;
+  const _LoansTab({required this.loans, required this.memberId});
 
   @override
   Widget build(BuildContext context) {
-    if (loans.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.account_balance_outlined, size: 48, color: AppColors.textSecondary.withOpacity(0.4)),
-            const SizedBox(height: AppDimensions.sm),
-            Text('No loans', style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textSecondary)),
-          ],
-        ),
-      );
-    }
     return ListView(
       padding: const EdgeInsets.all(AppDimensions.md),
-      children: loans.map((l) => Padding(
-        padding: const EdgeInsets.only(bottom: AppDimensions.sm),
-        child: Container(
-          padding: const EdgeInsets.all(AppDimensions.md),
-          decoration: BoxDecoration(
-            color: AppColors.surface,
-            borderRadius: BorderRadius.circular(AppDimensions.radiusLg),
-            border: Border.all(color: const Color(0xFFE8EDF3)),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: AppColors.primary.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(AppDimensions.radiusMd),
-                    ),
-                    child: const Icon(Icons.account_balance_rounded, color: AppColors.primary, size: 20),
-                  ),
-                  const SizedBox(width: AppDimensions.sm),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('Loan', style: AppTextStyles.titleSmall),
-                        Text(l.loanNumber,
-                            style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondary)),
-                      ],
-                    ),
-                  ),
-                  StatusBadge(status: l.status),
-                ],
-              ),
-              const SizedBox(height: AppDimensions.md),
-              Row(
-                children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Outstanding',
-                          style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondary)),
-                      Text('NPR ${l.outstanding.toStringAsFixed(2)}',
-                          style: AppTextStyles.amountSmall),
-                    ],
-                  ),
-                ],
-              ),
-            ],
+      children: [
+        // Apply Loan button
+        OutlinedButton.icon(
+          onPressed: () => context.push('/loans/apply?memberId=$memberId'),
+          icon: const Icon(Icons.add_card_rounded),
+          label: const Text('Apply Loan for this Member'),
+          style: OutlinedButton.styleFrom(
+            foregroundColor: AppColors.primary,
+            side: const BorderSide(color: AppColors.primary),
+            minimumSize: const Size.fromHeight(44),
           ),
         ),
-      )).toList(),
+        const SizedBox(height: AppDimensions.md),
+        if (loans.isEmpty)
+          Center(
+            child: Padding(
+              padding: const EdgeInsets.only(top: AppDimensions.xl),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.account_balance_outlined,
+                      size: 48,
+                      color: AppColors.textSecondary.withOpacity(0.4)),
+                  const SizedBox(height: AppDimensions.sm),
+                  Text('No loans yet',
+                      style: AppTextStyles.bodyMedium
+                          .copyWith(color: AppColors.textSecondary)),
+                ],
+              ),
+            ),
+          )
+        else
+          ...loans.map((l) => Padding(
+            padding: const EdgeInsets.only(bottom: AppDimensions.sm),
+            child: GestureDetector(
+              onTap: () => context.push('/loans/${l.id}'),
+              child: Container(
+                padding: const EdgeInsets.all(AppDimensions.md),
+                decoration: BoxDecoration(
+                  color: AppColors.surface,
+                  borderRadius: BorderRadius.circular(AppDimensions.radiusLg),
+                  border: Border.all(color: const Color(0xFFE8EDF3)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: AppColors.primary.withOpacity(0.1),
+                            borderRadius:
+                                BorderRadius.circular(AppDimensions.radiusMd),
+                          ),
+                          child: const Icon(Icons.account_balance_rounded,
+                              color: AppColors.primary, size: 20),
+                        ),
+                        const SizedBox(width: AppDimensions.sm),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('Loan', style: AppTextStyles.titleSmall),
+                              Text(l.loanNumber,
+                                  style: AppTextStyles.bodySmall
+                                      .copyWith(color: AppColors.textSecondary)),
+                            ],
+                          ),
+                        ),
+                        StatusBadge(status: l.status),
+                        const SizedBox(width: AppDimensions.xs),
+                        const Icon(Icons.chevron_right_rounded,
+                            color: AppColors.textSecondary, size: 18),
+                      ],
+                    ),
+                    const SizedBox(height: AppDimensions.md),
+                    Row(
+                      children: [
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('Outstanding',
+                                style: AppTextStyles.bodySmall
+                                    .copyWith(color: AppColors.textSecondary)),
+                            Text('NPR ${l.outstanding.toStringAsFixed(2)}',
+                                style: AppTextStyles.amountSmall),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          )),
+      ],
     );
   }
 }
