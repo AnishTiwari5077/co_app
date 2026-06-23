@@ -124,8 +124,17 @@ class _SavingsListPageState extends ConsumerState<SavingsListPage>
         title: const Text('Savings', style: AppTextStyles.titleLarge),
         backgroundColor: AppColors.surface,
         elevation: 0,
-        actions: const [
-          AppBarUserBadge(),
+        actions: [
+          TextButton.icon(
+            onPressed: () async {
+              await context.push('/savings/open');
+              if (mounted) ref.read(_savingsListProvider.notifier).load();
+            },
+            icon: const Icon(Icons.add_rounded, size: 18),
+            label: const Text('Open Account'),
+            style: TextButton.styleFrom(foregroundColor: AppColors.secondary),
+          ),
+          const AppBarUserBadge(),
         ],
         bottom: TabBar(
           controller: _tabController,

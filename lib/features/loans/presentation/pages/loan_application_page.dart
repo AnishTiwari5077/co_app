@@ -442,59 +442,63 @@ class _LoanApplicationPageState extends ConsumerState<LoanApplicationPage> {
 
           // Dropdown suggestions
           if (_showSuggestions && _memberSuggestions.isNotEmpty)
-            Container(
-              margin: const EdgeInsets.only(top: 4),
+            DecoratedBox(
               decoration: BoxDecoration(
-                color: AppColors.surface,
                 borderRadius: BorderRadius.circular(AppDimensions.radiusLg),
                 border: Border.all(color: const Color(0xFFE0E7EF)),
                 boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.06), blurRadius: 8, offset: const Offset(0, 3))],
               ),
-              child: ListView.separated(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                padding: EdgeInsets.zero,
-                itemCount: _memberSuggestions.length,
-                separatorBuilder: (_, __) => const Divider(height: 1, indent: 56),
-                itemBuilder: (ctx, i) {
-                  final m = _memberSuggestions[i];
-                  final isActive = m.status == 'Active';
-                  return ListTile(
-                    onTap: () => _selectMember(m),
-                    leading: CircleAvatar(
-                      backgroundColor: isActive
-                          ? AppColors.primary.withValues(alpha: 0.12)
-                          : AppColors.surfaceVariant,
-                      child: Text(
-                        m.fullName.isNotEmpty ? m.fullName[0].toUpperCase() : '?',
-                        style: AppTextStyles.labelLarge.copyWith(
-                          color: isActive ? AppColors.primary : AppColors.textSecondary,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(AppDimensions.radiusLg),
+                child: Material(
+                  color: AppColors.surface,
+                  child: ListView.separated(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    padding: EdgeInsets.zero,
+                    itemCount: _memberSuggestions.length,
+                    separatorBuilder: (_, __) => const Divider(height: 1, indent: 56),
+                    itemBuilder: (ctx, i) {
+                      final m = _memberSuggestions[i];
+                      final isActive = m.status == 'Active';
+                      return ListTile(
+                        onTap: () => _selectMember(m),
+                        leading: CircleAvatar(
+                          backgroundColor: isActive
+                              ? AppColors.primary.withValues(alpha: 0.12)
+                              : AppColors.surfaceVariant,
+                          child: Text(
+                            m.fullName.isNotEmpty ? m.fullName[0].toUpperCase() : '?',
+                            style: AppTextStyles.labelLarge.copyWith(
+                              color: isActive ? AppColors.primary : AppColors.textSecondary,
+                            ),
+                          ),
                         ),
-                      ),
-                    ),
-                    title: Text(m.fullName, style: AppTextStyles.titleSmall),
-                    subtitle: Text(
-                      '${m.memberCode}  •  ${m.phone}',
-                      style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondary),
-                    ),
-                    trailing: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                      decoration: BoxDecoration(
-                        color: isActive
-                            ? AppColors.secondary.withValues(alpha: 0.1)
-                            : AppColors.error.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(AppDimensions.radiusSm),
-                      ),
-                      child: Text(
-                        m.status,
-                        style: AppTextStyles.labelSmall.copyWith(
-                          color: isActive ? AppColors.secondary : AppColors.error,
-                          fontSize: 10,
+                        title: Text(m.fullName, style: AppTextStyles.titleSmall),
+                        subtitle: Text(
+                          '${m.memberCode}  •  ${m.phone}',
+                          style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondary),
                         ),
-                      ),
-                    ),
-                  );
-                },
+                        trailing: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: isActive
+                                ? AppColors.secondary.withValues(alpha: 0.1)
+                                : AppColors.error.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(AppDimensions.radiusSm),
+                          ),
+                          child: Text(
+                            m.status,
+                            style: AppTextStyles.labelSmall.copyWith(
+                              color: isActive ? AppColors.secondary : AppColors.error,
+                              fontSize: 10,
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
               ),
             ),
 

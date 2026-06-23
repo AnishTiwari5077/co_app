@@ -1,6 +1,6 @@
 {
   "Version": 1,
-  "Hash": "JBetGRucLeqMIR47Ost0up2Ge+dt1FBptSFgL/3ZDGo=",
+  "Hash": "Gs+alWrbE5DRXIQV4+jGBE7KfstidvNytYaz1hwPZ2g=",
   "Source": "SahakariMS.Api",
   "BasePath": "_content/SahakariMS.Api",
   "Mode": "Default",
@@ -15,5 +15,44 @@
       "Pattern": "**"
     }
   ],
-  "Assets": []
+  "Assets": [
+    {
+      "Identity": "F:\\c_app\\backend\\src\\SahakariMS.Api\\wwwroot\\uploads\\members\\f0fd6eb5-f71b-404c-b287-18a6c3ca312d\\citizenship_20260623154656.jpg",
+      "SourceId": "SahakariMS.Api",
+      "SourceType": "Discovered",
+      "ContentRoot": "F:\\c_app\\backend\\src\\SahakariMS.Api\\wwwroot\\",
+      "BasePath": "_content/SahakariMS.Api",
+      "RelativePath": "uploads/members/f0fd6eb5-f71b-404c-b287-18a6c3ca312d/citizenship_20260623154656.jpg",
+      "AssetKind": "All",
+      "AssetMode": "All",
+      "AssetRole": "Primary",
+      "AssetMergeBehavior": "PreferTarget",
+      "AssetMergeSource": "",
+      "RelatedAsset": "",
+      "AssetTraitName": "",
+      "AssetTraitValue": "",
+      "CopyToOutputDirectory": "Never",
+      "CopyToPublishDirectory": "PreserveNewest",
+      "OriginalItemSpec": "wwwroot\\uploads\\members\\f0fd6eb5-f71b-404c-b287-18a6c3ca312d\\citizenship_20260623154656.jpg"
+    },
+    {
+      "Identity": "F:\\c_app\\backend\\src\\SahakariMS.Api\\wwwroot\\uploads\\members\\f0fd6eb5-f71b-404c-b287-18a6c3ca312d\\photo_20260623154656.jpg",
+      "SourceId": "SahakariMS.Api",
+      "SourceType": "Discovered",
+      "ContentRoot": "F:\\c_app\\backend\\src\\SahakariMS.Api\\wwwroot\\",
+      "BasePath": "_content/SahakariMS.Api",
+      "RelativePath": "uploads/members/f0fd6eb5-f71b-404c-b287-18a6c3ca312d/photo_20260623154656.jpg",
+      "AssetKind": "All",
+      "AssetMode": "All",
+      "AssetRole": "Primary",
+      "AssetMergeBehavior": "PreferTarget",
+      "AssetMergeSource": "",
+      "RelatedAsset": "",
+      "AssetTraitName": "",
+      "AssetTraitValue": "",
+      "CopyToOutputDirectory": "Never",
+      "CopyToPublishDirectory": "PreserveNewest",
+      "OriginalItemSpec": "wwwroot\\uploads\\members\\f0fd6eb5-f71b-404c-b287-18a6c3ca312d\\photo_20260623154656.jpg"
+    }
+  ]
 }

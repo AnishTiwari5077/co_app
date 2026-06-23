@@ -783,7 +783,25 @@ public class DashboardController(IMediator mediator) : ControllerBase
     }
 }
 
+
+// ── Notifications Controller ──────────────────────────────────────────────────
+[ApiController]
+[Route("api/v1/notifications")]
+[Authorize]
+public class NotificationsController(IMediator mediator) : ControllerBase
+{
+    /// <summary>GET /notifications — returns real-time notifications from live data.</summary>
+    [HttpGet]
+    public async Task<IActionResult> GetNotifications(CancellationToken ct)
+    {
+        var result = await mediator.Send(new Application.Notifications.GetNotificationsQuery(), ct);
+        if (!result.IsSuccess) return BadRequest(ApiResponse<object>.Fail(result.ErrorCode!, result.ErrorMessage!));
+        return Ok(ApiResponse<List<Application.Notifications.NotificationDto>>.Ok(result.Value!));
+    }
+}
+
 // ── Request body records ──────────────────────────────────────────────────────
 
 public record UpdateMemberStatusBody(string Action, string? Reason);
 public record CloseAccountBody(string? Reason);
+
