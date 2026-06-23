@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("SahakariMS.Shared")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+0f5785e53847d34410c50a94dd60122291c8ebf0")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+4fea2cd7df986ac92d5d950fa7c5f136cec61936")]
 [assembly: System.Reflection.AssemblyProductAttribute("SahakariMS.Shared")]
 [assembly: System.Reflection.AssemblyTitleAttribute("SahakariMS.Shared")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

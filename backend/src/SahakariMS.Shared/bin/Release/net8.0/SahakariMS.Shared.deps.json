@@ -1,0 +1,23 @@
+{
+  "runtimeTarget": {
+    "name": ".NETCoreApp,Version=v8.0",
+    "signature": ""
+  },
+  "compilationOptions": {},
+  "targets": {
+    ".NETCoreApp,Version=v8.0": {
+      "SahakariMS.Shared/1.0.0": {
+        "runtime": {
+          "SahakariMS.Shared.dll": {}
+        }
+      }
+    }
+  },
+  "libraries": {
+    "SahakariMS.Shared/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    }
+  }
+}

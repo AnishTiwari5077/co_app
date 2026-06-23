@@ -1,0 +1,77 @@
+{
+  "Version": 1,
+  "Hash": "kc5rlRcEPkQSMRW8/20E5M0JiD/Bm8NYOS/Dl36QERk=",
+  "Source": "SahakariMS.Api",
+  "BasePath": "_content/SahakariMS.Api",
+  "Mode": "Default",
+  "ManifestType": "Build",
+  "ReferencedProjectsConfiguration": [],
+  "DiscoveryPatterns": [
+    {
+      "Name": "SahakariMS.Api\\wwwroot",
+      "Source": "SahakariMS.Api",
+      "ContentRoot": "F:\\c_app\\backend\\src\\SahakariMS.Api\\wwwroot\\",
+      "BasePath": "_content/SahakariMS.Api",
+      "Pattern": "**"
+    }
+  ],
+  "Assets": [
+    {
+      "Identity": "F:\\c_app\\backend\\src\\SahakariMS.Api\\wwwroot\\uploads\\members\\dcf3bf05-5c42-42d0-a681-66c99ec610df\\photo_20260623165259.jpg",
+      "SourceId": "SahakariMS.Api",
+      "SourceType": "Discovered",
+      "ContentRoot": "F:\\c_app\\backend\\src\\SahakariMS.Api\\wwwroot\\",
+      "BasePath": "_content/SahakariMS.Api",
+      "RelativePath": "uploads/members/dcf3bf05-5c42-42d0-a681-66c99ec610df/photo_20260623165259.jpg",
+      "AssetKind": "All",
+      "AssetMode": "All",
+      "AssetRole": "Primary",
+      "AssetMergeBehavior": "PreferTarget",
+      "AssetMergeSource": "",
+      "RelatedAsset": "",
+      "AssetTraitName": "",
+      "AssetTraitValue": "",
+      "CopyToOutputDirectory": "Never",
+      "CopyToPublishDirectory": "PreserveNewest",
+      "OriginalItemSpec": "wwwroot\\uploads\\members\\dcf3bf05-5c42-42d0-a681-66c99ec610df\\photo_20260623165259.jpg"
+    },
+    {
+      "Identity": "F:\\c_app\\backend\\src\\SahakariMS.Api\\wwwroot\\uploads\\members\\f0fd6eb5-f71b-404c-b287-18a6c3ca312d\\citizenship_20260623154656.jpg",
+      "SourceId": "SahakariMS.Api",
+      "SourceType": "Discovered",
+      "ContentRoot": "F:\\c_app\\backend\\src\\SahakariMS.Api\\wwwroot\\",
+      "BasePath": "_content/SahakariMS.Api",
+      "RelativePath": "uploads/members/f0fd6eb5-f71b-404c-b287-18a6c3ca312d/citizenship_20260623154656.jpg",
+      "AssetKind": "All",
+      "AssetMode": "All",
+      "AssetRole": "Primary",
+      "AssetMergeBehavior": "PreferTarget",
+      "AssetMergeSource": "",
+      "RelatedAsset": "",
+      "AssetTraitName": "",
+      "AssetTraitValue": "",
+      "CopyToOutputDirectory": "Never",
+      "CopyToPublishDirectory": "PreserveNewest",
+      "OriginalItemSpec": "wwwroot\\uploads\\members\\f0fd6eb5-f71b-404c-b287-18a6c3ca312d\\citizenship_20260623154656.jpg"
+    },
+    {
+      "Identity": "F:\\c_app\\backend\\src\\SahakariMS.Api\\wwwroot\\uploads\\members\\f0fd6eb5-f71b-404c-b287-18a6c3ca312d\\photo_20260623154656.jpg",
+      "SourceId": "SahakariMS.Api",
+      "SourceType": "Discovered",
+      "ContentRoot": "F:\\c_app\\backend\\src\\SahakariMS.Api\\wwwroot\\",
+      "BasePath": "_content/SahakariMS.Api",
+      "RelativePath": "uploads/members/f0fd6eb5-f71b-404c-b287-18a6c3ca312d/photo_20260623154656.jpg",
+      "AssetKind": "All",
+      "AssetMode": "All",
+      "AssetRole": "Primary",
+      "AssetMergeBehavior": "PreferTarget",
+      "AssetMergeSource": "",
+      "RelatedAsset": "",
+      "AssetTraitName": "",
+      "AssetTraitValue": "",
+      "CopyToOutputDirectory": "Never",
+      "CopyToPublishDirectory": "PreserveNewest",
+      "OriginalItemSpec": "wwwroot\\uploads\\members\\f0fd6eb5-f71b-404c-b287-18a6c3ca312d\\photo_20260623154656.jpg"
+    }
+  ]
+}
