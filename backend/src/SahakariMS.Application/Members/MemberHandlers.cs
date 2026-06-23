@@ -12,12 +12,17 @@ public record MemberListDto(Guid Id, string MemberCode, string FullName, string 
 
 public record MemberDetailDto(Guid Id, string MemberCode, string FirstName, string? MiddleName,
     string LastName, string Gender, DateOnly? DateOfBirthAd, string? CitizenshipNumber,
-    string PhoneNumber, string? Email, string? AddressDistrict, string? AddressMunicipality,
+    string? PanNumber, string? Occupation,
+    string PhoneNumber, string? Email,
+    string? AddressDistrict, string? AddressMunicipality, string? AddressWard, string? AddressTole,
+    DateOnly? MembershipDate,
     string Status, bool KycVerified, string? PhotoUrl,
-    List<SavingAccountSummaryDto> SavingAccounts, List<LoanSummaryDto> Loans);
+    List<SavingAccountSummaryDto> SavingAccounts, List<LoanSummaryDto> Loans,
+    List<NomineeSummaryDto> Nominees);
 
 public record SavingAccountSummaryDto(Guid Id, string AccountNumber, decimal Balance, string Status);
 public record LoanSummaryDto(Guid Id, string LoanNumber, decimal Outstanding, string Status);
+public record NomineeSummaryDto(string? FullName, string? Relationship, string? PhoneNumber);
 
 public record RegisterMemberRequest(
     string FirstName, string? MiddleName, string LastName, string Gender,
@@ -72,17 +77,23 @@ public class GetMemberByIdQueryHandler(IAppDbContext db)
     public async Task<Result<MemberDetailDto>> Handle(GetMemberByIdQuery q, CancellationToken ct)
     {
         var m = await db.Members.AsNoTracking()
-            .Include(m => m.SavingAccounts).Include(m => m.Loans)
+            .Include(m => m.SavingAccounts)
+            .Include(m => m.Loans)
+            .Include(m => m.Nominees)
             .FirstOrDefaultAsync(m => m.Id == q.Id && !m.IsDeleted, ct);
 
         if (m is null) return Result<MemberDetailDto>.Failure("MEMBER_NOT_FOUND", $"Member {q.Id} not found.");
 
         return Result<MemberDetailDto>.Success(new MemberDetailDto(
             m.Id, m.MemberCode, m.FirstName, m.MiddleName, m.LastName, m.Gender,
-            m.DateOfBirthAd, m.CitizenshipNumber, m.PhoneNumber, m.Email,
-            m.AddressDistrict, m.AddressMunicipality, m.Status, m.KycVerified, m.PhotoUrl,
+            m.DateOfBirthAd, m.CitizenshipNumber, m.PanNumber, m.Occupation,
+            m.PhoneNumber, m.Email,
+            m.AddressDistrict, m.AddressMunicipality, m.AddressWard, m.AddressTole,
+            m.MembershipDate,
+            m.Status, m.KycVerified, m.PhotoUrl,
             m.SavingAccounts.Select(s => new SavingAccountSummaryDto(s.Id, s.AccountNumber, s.CurrentBalance, s.Status)).ToList(),
-            m.Loans.Select(l => new LoanSummaryDto(l.Id, l.LoanNumber, l.OutstandingBalance, l.Status)).ToList()));
+            m.Loans.Select(l => new LoanSummaryDto(l.Id, l.LoanNumber, l.OutstandingBalance, l.Status)).ToList(),
+            m.Nominees.Select(n => new NomineeSummaryDto(n.FullName, n.Relationship, n.PhoneNumber)).ToList()));
     }
 }
 

@@ -11,6 +11,7 @@ using SahakariMS.Application.Interfaces;
 using SahakariMS.Api.Middleware;
 using Hangfire;
 using Hangfire.PostgreSql;
+using SahakariMS.Application.Loans;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -69,6 +70,7 @@ builder.Services.AddHangfire(cfg => cfg
     .UseRecommendedSerializerSettings()
     .UsePostgreSqlStorage(c => c.UseNpgsqlConnection(connString)));
 builder.Services.AddHangfireServer();
+builder.Services.AddScoped<LoanNpaJob>();
 
 // ── API ───────────────────────────────────────────────────────────────────────
 builder.Services.AddControllers().AddJsonOptions(opts =>
@@ -119,6 +121,14 @@ app.UseCors();
 app.UseAuthentication();
 app.UseAuthorization();
 app.UseHangfireDashboard("/hangfire");
+
+// ── Recurring Jobs ────────────────────────────────────────────────────────────
+// Runs every day at midnight UTC: marks overdue EMIs and updates NPA classification
+RecurringJob.AddOrUpdate<LoanNpaJob>(
+    "loan-npa-daily",
+    job => job.ExecuteAsync(),
+    Cron.Daily(0, 0), // midnight UTC
+    new RecurringJobOptions { TimeZone = TimeZoneInfo.Utc });
 app.MapControllers();
 
 app.Run();

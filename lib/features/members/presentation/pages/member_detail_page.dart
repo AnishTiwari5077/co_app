@@ -17,22 +17,28 @@ import '../../../dashboard/presentation/pages/dashboard_page.dart';
 class MemberDetail {
   final String id, memberCode, firstName, lastName, fullName;
   final String? middleName, gender, dateOfBirthAd, citizenshipNumber;
+  final String? panNumber, occupation, addressDistrict, addressMunicipality;
+  final String? addressWard, addressTole, membershipDate;
   final String phoneNumber;
-  final String? email, addressDistrict, addressMunicipality;
+  final String? email;
   final String status;
   final bool kycVerified;
   final String? photoUrl;
   final List<SavingAccountSummary> savingAccounts;
   final List<LoanSummary> loans;
+  final List<MemberNomineeSummary> nominees;
 
   MemberDetail({
     required this.id, required this.memberCode,
     required this.firstName, required this.lastName,
     this.middleName, this.gender, this.dateOfBirthAd,
-    this.citizenshipNumber, required this.phoneNumber,
-    this.email, this.addressDistrict, this.addressMunicipality,
+    this.citizenshipNumber, this.panNumber,
+    this.occupation, this.addressDistrict, this.addressMunicipality,
+    this.addressWard, this.addressTole, this.membershipDate,
+    required this.phoneNumber,
+    this.email,
     required this.status, required this.kycVerified, this.photoUrl,
-    required this.savingAccounts, required this.loans,
+    required this.savingAccounts, required this.loans, required this.nominees,
   }) : fullName = [firstName, if (middleName != null && middleName.isNotEmpty) middleName, lastName].join(' ');
 
   factory MemberDetail.fromJson(Map<String, dynamic> j) => MemberDetail(
@@ -44,10 +50,15 @@ class MemberDetail {
     gender: j['gender'] as String?,
     dateOfBirthAd: j['dateOfBirthAd'] as String?,
     citizenshipNumber: j['citizenshipNumber'] as String?,
-    phoneNumber: j['phoneNumber'] as String? ?? '',
-    email: j['email'] as String?,
+    panNumber: j['panNumber'] as String?,
+    occupation: j['occupation'] as String?,
     addressDistrict: j['addressDistrict'] as String?,
     addressMunicipality: j['addressMunicipality'] as String?,
+    addressWard: j['addressWard'] as String?,
+    addressTole: j['addressTole'] as String?,
+    membershipDate: j['membershipDate'] as String?,
+    phoneNumber: j['phoneNumber'] as String? ?? '',
+    email: j['email'] as String?,
     status: j['status'] as String? ?? 'Pending',
     kycVerified: j['kycVerified'] as bool? ?? false,
     photoUrl: j['photoUrl'] as String?,
@@ -56,6 +67,9 @@ class MemberDetail {
         .toList(),
     loans: (j['loans'] as List<dynamic>? ?? [])
         .map((e) => LoanSummary.fromJson(e as Map<String, dynamic>))
+        .toList(),
+    nominees: (j['nominees'] as List<dynamic>? ?? [])
+        .map((e) => MemberNomineeSummary.fromJson(e as Map<String, dynamic>))
         .toList(),
   );
 }
@@ -81,6 +95,16 @@ class LoanSummary {
     loanNumber: j['loanNumber'] as String? ?? '',
     outstanding: (j['outstanding'] as num?)?.toDouble() ?? 0,
     status: j['status'] as String? ?? 'Active',
+  );
+}
+
+class MemberNomineeSummary {
+  final String? fullName, relationship, phoneNumber;
+  MemberNomineeSummary({this.fullName, this.relationship, this.phoneNumber});
+  factory MemberNomineeSummary.fromJson(Map<String, dynamic> j) => MemberNomineeSummary(
+    fullName: j['fullName'] as String?,
+    relationship: j['relationship'] as String?,
+    phoneNumber: j['phoneNumber'] as String?,
   );
 }
 
@@ -440,40 +464,83 @@ class _ProfileTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Build full address string
+    final addressParts = [
+      if (member.addressTole != null) member.addressTole!,
+      if (member.addressWard != null) 'Ward ${member.addressWard}',
+      if (member.addressMunicipality != null) member.addressMunicipality!,
+      if (member.addressDistrict != null) member.addressDistrict!,
+    ];
+
     return ListView(
+      physics: const ClampingScrollPhysics(),
       padding: const EdgeInsets.all(AppDimensions.md),
       children: [
+        // ── Personal Information ───────────────────────────────────────────
         _InfoSection(title: 'Personal Information', rows: [
           InfoRow(label: 'Full Name', value: member.fullName),
           if (member.gender != null) InfoRow(label: 'Gender', value: member.gender!),
           if (member.dateOfBirthAd != null) InfoRow(label: 'Date of Birth (AD)', value: member.dateOfBirthAd!),
+          if (member.occupation != null) InfoRow(label: 'Occupation', value: member.occupation!),
         ]),
         const SizedBox(height: AppDimensions.md),
+
+        // ── Contact Information ────────────────────────────────────────────
         _InfoSection(title: 'Contact Information', rows: [
           InfoRow(label: 'Phone', value: member.phoneNumber),
-          if (member.email != null) InfoRow(label: 'Email', value: member.email!),
+          if (member.email != null && member.email!.isNotEmpty)
+            InfoRow(label: 'Email', value: member.email!),
         ]),
-        if (member.addressDistrict != null || member.addressMunicipality != null) ...[
+
+        // ── Address ───────────────────────────────────────────────────────
+        if (addressParts.isNotEmpty) ...[
           const SizedBox(height: AppDimensions.md),
-          _InfoSection(title: 'Address', rows: [
+          _InfoSection(title: 'Permanent Address', rows: [
             if (member.addressDistrict != null)
               InfoRow(label: 'District', value: member.addressDistrict!),
             if (member.addressMunicipality != null)
-              InfoRow(label: 'Municipality', value: member.addressMunicipality!),
+              InfoRow(label: 'Municipality / VDC', value: member.addressMunicipality!),
+            if (member.addressWard != null)
+              InfoRow(label: 'Ward No.', value: member.addressWard!),
+            if (member.addressTole != null)
+              InfoRow(label: 'Tole', value: member.addressTole!),
           ]),
         ],
-        if (member.citizenshipNumber != null) ...[
+
+        // ── Identity Documents ────────────────────────────────────────────
+        if (member.citizenshipNumber != null || member.panNumber != null) ...[
           const SizedBox(height: AppDimensions.md),
           _InfoSection(title: 'Identity Documents', rows: [
-            InfoRow(label: 'Citizenship No.', value: member.citizenshipNumber!),
+            if (member.citizenshipNumber != null && member.citizenshipNumber!.isNotEmpty)
+              InfoRow(label: 'Citizenship No.', value: member.citizenshipNumber!),
+            if (member.panNumber != null && member.panNumber!.isNotEmpty)
+              InfoRow(label: 'PAN Number', value: member.panNumber!),
           ]),
         ],
+
+        // ── Membership Details ────────────────────────────────────────────
         const SizedBox(height: AppDimensions.md),
         _InfoSection(title: 'Membership Details', rows: [
           InfoRow(label: 'Member Code', value: member.memberCode),
           InfoRow(label: 'Status', value: member.status),
           InfoRow(label: 'KYC Status', value: member.kycVerified ? 'Verified ✓' : 'Pending'),
+          if (member.membershipDate != null && member.membershipDate!.isNotEmpty)
+            InfoRow(label: 'Membership Date', value: member.membershipDate!.split('T').first),
         ]),
+
+        // ── Nominee Information ───────────────────────────────────────────
+        if (member.nominees.isNotEmpty) ...[
+          const SizedBox(height: AppDimensions.md),
+          _InfoSection(title: 'Nominee Information', rows: [
+            if (member.nominees.first.fullName != null)
+              InfoRow(label: 'Nominee Name', value: member.nominees.first.fullName!),
+            if (member.nominees.first.relationship != null)
+              InfoRow(label: 'Relationship', value: member.nominees.first.relationship!),
+            if (member.nominees.first.phoneNumber != null)
+              InfoRow(label: 'Nominee Phone', value: member.nominees.first.phoneNumber!),
+          ]),
+        ],
+
         const SizedBox(height: AppDimensions.xxl),
       ],
     );
