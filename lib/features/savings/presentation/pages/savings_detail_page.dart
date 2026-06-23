@@ -343,13 +343,32 @@ class _SavingsDetailPageState extends ConsumerState<SavingsDetailPage>
             Expanded(
               child: AppButton(
                 label: 'Withdraw',
-                onPressed: detail.withdrawalAllowed
-                    ? () async {
-                        await context.push(AppRoutes.withdraw(widget.accountId));
-                        ref.invalidate(_accountDetailProvider(widget.accountId));
-                        ref.invalidate(_txnProvider(widget.accountId));
-                      }
-                    : null,
+                onPressed: () async {
+                  if (!detail.withdrawalAllowed) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          'Early withdrawal from ${detail.accountType} accounts may incur penalties.',
+                        ),
+                        backgroundColor: AppColors.accent,
+                        behavior: SnackBarBehavior.floating,
+                        action: SnackBarAction(
+                          label: 'Proceed',
+                          textColor: Colors.white,
+                          onPressed: () async {
+                            await context.push(AppRoutes.withdraw(widget.accountId));
+                            ref.invalidate(_accountDetailProvider(widget.accountId));
+                            ref.invalidate(_txnProvider(widget.accountId));
+                          },
+                        ),
+                      ),
+                    );
+                    return;
+                  }
+                  await context.push(AppRoutes.withdraw(widget.accountId));
+                  ref.invalidate(_accountDetailProvider(widget.accountId));
+                  ref.invalidate(_txnProvider(widget.accountId));
+                },
                 icon: Icons.arrow_upward_rounded,
                 variant: ButtonVariant.outlined,
               ),
