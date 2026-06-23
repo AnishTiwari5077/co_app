@@ -11,6 +11,8 @@ import '../../../../shared/widgets/app_button.dart';
 import '../../../../shared/widgets/app_text_field.dart';
 import '../../../../core/api/repositories/member_repository.dart';
 import '../../../../core/api/api_client.dart';
+import '../../../dashboard/presentation/providers/dashboard_provider.dart';
+import '../../../dashboard/presentation/pages/dashboard_page.dart';
 
 // ── Loan Product model ────────────────────────────────────────────────────────
 class _LoanProduct {
@@ -221,6 +223,9 @@ class _LoanApplicationPageState extends ConsumerState<LoanApplicationPage> {
       final loanId = (res.data as Map<String, dynamic>?)?['id'] as String? ?? '';
       if (mounted) {
         setState(() => _isLoading = false);
+        // ── Immediately refresh dashboard KPIs and activity ──────────────
+        ref.invalidate(dashboardSummaryProvider);
+        ref.invalidate(dashboardActivityProvider);
         _showSuccessDialog(loanId);
       }
     } on DioException catch (e) {
