@@ -94,6 +94,26 @@ public class MembersController(IMediator mediator) : ControllerBase
         return Ok(ApiResponse<object>.Ok(new { message = "Member approved." }));
     }
 
+    /// <summary>PUT /members/{id}/status — suspend, reactivate, or deactivate a member.</summary>
+    [HttpPut("{id:guid}/status")]
+    [Authorize(Roles = "ADMIN,MANAGER")]
+    public async Task<IActionResult> UpdateMemberStatus(Guid id, [FromBody] UpdateMemberStatusBody body, CancellationToken ct)
+    {
+        var result = await mediator.Send(
+            new Application.Members.UpdateMemberStatusCommand(id, body.Action, body.Reason, GetCurrentUserId()), ct);
+        if (!result.IsSuccess) return BadRequest(ApiResponse<object>.Fail(result.ErrorCode!, result.ErrorMessage!));
+        return Ok(ApiResponse<object>.Ok(new { message = $"Member status updated." }));
+    }
+
+    /// <summary>DELETE /members/{id} — Admin only. Soft-deletes a Pending or Inactive member with no financial history.</summary>
+    [HttpDelete("{id:guid}")]
+    [Authorize(Roles = "ADMIN")]
+    public async Task<IActionResult> DeleteMember(Guid id, CancellationToken ct)
+    {
+        var result = await mediator.Send(new Application.Members.DeleteMemberCommand(id, GetCurrentUserId()), ct);
+        if (!result.IsSuccess) return BadRequest(ApiResponse<object>.Fail(result.ErrorCode!, result.ErrorMessage!));
+        return Ok(ApiResponse<object>.Ok(new { message = "Member deleted successfully." }));
+    }
 
 
     /// <summary>GET /accounting/chart-of-accounts/manage - all accounts for management (includes inactive).</summary>
@@ -268,6 +288,16 @@ public class SavingsController(IMediator mediator) : ControllerBase
         if (!result.IsSuccess) return BadRequest(ApiResponse<object>.Fail(result.ErrorCode!, result.ErrorMessage!));
         return Created($"/api/v1/savings/accounts/{result.Value!.AccountId}",
             ApiResponse<Application.Savings.OpenSavingAccountResponse>.Ok(result.Value!));
+    }
+
+    /// <summary>PUT /savings/accounts/{id}/close — Admin/Manager only. Closes an account (balance must be zero).</summary>
+    [HttpPut("{id:guid}/close")]
+    [Authorize(Roles = "ADMIN,MANAGER")]
+    public async Task<IActionResult> CloseAccount(Guid id, [FromBody] CloseAccountBody body, CancellationToken ct)
+    {
+        var result = await mediator.Send(new Application.Savings.CloseSavingAccountCommand(id, body.Reason, GetCurrentUserId()), ct);
+        if (!result.IsSuccess) return BadRequest(ApiResponse<object>.Fail(result.ErrorCode!, result.ErrorMessage!));
+        return Ok(ApiResponse<object>.Ok(new { message = "Savings account closed successfully." }));
     }
 
 
@@ -731,3 +761,8 @@ public class DashboardController(IMediator mediator) : ControllerBase
         return Ok(ApiResponse<Application.Accounting.DashboardActivityDto>.Ok(result.Value!));
     }
 }
+
+// ── Request body records ──────────────────────────────────────────────────────
+
+public record UpdateMemberStatusBody(string Action, string? Reason);
+public record CloseAccountBody(string? Reason);

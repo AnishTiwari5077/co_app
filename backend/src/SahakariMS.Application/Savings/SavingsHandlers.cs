@@ -430,3 +430,32 @@ public class GetSavingTransactionsQueryHandler(IAppDbContext db)
             PagedResult<SavingTransactionDto>.Create(items, q.Page, q.PageSize, total));
     }
 }
+
+// ── Close Saving Account Command ──────────────────────────────────────────────
+
+public record CloseSavingAccountCommand(Guid AccountId, string? Reason, Guid ActorId) : IRequest<Result>;
+
+public class CloseSavingAccountCommandHandler(IAppDbContext db, IUnitOfWork uow)
+    : IRequestHandler<CloseSavingAccountCommand, Result>
+{
+    public async Task<Result> Handle(CloseSavingAccountCommand cmd, CancellationToken ct)
+    {
+        var account = await db.SavingAccounts.FindAsync([cmd.AccountId], ct);
+        if (account is null) return Result.Failure("ACCOUNT_NOT_FOUND", "Savings account not found.");
+
+        if (account.Status == "Closed")
+            return Result.Failure("ALREADY_CLOSED", "This savings account is already closed.");
+
+        if (account.CurrentBalance > 0)
+            return Result.Failure("NON_ZERO_BALANCE",
+                $"Cannot close account with a balance of NPR {account.CurrentBalance:N2}. Please withdraw all funds before closing.");
+
+        account.Status = "Closed";
+        account.CloseDate = DateOnly.FromDateTime(DateTime.UtcNow);
+        account.CloseReason = string.IsNullOrWhiteSpace(cmd.Reason) ? "Closed by administrator." : cmd.Reason;
+        account.UpdatedBy = cmd.ActorId;
+
+        await uow.SaveChangesAsync(ct);
+        return Result.Success();
+    }
+}

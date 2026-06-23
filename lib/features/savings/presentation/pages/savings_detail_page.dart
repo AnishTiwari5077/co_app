@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:dio/dio.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/theme/app_dimensions.dart';
@@ -176,6 +177,124 @@ class _SavingsDetailPageState extends ConsumerState<SavingsDetailPage>
     return 'NPR $buf.${parts[1]}';
   }
 
+  bool _isClosing = false;
+
+  Future<void> _closeAccount(SavingAccountDetail detail, String? reason) async {
+    setState(() => _isClosing = true);
+    try {
+      final dio = ref.read(dioProvider);
+      await dio.put('/api/v1/savings/accounts/${detail.id}/close',
+          data: {'reason': reason});
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Row(children: [
+              Icon(Icons.check_circle_rounded, color: Colors.white),
+              SizedBox(width: 8),
+              Text('Account closed successfully.'),
+            ]),
+            backgroundColor: AppColors.error,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        ref.invalidate(_accountDetailProvider(widget.accountId));
+        ref.invalidate(_txnProvider(widget.accountId));
+      }
+    } on DioException catch (e) {
+      if (mounted) {
+        final errBody = e.response?.data;
+        final msg = errBody is Map
+            ? (errBody['error']?['message'] ??
+                errBody['message'] ??
+                'Failed to close account')
+            : 'Failed to close account';
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(msg.toString()),
+            backgroundColor: AppColors.error,
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 6),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isClosing = false);
+    }
+  }
+
+  Future<void> _showCloseConfirm(SavingAccountDetail detail) async {
+    final reasonCtrl = TextEditingController();
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Row(children: [
+          Icon(Icons.cancel_outlined, color: AppColors.error, size: 24),
+          SizedBox(width: 8),
+          Text('Close Savings Account',
+              style: TextStyle(color: AppColors.error, fontSize: 16)),
+        ]),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (detail.balance > 0)
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: AppColors.error.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: AppColors.error.withValues(alpha: 0.3)),
+                ),
+                child: Row(children: [
+                  const Icon(Icons.warning_amber_rounded,
+                      color: AppColors.error, size: 18),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Current balance is NPR ${detail.balance.toStringAsFixed(2)}. Please withdraw all funds first.',
+                      style: const TextStyle(fontSize: 12, color: AppColors.error),
+                    ),
+                  ),
+                ]),
+              )
+            else
+              const Text(
+                  'This will permanently close the savings account. This action cannot be undone.',
+                  style: TextStyle(fontSize: 13)),
+            const SizedBox(height: 16),
+            TextField(
+              controller: reasonCtrl,
+              decoration: InputDecoration(
+                labelText: 'Reason for closing (optional)',
+                hintText: 'e.g. Member request, Dormant account...',
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                isDense: true,
+              ),
+              maxLines: 2,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: detail.balance > 0 ? null : () => Navigator.of(ctx).pop(true),
+            style: FilledButton.styleFrom(backgroundColor: AppColors.error),
+            child: const Text('Close Account'),
+          ),
+        ],
+      ),
+    );
+    final reason = reasonCtrl.text.trim();
+    reasonCtrl.dispose();
+    if (confirmed == true && mounted) {
+      await _closeAccount(detail, reason.isEmpty ? null : reason);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final detailAsync = ref.watch(_accountDetailProvider(widget.accountId));
@@ -229,7 +348,36 @@ class _SavingsDetailPageState extends ConsumerState<SavingsDetailPage>
               onPressed: () => context.pop(),
             ),
             actions: [
-              // Download Statement button
+              // Close Account (only if Active)
+              if (detail.status == 'Active')
+                _isClosing
+                    ? const Padding(
+                        padding: EdgeInsets.all(12),
+                        child: SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                                strokeWidth: 2, color: Colors.white)))
+                    : PopupMenuButton<String>(
+                        icon: const Icon(Icons.more_vert, color: Colors.white),
+                        onSelected: (v) {
+                          if (v == 'close') _showCloseConfirm(detail);
+                        },
+                        itemBuilder: (ctx) => [
+                          const PopupMenuItem(
+                            value: 'close',
+                            child: ListTile(
+                              leading: Icon(Icons.cancel_outlined,
+                                  color: AppColors.error),
+                              title: Text('Close Account',
+                                  style:
+                                      TextStyle(color: AppColors.error)),
+                              contentPadding: EdgeInsets.zero,
+                            ),
+                          ),
+                        ],
+                      ),
+              // Download Statement
               Consumer(builder: (ctx, ref, _) {
                 final txnState = ref.watch(_txnProvider(widget.accountId));
                 return IconButton(

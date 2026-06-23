@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("SahakariMS.Api")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+9259d8cf347abaa5f92867ba6ebc0baa6e3b7b05")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+1dd1c87524225f6beb10bb11209fcfc7ef0dba71")]
 [assembly: System.Reflection.AssemblyProductAttribute("SahakariMS.Api")]
 [assembly: System.Reflection.AssemblyTitleAttribute("SahakariMS.Api")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

@@ -146,6 +146,7 @@ class _MemberDetailPageState extends ConsumerState<MemberDetailPage>
   }
 
   bool _isActivating = false;
+  bool _isUpdatingStatus = false;
 
   Future<void> _activateMember(String memberId) async {
     setState(() => _isActivating = true);
@@ -182,6 +183,269 @@ class _MemberDetailPageState extends ConsumerState<MemberDetailPage>
       }
     } finally {
       if (mounted) setState(() => _isActivating = false);
+    }
+  }
+
+  Future<void> _updateMemberStatus(
+      String memberId, String action, String? reason) async {
+    setState(() => _isUpdatingStatus = true);
+    try {
+      final dio = ref.read(dioProvider);
+      await dio.put('/api/v1/members/$memberId/status',
+          data: {'action': action, 'reason': reason});
+      if (mounted) {
+        final label = action == 'suspend'
+            ? 'Suspended'
+            : action == 'reactivate'
+                ? 'Reactivated'
+                : 'Deactivated';
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(children: [
+              const Icon(Icons.check_circle_rounded, color: Colors.white),
+              const SizedBox(width: 8),
+              Text('Member $label successfully!'),
+            ]),
+            backgroundColor: action == 'reactivate'
+                ? AppColors.secondary
+                : AppColors.accent,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        ref.invalidate(memberDetailProvider(memberId));
+        ref.invalidate(memberListProvider);
+        ref.invalidate(dashboardSummaryProvider);
+        ref.invalidate(dashboardActivityProvider);
+      }
+    } on DioException catch (e) {
+      if (mounted) {
+        final errBody = e.response?.data;
+        final msg = errBody is Map
+            ? (errBody['error']?['message'] ?? errBody['message'] ?? 'Failed to update status')
+            : 'Failed to update status';
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(msg.toString()),
+            backgroundColor: AppColors.error,
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 5),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isUpdatingStatus = false);
+    }
+  }
+
+  Future<void> _showStatusConfirm(MemberDetail member, String action) async {
+    final needsReason = action == 'suspend' || action == 'deactivate';
+    final reasonCtrl = TextEditingController();
+
+    final (title, body, icon, color) = switch (action) {
+      'suspend' => (
+          'Suspend Member',
+          'This member will no longer be able to perform transactions until reactivated.',
+          Icons.pause_circle_outline_rounded,
+          AppColors.accent,
+        ),
+      'reactivate' => (
+          'Reactivate Member',
+          'This member will be restored to Active status and can perform transactions again.',
+          Icons.play_circle_outline_rounded,
+          AppColors.secondary,
+        ),
+      _ => (
+          'Deactivate Member',
+          'This will permanently set the member as Inactive. This action cannot easily be undone. The member must have no active savings or loans.',
+          Icons.block_rounded,
+          AppColors.error,
+        ),
+    };
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(children: [
+          Icon(icon, color: color, size: 24),
+          const SizedBox(width: 8),
+          Text(title, style: AppTextStyles.titleMedium),
+        ]),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(body, style: AppTextStyles.bodySmall),
+            if (needsReason) ...[
+              const SizedBox(height: 16),
+              TextField(
+                controller: reasonCtrl,
+                decoration: InputDecoration(
+                  labelText: 'Reason (optional)',
+                  hintText: 'Enter reason...',
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8)),
+                  isDense: true,
+                ),
+                maxLines: 2,
+              ),
+            ],
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            style: FilledButton.styleFrom(backgroundColor: color),
+            child: Text(title),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && mounted) {
+      await _updateMemberStatus(
+          member.id, action, needsReason ? reasonCtrl.text.trim() : null);
+    }
+    reasonCtrl.dispose();
+  }
+
+  Future<void> _deleteMember(MemberDetail member) async {
+    setState(() => _isUpdatingStatus = true);
+    try {
+      final dio = ref.read(dioProvider);
+      await dio.delete('/api/v1/members/${member.id}');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Row(children: [
+              Icon(Icons.check_circle_rounded, color: Colors.white),
+              SizedBox(width: 8),
+              Text('Member deleted successfully.'),
+            ]),
+            backgroundColor: AppColors.error,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        ref.invalidate(memberListProvider);
+        ref.invalidate(dashboardSummaryProvider);
+        ref.invalidate(dashboardActivityProvider);
+        if (mounted) context.pop(); // Navigate back to member list
+      }
+    } on DioException catch (e) {
+      if (mounted) {
+        final errBody = e.response?.data;
+        final msg = errBody is Map
+            ? (errBody['error']?['message'] ??
+                errBody['message'] ??
+                'Failed to delete member')
+            : 'Failed to delete member';
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(msg.toString()),
+            backgroundColor: AppColors.error,
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 6),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isUpdatingStatus = false);
+    }
+  }
+
+  Future<void> _showDeleteConfirm(MemberDetail member) async {
+    final confirmCtrl = TextEditingController();
+    bool canConfirm = false;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setLocal) => AlertDialog(
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Row(children: [
+            const Icon(Icons.delete_forever_rounded,
+                color: AppColors.error, size: 24),
+            const SizedBox(width: 8),
+            const Text('Delete Member',
+                style: TextStyle(color: AppColors.error)),
+          ]),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: AppColors.error.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                      color: AppColors.error.withValues(alpha: 0.3)),
+                ),
+                child: const Row(children: [
+                  Icon(Icons.warning_amber_rounded,
+                      color: AppColors.error, size: 18),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'This action is irreversible. The member record will be permanently removed from the system.',
+                      style: TextStyle(fontSize: 12, color: AppColors.error),
+                    ),
+                  ),
+                ]),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                  'Only members with status Pending or Inactive and no financial history can be deleted.',
+                  style: AppTextStyles.bodySmall
+                      .copyWith(color: AppColors.textSecondary)),
+              const SizedBox(height: 16),
+              const Text('Type DELETE to confirm:',
+                  style: TextStyle(
+                      fontSize: 12, fontWeight: FontWeight.w600)),
+              const SizedBox(height: 6),
+              TextField(
+                controller: confirmCtrl,
+                decoration: InputDecoration(
+                  hintText: 'DELETE',
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8)),
+                  isDense: true,
+                  errorText: confirmCtrl.text.isNotEmpty &&
+                          confirmCtrl.text != 'DELETE'
+                      ? 'Type exactly: DELETE'
+                      : null,
+                ),
+                onChanged: (v) => setLocal(() => canConfirm = v == 'DELETE'),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(false),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: canConfirm
+                  ? () => Navigator.of(ctx).pop(true)
+                  : null,
+              style:
+                  FilledButton.styleFrom(backgroundColor: AppColors.error),
+              child: const Text('Delete Permanently'),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    confirmCtrl.dispose();
+    if (confirmed == true && mounted) {
+      await _deleteMember(member);
     }
   }
 
@@ -300,9 +564,19 @@ class _MemberDetailPageState extends ConsumerState<MemberDetailPage>
           onPressed: () {},
         ),
         PopupMenuButton<String>(
-          icon: const Icon(Icons.more_vert, color: Colors.white),
+          icon: (_isUpdatingStatus)
+              ? const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                      strokeWidth: 2, color: Colors.white))
+              : const Icon(Icons.more_vert, color: Colors.white),
           onSelected: (value) {
             if (value == 'activate') _showActivateConfirm(member);
+            if (value == 'suspend') _showStatusConfirm(member, 'suspend');
+            if (value == 'reactivate') _showStatusConfirm(member, 'reactivate');
+            if (value == 'deactivate') _showStatusConfirm(member, 'deactivate');
+            if (value == 'delete') _showDeleteConfirm(member);
           },
           itemBuilder: (ctx) => [
             if (member.status == 'Pending')
@@ -314,9 +588,49 @@ class _MemberDetailPageState extends ConsumerState<MemberDetailPage>
                     title: Text('Activate Member'),
                     contentPadding: EdgeInsets.zero,
                   )),
-            const PopupMenuItem(value: 'suspend', child: Text('Suspend Member')),
-            const PopupMenuItem(value: 'close', child: Text('Close Account')),
-            const PopupMenuItem(value: 'export', child: Text('Export Profile')),
+            if (member.status == 'Active')
+              const PopupMenuItem(
+                  value: 'suspend',
+                  child: ListTile(
+                    leading: Icon(Icons.pause_circle_outline_rounded,
+                        color: AppColors.accent),
+                    title: Text('Suspend Member'),
+                    contentPadding: EdgeInsets.zero,
+                  )),
+            if (member.status == 'Suspended' || member.status == 'Inactive')
+              const PopupMenuItem(
+                  value: 'reactivate',
+                  child: ListTile(
+                    leading: Icon(Icons.play_circle_outline_rounded,
+                        color: AppColors.secondary),
+                    title: Text('Reactivate Member'),
+                    contentPadding: EdgeInsets.zero,
+                  )),
+            if (member.status != 'Inactive')
+              const PopupMenuItem(
+                  value: 'deactivate',
+                  child: ListTile(
+                    leading:
+                        Icon(Icons.block_rounded, color: AppColors.error),
+                    title: Text('Deactivate Member',
+                        style: TextStyle(color: AppColors.error)),
+                    contentPadding: EdgeInsets.zero,
+                  )),
+            // Delete — only for Pending or Inactive with no financial history
+            if (member.status == 'Pending' || member.status == 'Inactive') ...[
+              const PopupMenuDivider(),
+              const PopupMenuItem(
+                  value: 'delete',
+                  child: ListTile(
+                    leading: Icon(Icons.delete_forever_rounded,
+                        color: AppColors.error),
+                    title: Text('Delete Member',
+                        style: TextStyle(
+                            color: AppColors.error,
+                            fontWeight: FontWeight.w700)),
+                    contentPadding: EdgeInsets.zero,
+                  )),
+            ],
           ],
         ),
       ],
@@ -571,44 +885,66 @@ class _SavingsTab extends StatelessWidget {
       padding: const EdgeInsets.all(AppDimensions.md),
       children: accounts.map((a) => Padding(
         padding: const EdgeInsets.only(bottom: AppDimensions.sm),
-        child: Container(
-          padding: const EdgeInsets.all(AppDimensions.md),
-          decoration: BoxDecoration(
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(AppDimensions.radiusLg),
+          child: Material(
             color: AppColors.surface,
-            borderRadius: BorderRadius.circular(AppDimensions.radiusLg),
-            border: Border.all(color: const Color(0xFFE8EDF3)),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: AppColors.secondary.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(AppDimensions.radiusMd),
-                    ),
-                    child: const Icon(Icons.savings_rounded, color: AppColors.secondary, size: 20),
-                  ),
-                  const SizedBox(width: AppDimensions.sm),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+            child: InkWell(
+              onTap: () => context.push('/savings/${a.id}'),
+              child: Container(
+                padding: const EdgeInsets.all(AppDimensions.md),
+                decoration: BoxDecoration(
+                  border: Border.all(color: const Color(0xFFE8EDF3)),
+                  borderRadius: BorderRadius.circular(AppDimensions.radiusLg),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
                       children: [
-                        const Text('Savings Account', style: AppTextStyles.titleSmall),
-                        Text(a.accountNumber,
-                            style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondary)),
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: AppColors.secondary.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(AppDimensions.radiusMd),
+                          ),
+                          child: const Icon(Icons.savings_rounded, color: AppColors.secondary, size: 20),
+                        ),
+                        const SizedBox(width: AppDimensions.sm),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text('Savings Account', style: AppTextStyles.titleSmall),
+                              Text(a.accountNumber,
+                                  style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondary)),
+                            ],
+                          ),
+                        ),
+                        StatusBadge(status: a.status),
+                        const SizedBox(width: 4),
+                        const Icon(Icons.chevron_right_rounded,
+                            color: AppColors.textSecondary, size: 18),
                       ],
                     ),
-                  ),
-                  StatusBadge(status: a.status),
-                ],
+                    const SizedBox(height: AppDimensions.md),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text('NPR ${_fmt(a.balance)}',
+                              style: AppTextStyles.amountMedium
+                                  .copyWith(color: AppColors.secondary)),
+                        ),
+                        if (a.status == 'Active')
+                          Text('Tap to open & close account',
+                              style: AppTextStyles.labelSmall
+                                  .copyWith(color: AppColors.textSecondary)),
+                      ],
+                    ),
+                  ],
+                ),
               ),
-              const SizedBox(height: AppDimensions.md),
-              Text('NPR ${_fmt(a.balance)}',
-                  style: AppTextStyles.amountMedium.copyWith(color: AppColors.secondary)),
-            ],
+            ),
           ),
         ),
       )).toList(),

@@ -158,3 +158,105 @@ public class ApproveMemberCommandHandler(IAppDbContext db, IUnitOfWork uow, ICac
         return Result.Success();
     }
 }
+
+// ── Update Member Status Command ──────────────────────────────────────────────
+
+/// <param name="Action">One of: "suspend" | "reactivate" | "deactivate"</param>
+public record UpdateMemberStatusCommand(Guid MemberId, string Action, string? Reason, Guid ActorId) : IRequest<Result>;
+
+public class UpdateMemberStatusCommandHandler(IAppDbContext db, IUnitOfWork uow, ICacheService cache)
+    : IRequestHandler<UpdateMemberStatusCommand, Result>
+{
+    public async Task<Result> Handle(UpdateMemberStatusCommand cmd, CancellationToken ct)
+    {
+        var member = await db.Members.FindAsync([cmd.MemberId], ct);
+
+        if (member is null) return Result.Failure("MEMBER_NOT_FOUND", "Member not found.");
+
+        switch (cmd.Action.ToLower())
+        {
+            case "suspend":
+                if (member.Status != "Active")
+                    return Result.Failure("INVALID_STATUS", $"Cannot suspend a member with status '{member.Status}'. Only Active members can be suspended.");
+                member.Status = "Suspended";
+                break;
+
+            case "reactivate":
+                if (member.Status != "Suspended" && member.Status != "Inactive")
+                    return Result.Failure("INVALID_STATUS", $"Cannot reactivate a member with status '{member.Status}'.");
+                member.Status = "Active";
+                break;
+
+            case "deactivate":
+                if (member.Status == "Inactive")
+                    return Result.Failure("INVALID_STATUS", "Member is already inactive.");
+
+                // Guard: cannot deactivate if they have active savings or loans
+                var activeSavingsQ = db.SavingAccounts
+                    .Where(s => s.MemberId == cmd.MemberId && s.Status == "Active");
+                var hasActiveSavings = await activeSavingsQ.AnyAsync(ct);
+
+                var activeLoansQ = db.Loans
+                    .Where(l => l.MemberId == cmd.MemberId && (l.Status == "Active" || l.Status == "Disbursed"));
+                var hasActiveLoans = await activeLoansQ.AnyAsync(ct);
+
+                if (hasActiveSavings)
+                    return Result.Failure("HAS_ACTIVE_SAVINGS", "Cannot deactivate member with active savings accounts. Please close all savings accounts first.");
+                if (hasActiveLoans)
+                    return Result.Failure("HAS_ACTIVE_LOANS", "Cannot deactivate member with active loans. Please settle all outstanding loans first.");
+
+                member.Status = "Inactive";
+                break;
+
+            default:
+                return Result.Failure("INVALID_ACTION", $"Unknown action '{cmd.Action}'. Allowed: suspend, reactivate, deactivate.");
+        }
+
+        member.UpdatedBy = cmd.ActorId;
+        await uow.SaveChangesAsync(ct);
+        try { await cache.RemoveByPrefixAsync("dashboard:", ct); } catch { /* ignore */ }
+        return Result.Success();
+    }
+}
+
+// ── Delete Member Command ─────────────────────────────────────────────────────
+
+public record DeleteMemberCommand(Guid MemberId, Guid ActorId) : IRequest<Result>;
+
+public class DeleteMemberCommandHandler(IAppDbContext db, IUnitOfWork uow, ICacheService cache)
+    : IRequestHandler<DeleteMemberCommand, Result>
+{
+    public async Task<Result> Handle(DeleteMemberCommand cmd, CancellationToken ct)
+    {
+        var member = await db.Members.FindAsync([cmd.MemberId], ct);
+        if (member is null) return Result.Failure("MEMBER_NOT_FOUND", "Member not found.");
+
+        // Only Pending or Inactive members can be deleted
+        if (member.Status != "Pending" && member.Status != "Inactive")
+            return Result.Failure("INVALID_STATUS",
+                $"Cannot delete a member with status '{member.Status}'. Please deactivate the member first before deleting.");
+
+        // Guard: must have no savings or loans at all
+        var hasSavings = await db.SavingAccounts
+            .Where(s => s.MemberId == cmd.MemberId)
+            .AnyAsync(ct);
+        var hasLoans = await db.Loans
+            .Where(l => l.MemberId == cmd.MemberId)
+            .AnyAsync(ct);
+
+        if (hasSavings)
+            return Result.Failure("HAS_SAVINGS",
+                "Cannot delete a member who has savings account history. Consider keeping the member as Inactive.");
+        if (hasLoans)
+            return Result.Failure("HAS_LOANS",
+                "Cannot delete a member who has loan history. Consider keeping the member as Inactive.");
+
+        // Soft delete
+        member.IsDeleted = true;
+        member.DeletedAt = DateTime.UtcNow;
+        member.DeletedBy = cmd.ActorId;
+        await uow.SaveChangesAsync(ct);
+        try { await cache.RemoveByPrefixAsync("dashboard:", ct); } catch { /* ignore */ }
+        return Result.Success();
+    }
+}
