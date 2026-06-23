@@ -107,7 +107,7 @@ class _WithdrawalPageState extends ConsumerState<WithdrawalPage> {
                   color: AppColors.primary, size: 40),
             ),
             const SizedBox(height: AppDimensions.md),
-            Text('Withdrawal Successful!', style: AppTextStyles.titleLarge),
+            const Text('Withdrawal Successful!', style: AppTextStyles.titleLarge),
             const SizedBox(height: AppDimensions.xs),
             Text(
                 'NPR ${_amountCtrl.text} withdrawn successfully',
@@ -147,7 +147,7 @@ class _WithdrawalPageState extends ConsumerState<WithdrawalPage> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: Text('Withdrawal', style: AppTextStyles.titleLarge),
+        title: const Text('Withdrawal', style: AppTextStyles.titleLarge),
         backgroundColor: AppColors.surface,
         elevation: 0,
         leading: IconButton(
@@ -165,7 +165,7 @@ class _WithdrawalPageState extends ConsumerState<WithdrawalPage> {
               const Icon(Icons.error_outline_rounded,
                   color: AppColors.error, size: 40),
               const SizedBox(height: 8),
-              Text('Failed to load account',
+              const Text('Failed to load account',
                   style: AppTextStyles.titleSmall),
               const SizedBox(height: 4),
               Text(e.toString(),
@@ -289,7 +289,7 @@ class _WithdrawalPageState extends ConsumerState<WithdrawalPage> {
               ),
               const SizedBox(height: AppDimensions.md),
               // Mode selector
-              Text('Payment Mode *', style: AppTextStyles.labelMedium),
+              const Text('Payment Mode *', style: AppTextStyles.labelMedium),
               const SizedBox(height: AppDimensions.xs),
               Wrap(
                 spacing: AppDimensions.xs,

@@ -147,14 +147,14 @@ class _MemberRegistrationPageState
               width: 72,
               height: 72,
               decoration: BoxDecoration(
-                color: AppColors.secondary.withOpacity(0.1),
+                color: AppColors.secondary.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
               child: const Icon(Icons.check_circle_outline_rounded,
                   color: AppColors.secondary, size: 40),
             ),
             const SizedBox(height: AppDimensions.md),
-            Text('Registration Successful!', style: AppTextStyles.titleLarge),
+            const Text('Registration Successful!', style: AppTextStyles.titleLarge),
             const SizedBox(height: AppDimensions.xs),
               Text(
                 memberId.isNotEmpty
@@ -183,7 +183,7 @@ class _MemberRegistrationPageState
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: Text('New Member Registration', style: AppTextStyles.titleLarge),
+        title: const Text('New Member Registration', style: AppTextStyles.titleLarge),
         backgroundColor: AppColors.surface,
         elevation: 0,
         leading: IconButton(
@@ -296,7 +296,7 @@ class _MemberRegistrationPageState
       key: const ValueKey('personal'),
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Personal Information', style: AppTextStyles.titleMedium),
+        const Text('Personal Information', style: AppTextStyles.titleMedium),
         const SizedBox(height: AppDimensions.md),
         Row(
           children: [
@@ -352,7 +352,7 @@ class _MemberRegistrationPageState
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Gender *', style: AppTextStyles.bodyMedium),
+            const Text('Gender *', style: AppTextStyles.bodyMedium),
             const SizedBox(height: AppDimensions.xs),
             Row(
               children: _genders.map((g) {
@@ -419,7 +419,7 @@ class _MemberRegistrationPageState
       key: const ValueKey('contact'),
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Contact Information', style: AppTextStyles.titleMedium),
+        const Text('Contact Information', style: AppTextStyles.titleMedium),
         const SizedBox(height: AppDimensions.md),
         AppTextField(
           controller: _phoneCtrl,
@@ -443,7 +443,7 @@ class _MemberRegistrationPageState
           keyboardType: TextInputType.emailAddress,
         ),
         const SizedBox(height: AppDimensions.lg),
-        Text('Permanent Address', style: AppTextStyles.titleMedium),
+        const Text('Permanent Address', style: AppTextStyles.titleMedium),
         const SizedBox(height: AppDimensions.md),
         AppTextField(
           controller: _districtCtrl,
@@ -491,7 +491,7 @@ class _MemberRegistrationPageState
       key: const ValueKey('identity'),
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Identity Documents', style: AppTextStyles.titleMedium),
+        const Text('Identity Documents', style: AppTextStyles.titleMedium),
         const SizedBox(height: AppDimensions.md),
         AppTextField(
           controller: _citizenshipCtrl,
@@ -507,13 +507,13 @@ class _MemberRegistrationPageState
           keyboardType: TextInputType.number,
         ),
         const SizedBox(height: AppDimensions.lg),
-        Text('Upload Documents', style: AppTextStyles.titleMedium),
+        const Text('Upload Documents', style: AppTextStyles.titleMedium),
         const SizedBox(height: AppDimensions.md),
-        _DocumentUploadCard(label: 'Citizenship Certificate', icon: Icons.badge_outlined),
+        const _DocumentUploadCard(label: 'Citizenship Certificate', icon: Icons.badge_outlined),
         const SizedBox(height: AppDimensions.sm),
-        _DocumentUploadCard(label: 'Passport-size Photo', icon: Icons.photo_camera_outlined),
+        const _DocumentUploadCard(label: 'Passport-size Photo', icon: Icons.photo_camera_outlined),
         const SizedBox(height: AppDimensions.sm),
-        _DocumentUploadCard(label: 'Digital Signature', icon: Icons.draw_outlined),
+        const _DocumentUploadCard(label: 'Digital Signature', icon: Icons.draw_outlined),
       ],
     );
   }
@@ -523,7 +523,7 @@ class _MemberRegistrationPageState
       key: const ValueKey('nominee'),
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Nominee Information', style: AppTextStyles.titleMedium),
+        const Text('Nominee Information', style: AppTextStyles.titleMedium),
         const SizedBox(height: AppDimensions.xs),
         Text(
           'Nominee will receive benefits in case of member\'s absence.',
@@ -557,9 +557,9 @@ class _MemberRegistrationPageState
         Container(
           padding: const EdgeInsets.all(AppDimensions.md),
           decoration: BoxDecoration(
-            color: AppColors.primary.withOpacity(0.05),
+            color: AppColors.primary.withValues(alpha: 0.05),
             borderRadius: BorderRadius.circular(AppDimensions.radiusLg),
-            border: Border.all(color: AppColors.primary.withOpacity(0.2)),
+            border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -653,7 +653,7 @@ class _DropdownField extends StatelessWidget {
         Text(label, style: AppTextStyles.bodyMedium),
         const SizedBox(height: AppDimensions.xs),
         DropdownButtonFormField<String>(
-          value: value,
+          initialValue: value,
           onChanged: onChanged,
           decoration: InputDecoration(
             filled: true,
@@ -699,12 +699,12 @@ class _DocumentUploadCardState extends State<_DocumentUploadCard> {
         padding: const EdgeInsets.all(AppDimensions.md),
         decoration: BoxDecoration(
           color: _uploaded
-              ? AppColors.secondary.withOpacity(0.05)
+              ? AppColors.secondary.withValues(alpha: 0.05)
               : AppColors.surfaceVariant,
           borderRadius: BorderRadius.circular(AppDimensions.radiusLg),
           border: Border.all(
             color: _uploaded
-                ? AppColors.secondary.withOpacity(0.4)
+                ? AppColors.secondary.withValues(alpha: 0.4)
                 : const Color(0xFFE0E7EF),
           ),
         ),
@@ -715,7 +715,7 @@ class _DocumentUploadCardState extends State<_DocumentUploadCard> {
               height: 44,
               decoration: BoxDecoration(
                 color: _uploaded
-                    ? AppColors.secondary.withOpacity(0.1)
+                    ? AppColors.secondary.withValues(alpha: 0.1)
                     : AppColors.surfaceVariant,
                 borderRadius: BorderRadius.circular(AppDimensions.radiusMd),
               ),

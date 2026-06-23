@@ -262,14 +262,14 @@ class _LoanApplicationPageState extends ConsumerState<LoanApplicationPage> {
               width: 72,
               height: 72,
               decoration: BoxDecoration(
-                color: AppColors.secondary.withOpacity(0.1),
+                color: AppColors.secondary.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
               child: const Icon(Icons.check_circle_outline_rounded,
                   color: AppColors.secondary, size: 40),
             ),
             const SizedBox(height: AppDimensions.md),
-            Text('Loan Applied!', style: AppTextStyles.titleLarge),
+            const Text('Loan Applied!', style: AppTextStyles.titleLarge),
             const SizedBox(height: AppDimensions.xs),
             Text(
               'Application submitted successfully.\nAwaiting manager approval.',
@@ -313,7 +313,7 @@ class _LoanApplicationPageState extends ConsumerState<LoanApplicationPage> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: Text('Loan Application', style: AppTextStyles.titleLarge),
+        title: const Text('Loan Application', style: AppTextStyles.titleLarge),
         backgroundColor: AppColors.surface,
         elevation: 0,
         leading: IconButton(
@@ -415,7 +415,7 @@ class _LoanApplicationPageState extends ConsumerState<LoanApplicationPage> {
       key: const ValueKey('member'),
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Select Member', style: AppTextStyles.titleMedium),
+        const Text('Select Member', style: AppTextStyles.titleMedium),
         const SizedBox(height: AppDimensions.md),
 
         // ── Search field with live dropdown ──────────────────────────────────
@@ -448,7 +448,7 @@ class _LoanApplicationPageState extends ConsumerState<LoanApplicationPage> {
                 color: AppColors.surface,
                 borderRadius: BorderRadius.circular(AppDimensions.radiusLg),
                 border: Border.all(color: const Color(0xFFE0E7EF)),
-                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.06), blurRadius: 8, offset: const Offset(0, 3))],
+                boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.06), blurRadius: 8, offset: const Offset(0, 3))],
               ),
               child: ListView.separated(
                 shrinkWrap: true,
@@ -463,7 +463,7 @@ class _LoanApplicationPageState extends ConsumerState<LoanApplicationPage> {
                     onTap: () => _selectMember(m),
                     leading: CircleAvatar(
                       backgroundColor: isActive
-                          ? AppColors.primary.withOpacity(0.12)
+                          ? AppColors.primary.withValues(alpha: 0.12)
                           : AppColors.surfaceVariant,
                       child: Text(
                         m.fullName.isNotEmpty ? m.fullName[0].toUpperCase() : '?',
@@ -481,8 +481,8 @@ class _LoanApplicationPageState extends ConsumerState<LoanApplicationPage> {
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                       decoration: BoxDecoration(
                         color: isActive
-                            ? AppColors.secondary.withOpacity(0.1)
-                            : AppColors.error.withOpacity(0.1),
+                            ? AppColors.secondary.withValues(alpha: 0.1)
+                            : AppColors.error.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(AppDimensions.radiusSm),
                       ),
                       child: Text(
@@ -512,9 +512,9 @@ class _LoanApplicationPageState extends ConsumerState<LoanApplicationPage> {
           Container(
             padding: const EdgeInsets.all(AppDimensions.md),
             decoration: BoxDecoration(
-              color: AppColors.primary.withOpacity(0.05),
+              color: AppColors.primary.withValues(alpha: 0.05),
               borderRadius: BorderRadius.circular(AppDimensions.radiusLg),
-              border: Border.all(color: AppColors.primary.withOpacity(0.2)),
+              border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
             ),
             child: Row(
               children: [
@@ -569,7 +569,7 @@ class _LoanApplicationPageState extends ConsumerState<LoanApplicationPage> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Icon(Icons.inventory_2_outlined,
-                  size: 52, color: AppColors.textSecondary.withOpacity(0.4)),
+                  size: 52, color: AppColors.textSecondary.withValues(alpha: 0.4)),
               const SizedBox(height: AppDimensions.md),
               Text('No loan products available',
                   style: AppTextStyles.titleSmall
@@ -597,7 +597,7 @@ class _LoanApplicationPageState extends ConsumerState<LoanApplicationPage> {
       key: const ValueKey('product'),
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Loan Product', style: AppTextStyles.titleMedium),
+        const Text('Loan Product', style: AppTextStyles.titleMedium),
         const SizedBox(height: AppDimensions.md),
         // Product selector
         Wrap(
@@ -683,7 +683,7 @@ class _LoanApplicationPageState extends ConsumerState<LoanApplicationPage> {
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Tenure (months) *', style: AppTextStyles.bodyMedium),
+            const Text('Tenure (months) *', style: AppTextStyles.bodyMedium),
             const SizedBox(height: AppDimensions.xs),
             Wrap(
               spacing: AppDimensions.xs,
@@ -733,14 +733,14 @@ class _LoanApplicationPageState extends ConsumerState<LoanApplicationPage> {
             padding: const EdgeInsets.all(AppDimensions.md),
             decoration: BoxDecoration(
               gradient: LinearGradient(
-                colors: [AppColors.secondary.withOpacity(0.1), AppColors.secondary.withOpacity(0.05)],
+                colors: [AppColors.secondary.withValues(alpha: 0.1), AppColors.secondary.withValues(alpha: 0.05)],
               ),
               borderRadius: BorderRadius.circular(AppDimensions.radiusLg),
-              border: Border.all(color: AppColors.secondary.withOpacity(0.3)),
+              border: Border.all(color: AppColors.secondary.withValues(alpha: 0.3)),
             ),
             child: Column(
               children: [
-                Text('EMI Calculation Result', style: AppTextStyles.titleSmall),
+                const Text('EMI Calculation Result', style: AppTextStyles.titleSmall),
                 const SizedBox(height: AppDimensions.md),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -763,7 +763,7 @@ class _LoanApplicationPageState extends ConsumerState<LoanApplicationPage> {
       key: const ValueKey('security'),
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Security & Guarantors', style: AppTextStyles.titleMedium),
+        const Text('Security & Guarantors', style: AppTextStyles.titleMedium),
         const SizedBox(height: AppDimensions.md),
         AppTextField(
           controller: _guarantorCtrl,
@@ -772,7 +772,7 @@ class _LoanApplicationPageState extends ConsumerState<LoanApplicationPage> {
           prefixIcon: Icons.person_search_rounded,
         ),
         const SizedBox(height: AppDimensions.sm),
-        Text('Collateral', style: AppTextStyles.titleMedium),
+        const Text('Collateral', style: AppTextStyles.titleMedium),
         const SizedBox(height: AppDimensions.sm),
         _CollateralTypeSelector(),
         const SizedBox(height: AppDimensions.sm),
@@ -800,7 +800,7 @@ class _LoanApplicationPageState extends ConsumerState<LoanApplicationPage> {
       key: const ValueKey('review'),
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Review & Submit', style: AppTextStyles.titleMedium),
+        const Text('Review & Submit', style: AppTextStyles.titleMedium),
         const SizedBox(height: AppDimensions.md),
         _ReviewSection(title: 'Member', rows: [
           _selectedMember?.fullName ?? widget.memberId ?? '—',
@@ -819,9 +819,9 @@ class _LoanApplicationPageState extends ConsumerState<LoanApplicationPage> {
         Container(
           padding: const EdgeInsets.all(AppDimensions.md),
           decoration: BoxDecoration(
-            color: AppColors.warning.withOpacity(0.07),
+            color: AppColors.warning.withValues(alpha: 0.07),
             borderRadius: BorderRadius.circular(AppDimensions.radiusLg),
-            border: Border.all(color: AppColors.warning.withOpacity(0.3)),
+            border: Border.all(color: AppColors.warning.withValues(alpha: 0.3)),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,

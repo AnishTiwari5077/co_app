@@ -30,12 +30,12 @@ class EmiSchedulePage extends ConsumerWidget {
 
     final paidCount = schedule.where((s) => s.isPaid).length;
     final totalPaid = paidCount * 11634;
-    final outstanding = 1_80_234;
+    const outstanding = 1_80_234;
 
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: Text('EMI Schedule', style: AppTextStyles.titleLarge),
+        title: const Text('EMI Schedule', style: AppTextStyles.titleLarge),
         backgroundColor: AppColors.surface,
         elevation: 0,
         leading: IconButton(
@@ -62,7 +62,7 @@ class EmiSchedulePage extends ConsumerWidget {
                 const SizedBox(width: AppDimensions.sm),
                 _SummaryStat(label: 'Paid', value: 'NPR ${totalPaid.toString()}', color: AppColors.secondary),
                 const SizedBox(width: AppDimensions.sm),
-                _SummaryStat(label: 'Outstanding', value: 'NPR $outstanding', color: AppColors.error),
+                const _SummaryStat(label: 'Outstanding', value: 'NPR $outstanding', color: AppColors.error),
               ],
             ),
           ),
@@ -100,9 +100,9 @@ class EmiSchedulePage extends ConsumerWidget {
             color: AppColors.surfaceVariant,
             padding: const EdgeInsets.symmetric(
                 horizontal: AppDimensions.md, vertical: AppDimensions.sm),
-            child: Row(
+            child: const Row(
               children: [
-                const SizedBox(width: 28),
+                SizedBox(width: 28),
                 Expanded(child: _Th('Due Date')),
                 Expanded(child: _Th('Principal')),
                 Expanded(child: _Th('Interest')),
@@ -165,9 +165,9 @@ class _ScheduleRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       color: item.isCurrent
-          ? AppColors.primary.withOpacity(0.04)
+          ? AppColors.primary.withValues(alpha: 0.04)
           : item.isPaid
-              ? AppColors.secondary.withOpacity(0.03)
+              ? AppColors.secondary.withValues(alpha: 0.03)
               : null,
       padding: const EdgeInsets.symmetric(
           horizontal: AppDimensions.md, vertical: AppDimensions.sm),
@@ -241,9 +241,9 @@ class _SummaryStat extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(AppDimensions.sm),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.07),
+          color: color.withValues(alpha: 0.07),
           borderRadius: BorderRadius.circular(AppDimensions.radiusMd),
-          border: Border.all(color: color.withOpacity(0.2)),
+          border: Border.all(color: color.withValues(alpha: 0.2)),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,

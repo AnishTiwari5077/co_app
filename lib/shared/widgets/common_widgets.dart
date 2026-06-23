@@ -70,7 +70,7 @@ class KpiCard extends StatelessWidget {
                   width: 40,
                   height: 40,
                   decoration: BoxDecoration(
-                    color: iconBg ?? iconColor.withOpacity(0.12),
+                    color: iconBg ?? iconColor.withValues(alpha: 0.12),
                     borderRadius:
                         BorderRadius.circular(AppDimensions.radiusMd),
                   ),
@@ -83,8 +83,8 @@ class KpiCard extends StatelessWidget {
                         const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                     decoration: BoxDecoration(
                       color: isTrendUp
-                          ? AppColors.success.withOpacity(0.12)
-                          : AppColors.error.withOpacity(0.12),
+                          ? AppColors.success.withValues(alpha: 0.12)
+                          : AppColors.error.withValues(alpha: 0.12),
                       borderRadius:
                           BorderRadius.circular(AppDimensions.radiusRound),
                     ),
@@ -203,7 +203,7 @@ class ErrorView extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(Icons.error_outline,
-                size: 48, color: AppColors.error.withOpacity(0.6)),
+                size: 48, color: AppColors.error.withValues(alpha: 0.6)),
             const SizedBox(height: 16),
             Text(
               message,

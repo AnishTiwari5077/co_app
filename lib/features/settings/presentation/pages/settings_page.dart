@@ -31,7 +31,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: Text('Settings', style: AppTextStyles.titleLarge),
+        title: const Text('Settings', style: AppTextStyles.titleLarge),
         backgroundColor: AppColors.surface,
         elevation: 0,
       ),
@@ -41,7 +41,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
           _buildProfileHeader(user?.fullName ?? 'Branch Manager'),
 
           // Account section
-          _SectionTitle('Account'),
+          const _SectionTitle('Account'),
           _SettingsTile(
             icon: Icons.person_outline_rounded,
             title: 'My Profile',
@@ -61,7 +61,8 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
             trailing: Switch.adaptive(
               value: _biometrics,
               onChanged: (v) => setState(() => _biometrics = v),
-              activeColor: AppColors.primary,
+              activeThumbColor: AppColors.primary,
+              activeTrackColor: AppColors.primary.withValues(alpha: 0.4),
             ),
             onTap: null,
           ),
@@ -73,14 +74,15 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
           ),
 
           // Notifications
-          _SectionTitle('Notifications'),
+          const _SectionTitle('Notifications'),
           _SettingsTile(
             icon: Icons.notifications_outlined,
             title: 'Push Notifications',
             trailing: Switch.adaptive(
               value: _pushNotifications,
               onChanged: (v) => setState(() => _pushNotifications = v),
-              activeColor: AppColors.primary,
+              activeThumbColor: AppColors.primary,
+              activeTrackColor: AppColors.primary.withValues(alpha: 0.4),
             ),
             onTap: null,
           ),
@@ -91,7 +93,8 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
             trailing: Switch.adaptive(
               value: _emiReminders,
               onChanged: (v) => setState(() => _emiReminders = v),
-              activeColor: AppColors.primary,
+              activeThumbColor: AppColors.primary,
+              activeTrackColor: AppColors.primary.withValues(alpha: 0.4),
             ),
             onTap: null,
           ),
@@ -102,7 +105,8 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
             trailing: Switch.adaptive(
               value: _largeTransactionAlerts,
               onChanged: (v) => setState(() => _largeTransactionAlerts = v),
-              activeColor: AppColors.primary,
+              activeThumbColor: AppColors.primary,
+              activeTrackColor: AppColors.primary.withValues(alpha: 0.4),
             ),
             onTap: null,
           ),
@@ -113,20 +117,22 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
             trailing: Switch.adaptive(
               value: _nightlyReports,
               onChanged: (v) => setState(() => _nightlyReports = v),
-              activeColor: AppColors.primary,
+              activeThumbColor: AppColors.primary,
+              activeTrackColor: AppColors.primary.withValues(alpha: 0.4),
             ),
             onTap: null,
           ),
 
           // Appearance
-          _SectionTitle('Appearance & Language'),
+          const _SectionTitle('Appearance & Language'),
           _SettingsTile(
             icon: Icons.dark_mode_outlined,
             title: 'Dark Mode',
             trailing: Switch.adaptive(
               value: _darkMode,
               onChanged: (v) => setState(() => _darkMode = v),
-              activeColor: AppColors.primary,
+              activeThumbColor: AppColors.primary,
+              activeTrackColor: AppColors.primary.withValues(alpha: 0.4),
             ),
             onTap: null,
           ),
@@ -144,7 +150,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
           ),
 
           // System
-          _SectionTitle('System'),
+          const _SectionTitle('System'),
           _SettingsTile(
             icon: Icons.cloud_sync_rounded,
             title: 'Sync Data',
@@ -171,8 +177,8 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
           ),
 
           // About
-          _SectionTitle('About'),
-          _SettingsTile(
+          const _SectionTitle('About'),
+          const _SettingsTile(
             icon: Icons.info_outline_rounded,
             title: 'App Version',
             subtitle: 'SahakariMS v1.0.0 (Build 1)',
@@ -231,7 +237,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
           Container(
             width: 64,
             height: 64,
-            decoration: BoxDecoration(
+            decoration: const BoxDecoration(
               gradient: AppColors.primaryGradient,
               shape: BoxShape.circle,
             ),
@@ -287,7 +293,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Change Password', style: AppTextStyles.titleLarge),
+            const Text('Change Password', style: AppTextStyles.titleLarge),
             const SizedBox(height: AppDimensions.md),
             TextFormField(
               decoration: const InputDecoration(
@@ -329,19 +335,19 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Language'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: ['English', 'नेपाली (Nepali)'].map((lang) {
-            return RadioListTile<String>(
-              value: lang,
-              groupValue: _language,
-              title: Text(lang),
-              onChanged: (v) {
-                setState(() => _language = v!);
-                Navigator.pop(ctx);
-              },
-            );
-          }).toList(),
+        content: DropdownButton<String>(
+          value: _language,
+          isExpanded: true,
+          items: ['English', 'नेपाली (Nepali)']
+              .map((lang) => DropdownMenuItem(
+                    value: lang,
+                    child: Text(lang),
+                  ))
+              .toList(),
+          onChanged: (v) {
+            if (v != null) setState(() => _language = v);
+            Navigator.pop(ctx);
+          },
         ),
       ),
     );
@@ -352,19 +358,19 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Date Format'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: ['Nepali (BS)', 'English (AD)', 'Both'].map((fmt) {
-            return RadioListTile<String>(
-              value: fmt,
-              groupValue: _fiscalYearDisplay,
-              title: Text(fmt),
-              onChanged: (v) {
-                setState(() => _fiscalYearDisplay = v!);
-                Navigator.pop(ctx);
-              },
-            );
-          }).toList(),
+        content: DropdownButton<String>(
+          value: _fiscalYearDisplay,
+          isExpanded: true,
+          items: ['Nepali (BS)', 'English (AD)', 'Both']
+              .map((fmt) => DropdownMenuItem(
+                    value: fmt,
+                    child: Text(fmt),
+                  ))
+              .toList(),
+          onChanged: (v) {
+            if (v != null) setState(() => _fiscalYearDisplay = v);
+            Navigator.pop(ctx);
+          },
         ),
       ),
     );
@@ -456,7 +462,7 @@ class _SettingsTile extends StatelessWidget {
               width: 36,
               height: 36,
               decoration: BoxDecoration(
-                color: AppColors.primary.withOpacity(0.08),
+                color: AppColors.primary.withValues(alpha: 0.08),
                 borderRadius:
                     BorderRadius.circular(AppDimensions.radiusMd),
               ),

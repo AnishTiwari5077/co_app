@@ -6,7 +6,6 @@ import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/theme/app_dimensions.dart';
 import '../../../../shared/widgets/status_badge.dart';
 import '../../../../shared/widgets/common_widgets.dart';
-import '../../../../shared/widgets/app_button.dart';
 import '../../../../core/api/api_client.dart';
 
 // ── Models ────────────────────────────────────────────────────────────────────
@@ -228,7 +227,7 @@ class _LoanDetailPageState extends ConsumerState<LoanDetailPage>
                         borderRadius: BorderRadius.circular(2))),
               ),
               const SizedBox(height: AppDimensions.md),
-              Text('Approve Loan', style: AppTextStyles.titleMedium),
+              const Text('Approve Loan', style: AppTextStyles.titleMedium),
               Text(loan.loanNumber, style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondary)),
               const SizedBox(height: AppDimensions.md),
               TextFormField(
@@ -332,7 +331,7 @@ class _LoanDetailPageState extends ConsumerState<LoanDetailPage>
                           borderRadius: BorderRadius.circular(2))),
                 ),
                 const SizedBox(height: AppDimensions.md),
-                Text('Disburse Loan', style: AppTextStyles.titleMedium),
+                const Text('Disburse Loan', style: AppTextStyles.titleMedium),
                 Text(loan.loanNumber,
                     style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondary)),
                 const SizedBox(height: AppDimensions.md),
@@ -352,7 +351,7 @@ class _LoanDetailPageState extends ConsumerState<LoanDetailPage>
                 ),
                 const SizedBox(height: AppDimensions.sm),
                 DropdownButtonFormField<String>(
-                  value: mode,
+                  initialValue: mode,
                   decoration: const InputDecoration(
                     labelText: 'Disbursement Mode',
                     prefixIcon: Icon(Icons.payment_rounded),
@@ -367,9 +366,9 @@ class _LoanDetailPageState extends ConsumerState<LoanDetailPage>
                 Container(
                   padding: const EdgeInsets.all(AppDimensions.sm),
                   decoration: BoxDecoration(
-                    color: AppColors.warning.withOpacity(0.1),
+                    color: AppColors.warning.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: AppColors.warning.withOpacity(0.3)),
+                    border: Border.all(color: AppColors.warning.withValues(alpha: 0.3)),
                   ),
                   child: Row(children: [
                     const Icon(Icons.info_outline_rounded, color: AppColors.warning, size: 16),
@@ -472,13 +471,13 @@ class _LoanDetailPageState extends ConsumerState<LoanDetailPage>
                 Row(children: [
                   Container(
                     padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(color: AppColors.primary.withOpacity(0.1),
+                    decoration: BoxDecoration(color: AppColors.primary.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(8)),
                     child: const Icon(Icons.payments_rounded, color: AppColors.primary, size: 20),
                   ),
                   const SizedBox(width: AppDimensions.sm),
                   Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Text('Collect EMI Payment', style: AppTextStyles.titleMedium),
+                    const Text('Collect EMI Payment', style: AppTextStyles.titleMedium),
                     Text(loan.loanNumber,
                         style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondary)),
                   ]),
@@ -490,9 +489,9 @@ class _LoanDetailPageState extends ConsumerState<LoanDetailPage>
                   Container(
                     padding: const EdgeInsets.all(AppDimensions.sm),
                     decoration: BoxDecoration(
-                      color: AppColors.primary.withOpacity(0.05),
+                      color: AppColors.primary.withValues(alpha: 0.05),
                       borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: AppColors.primary.withOpacity(0.2)),
+                      border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
                     ),
                     child: Column(children: [
                       Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
@@ -532,12 +531,12 @@ class _LoanDetailPageState extends ConsumerState<LoanDetailPage>
                   Container(
                     padding: const EdgeInsets.all(AppDimensions.sm),
                     decoration: BoxDecoration(
-                      color: Colors.orange.withOpacity(0.1),
+                      color: Colors.orange.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: Row(children: [
-                      const Icon(Icons.info_outline, color: AppColors.warning, size: 16),
-                      const SizedBox(width: 8),
+                    child: const Row(children: [
+                      Icon(Icons.info_outline, color: AppColors.warning, size: 16),
+                      SizedBox(width: 8),
                       Text('No pending EMI — extra payment', style: AppTextStyles.bodySmall),
                     ]),
                   ),
@@ -553,14 +552,15 @@ class _LoanDetailPageState extends ConsumerState<LoanDetailPage>
                   ),
                   validator: (v) {
                     if (v == null || v.isEmpty) return 'Required';
-                    if (double.tryParse(v) == null || double.parse(v) <= 0)
+                    if (double.tryParse(v) == null || double.parse(v) <= 0) {
                       return 'Enter a valid amount';
+                    }
                     return null;
                   },
                 ),
                 const SizedBox(height: AppDimensions.sm),
                 DropdownButtonFormField<String>(
-                  value: mode,
+                  initialValue: mode,
                   decoration: const InputDecoration(
                     labelText: 'Payment Mode',
                     prefixIcon: Icon(Icons.payment_rounded),
@@ -655,7 +655,7 @@ class _LoanDetailPageState extends ConsumerState<LoanDetailPage>
           child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
             const Icon(Icons.error_outline_rounded, color: AppColors.error, size: 48),
             const SizedBox(height: AppDimensions.md),
-            Text('Could not load loan', style: AppTextStyles.titleMedium),
+            const Text('Could not load loan', style: AppTextStyles.titleMedium),
             const SizedBox(height: AppDimensions.xs),
             Text(e.toString(), style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondary)),
             const SizedBox(height: AppDimensions.md),
@@ -691,7 +691,7 @@ class _LoanDetailPageState extends ConsumerState<LoanDetailPage>
                       AppDimensions.md, AppDimensions.sm, AppDimensions.md, AppDimensions.lg),
                   decoration: BoxDecoration(
                     color: AppColors.surface,
-                    boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.08),
+                    boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.08),
                         blurRadius: 16, offset: const Offset(0, -4))],
                   ),
                   child: _actionLoading
@@ -800,7 +800,7 @@ class _LoanDetailPageState extends ConsumerState<LoanDetailPage>
                     Container(
                       padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.15),
+                        color: Colors.white.withValues(alpha: 0.15),
                         borderRadius: BorderRadius.circular(AppDimensions.radiusMd),
                       ),
                       child: const Icon(Icons.account_balance_rounded, color: Colors.white, size: 24),
@@ -894,13 +894,13 @@ class _OverviewTab extends StatelessWidget {
             padding: const EdgeInsets.all(AppDimensions.md),
             decoration: BoxDecoration(
               color: loan.overdueDays > 0
-                  ? AppColors.error.withOpacity(0.08)
-                  : AppColors.secondary.withOpacity(0.07),
+                  ? AppColors.error.withValues(alpha: 0.08)
+                  : AppColors.secondary.withValues(alpha: 0.07),
               borderRadius: BorderRadius.circular(AppDimensions.radiusXl),
               border: Border.all(
                   color: loan.overdueDays > 0
-                      ? AppColors.error.withOpacity(0.25)
-                      : AppColors.secondary.withOpacity(0.2)),
+                      ? AppColors.error.withValues(alpha: 0.25)
+                      : AppColors.secondary.withValues(alpha: 0.2)),
             ),
             child: Row(children: [
               Icon(
@@ -1064,8 +1064,8 @@ class _ScheduleTab extends ConsumerWidget {
                     final isCurrent = r.status == 'Overdue' || (!isPaid && i == rows.indexWhere((x) => x.status != 'Paid'));
                     return Container(
                       color: isCurrent
-                          ? AppColors.primary.withOpacity(0.05)
-                          : isPaid ? AppColors.secondary.withOpacity(0.03) : Colors.transparent,
+                          ? AppColors.primary.withValues(alpha: 0.05)
+                          : isPaid ? AppColors.secondary.withValues(alpha: 0.03) : Colors.transparent,
                       padding: const EdgeInsets.symmetric(
                           horizontal: AppDimensions.md, vertical: AppDimensions.sm),
                       child: Row(children: [
@@ -1153,7 +1153,7 @@ class _PaymentsTab extends ConsumerWidget {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                         decoration: BoxDecoration(
-                          color: AppColors.secondary.withOpacity(0.1),
+                          color: AppColors.secondary.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(AppDimensions.radiusRound),
                         ),
                         child: Text('PAID',

@@ -2,7 +2,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:dio/dio.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/theme/app_dimensions.dart';
@@ -112,7 +111,7 @@ class _LedgerPageState extends ConsumerState<LedgerPage> {
 
   void _onSearch(String query) {
     _debounce?.cancel();
-    if (query.trim().length < 1) {
+    if (query.trim().isEmpty) {
       setState(() {
         _suggestions = [];
         _showSuggestions = false;
@@ -157,7 +156,7 @@ class _LedgerPageState extends ConsumerState<LedgerPage> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: Text('General Ledger', style: AppTextStyles.titleLarge),
+        title: const Text('General Ledger', style: AppTextStyles.titleLarge),
         backgroundColor: AppColors.surface,
         elevation: 0,
         leading: IconButton(
@@ -210,7 +209,7 @@ class _LedgerPageState extends ConsumerState<LedgerPage> {
                   border: Border.all(color: const Color(0xFFE0E7EF)),
                   boxShadow: [
                     BoxShadow(
-                        color: Colors.black.withOpacity(0.06),
+                        color: Colors.black.withValues(alpha: 0.06),
                         blurRadius: 8,
                         offset: const Offset(0, 3))
                   ],
@@ -231,7 +230,7 @@ class _LedgerPageState extends ConsumerState<LedgerPage> {
                             horizontal: 6, vertical: 2),
                         decoration: BoxDecoration(
                           color:
-                              AppColors.primary.withOpacity(0.08),
+                              AppColors.primary.withValues(alpha: 0.08),
                           borderRadius: BorderRadius.circular(4),
                         ),
                         child: Text(s.accountType,
@@ -310,7 +309,7 @@ class _LedgerView extends ConsumerWidget {
           const Icon(Icons.error_outline_rounded,
               color: AppColors.error, size: 48),
           const SizedBox(height: AppDimensions.md),
-          Text('Could not load ledger',
+          const Text('Could not load ledger',
               style: AppTextStyles.titleMedium),
           const SizedBox(height: AppDimensions.xs),
           Text(e.toString(),
@@ -353,7 +352,7 @@ class _LedgerView extends ConsumerWidget {
 
         // Table header
         Container(
-          color: AppColors.primary.withOpacity(0.08),
+          color: AppColors.primary.withValues(alpha: 0.08),
           padding: const EdgeInsets.symmetric(
               horizontal: AppDimensions.md, vertical: AppDimensions.xs),
           child: Row(children: [

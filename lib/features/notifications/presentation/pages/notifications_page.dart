@@ -102,7 +102,7 @@ class _NotificationsPageState extends ConsumerState<NotificationsPage>
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: Text('Notifications', style: AppTextStyles.titleLarge),
+        title: const Text('Notifications', style: AppTextStyles.titleLarge),
         backgroundColor: AppColors.surface,
         elevation: 0,
         actions: [
@@ -168,7 +168,7 @@ class _NotificationsPageState extends ConsumerState<NotificationsPage>
             const Icon(Icons.notifications_none_rounded,
                 size: 64, color: AppColors.textSecondary),
             const SizedBox(height: AppDimensions.md),
-            Text('No notifications', style: AppTextStyles.titleMedium),
+            const Text('No notifications', style: AppTextStyles.titleMedium),
             Text('You\'re all caught up!',
                 style: AppTextStyles.bodyMedium
                     .copyWith(color: AppColors.textSecondary)),
@@ -239,12 +239,12 @@ class _NotifCard extends StatelessWidget {
         decoration: BoxDecoration(
           color: notif.isRead
               ? AppColors.surface
-              : AppColors.primary.withOpacity(0.04),
+              : AppColors.primary.withValues(alpha: 0.04),
           borderRadius: BorderRadius.circular(AppDimensions.radiusLg),
           border: Border.all(
             color: notif.isRead
                 ? const Color(0xFFE8EDF3)
-                : AppColors.primary.withOpacity(0.15),
+                : AppColors.primary.withValues(alpha: 0.15),
           ),
         ),
         child: Row(
@@ -254,7 +254,7 @@ class _NotifCard extends StatelessWidget {
               width: 44,
               height: 44,
               decoration: BoxDecoration(
-                color: _typeColor.withOpacity(0.1),
+                color: _typeColor.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(AppDimensions.radiusMd),
               ),
               child: Icon(_typeIcon, color: _typeColor, size: 22),
@@ -304,7 +304,7 @@ class _NotifCard extends StatelessWidget {
                         padding: const EdgeInsets.symmetric(
                             horizontal: 6, vertical: 2),
                         decoration: BoxDecoration(
-                          color: _typeColor.withOpacity(0.1),
+                          color: _typeColor.withValues(alpha: 0.1),
                           borderRadius:
                               BorderRadius.circular(AppDimensions.radiusRound),
                         ),

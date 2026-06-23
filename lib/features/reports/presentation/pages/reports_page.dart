@@ -12,13 +12,13 @@ class ReportsPage extends ConsumerWidget {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: Text('Reports', style: AppTextStyles.titleLarge),
+        title: const Text('Reports', style: AppTextStyles.titleLarge),
         backgroundColor: AppColors.surface,
         elevation: 0,
       ),
       body: ListView(
         padding: const EdgeInsets.all(AppDimensions.md),
-        children: [
+        children: const [
           _ReportCategory(
             title: 'Financial Reports',
             icon: Icons.account_balance_outlined,
@@ -30,7 +30,7 @@ class ReportsPage extends ConsumerWidget {
               _ReportItem(title: 'Cash Flow Statement', subtitle: 'Cash inflows and outflows', icon: Icons.currency_rupee_rounded),
             ],
           ),
-          const SizedBox(height: AppDimensions.md),
+          SizedBox(height: AppDimensions.md),
           _ReportCategory(
             title: 'Loan Reports',
             icon: Icons.account_balance_wallet_outlined,
@@ -43,7 +43,7 @@ class ReportsPage extends ConsumerWidget {
               _ReportItem(title: 'Disbursement Report', subtitle: 'Loans disbursed by period', icon: Icons.send_rounded),
             ],
           ),
-          const SizedBox(height: AppDimensions.md),
+          SizedBox(height: AppDimensions.md),
           _ReportCategory(
             title: 'Savings Reports',
             icon: Icons.savings_outlined,
@@ -55,11 +55,11 @@ class ReportsPage extends ConsumerWidget {
               _ReportItem(title: 'Fixed Deposit Maturity', subtitle: 'FDs maturing this month', icon: Icons.lock_clock_outlined),
             ],
           ),
-          const SizedBox(height: AppDimensions.md),
+          SizedBox(height: AppDimensions.md),
           _ReportCategory(
             title: 'Member Reports',
             icon: Icons.people_outline_rounded,
-            color: const Color(0xFF7C3AED),
+            color: Color(0xFF7C3AED),
             reports: [
               _ReportItem(title: 'Member List', subtitle: 'All members with status', icon: Icons.people_rounded),
               _ReportItem(title: 'New Members', subtitle: 'Members registered this month', icon: Icons.person_add_rounded),
@@ -67,7 +67,7 @@ class ReportsPage extends ConsumerWidget {
               _ReportItem(title: 'Share Capital Report', subtitle: 'Shares held per member', icon: Icons.pie_chart_rounded),
             ],
           ),
-          const SizedBox(height: AppDimensions.md),
+          SizedBox(height: AppDimensions.md),
           _ReportCategory(
             title: 'Compliance Reports',
             icon: Icons.gavel_rounded,
@@ -79,7 +79,7 @@ class ReportsPage extends ConsumerWidget {
               _ReportItem(title: 'Audit Trail', subtitle: 'System activity log export', icon: Icons.history_rounded),
             ],
           ),
-          const SizedBox(height: AppDimensions.xxl),
+          SizedBox(height: AppDimensions.xxl),
         ],
       ),
     );
@@ -109,7 +109,7 @@ class _ReportCategory extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(6),
               decoration: BoxDecoration(
-                color: color.withOpacity(0.1),
+                color: color.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(AppDimensions.radiusSm),
               ),
               child: Icon(icon, color: color, size: 18),
@@ -144,7 +144,7 @@ class _ReportCategory extends StatelessWidget {
                           Container(
                             width: 40, height: 40,
                             decoration: BoxDecoration(
-                              color: color.withOpacity(0.08),
+                              color: color.withValues(alpha: 0.08),
                               borderRadius: BorderRadius.circular(AppDimensions.radiusMd),
                             ),
                             child: Icon(r.icon, color: color, size: 20),

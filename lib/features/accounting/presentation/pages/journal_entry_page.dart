@@ -36,7 +36,7 @@ class ChartOfAccountItem {
         currentBalance: (j['currentBalance'] as num?)?.toDouble() ?? 0,
       );
 
-  String get display => '${accountCode}  ${accountName}';
+  String get display => '$accountCode  $accountName';
 }
 
 // ── Journal line model ────────────────────────────────────────────────────────
@@ -130,7 +130,7 @@ class _JournalEntryPageState extends ConsumerState<JournalEntryPage>
 
   void _onAccountSearch(_JournalLine line, String query) {
     line.debounce?.cancel();
-    if (query.trim().length < 1) {
+    if (query.trim().isEmpty) {
       setState(() {
         line.suggestions = [];
         line.showSuggestions = false;
@@ -241,7 +241,9 @@ class _JournalEntryPageState extends ConsumerState<JournalEntryPage>
         setState(() {
           _isPosting = false;
           _narrationCtrl.clear();
-          for (final e in _entries) e.dispose();
+          for (final e in _entries) {
+            e.dispose();
+          }
           _entries.clear();
           _entries.addAll([
             _JournalLine(isDebit: true),
@@ -270,7 +272,7 @@ class _JournalEntryPageState extends ConsumerState<JournalEntryPage>
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: Text('Accounting', style: AppTextStyles.titleLarge),
+        title: const Text('Accounting', style: AppTextStyles.titleLarge),
         backgroundColor: AppColors.surface,
         elevation: 0,
         actions: [
@@ -364,7 +366,7 @@ class _JournalEntryPageState extends ConsumerState<JournalEntryPage>
                         .copyWith(color: AppColors.textSecondary)),
                 const SizedBox(height: 4),
                 DropdownButtonFormField<String>(
-                  value: _selectedVoucherType,
+                  initialValue: _selectedVoucherType,
                   onChanged: (v) => setState(() => _selectedVoucherType = v!),
                   decoration: const InputDecoration(isDense: true),
                   items: _voucherTypes
@@ -405,12 +407,12 @@ class _JournalEntryPageState extends ConsumerState<JournalEntryPage>
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text('Journal Entries', style: AppTextStyles.titleSmall),
+                const Text('Journal Entries', style: AppTextStyles.titleSmall),
                 TextButton.icon(
                   onPressed: () => setState(() =>
                       _entries.add(_JournalLine(isDebit: true))),
                   icon: const Icon(Icons.add_rounded, size: 16),
-                  label: Text('Add Line', style: AppTextStyles.labelSmall),
+                  label: const Text('Add Line', style: AppTextStyles.labelSmall),
                 ),
               ],
             ),
@@ -504,8 +506,8 @@ class _JournalEntryPageState extends ConsumerState<JournalEntryPage>
                     height: 36,
                     decoration: BoxDecoration(
                       color: entry.isDebit
-                          ? AppColors.error.withOpacity(0.1)
-                          : AppColors.secondary.withOpacity(0.1),
+                          ? AppColors.error.withValues(alpha: 0.1)
+                          : AppColors.secondary.withValues(alpha: 0.1),
                       borderRadius:
                           BorderRadius.circular(AppDimensions.radiusSm),
                     ),
@@ -571,7 +573,7 @@ class _JournalEntryPageState extends ConsumerState<JournalEntryPage>
                 border: Border.all(color: const Color(0xFFE0E7EF)),
                 boxShadow: [
                   BoxShadow(
-                      color: Colors.black.withOpacity(0.07),
+                      color: Colors.black.withValues(alpha: 0.07),
                       blurRadius: 8,
                       offset: const Offset(0, 3))
                 ],
@@ -591,7 +593,7 @@ class _JournalEntryPageState extends ConsumerState<JournalEntryPage>
                       padding: const EdgeInsets.symmetric(
                           horizontal: 6, vertical: 2),
                       decoration: BoxDecoration(
-                        color: _typeColor(acc.accountType).withOpacity(0.1),
+                        color: _typeColor(acc.accountType).withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(4),
                       ),
                       child: Text(acc.accountType[0],
@@ -649,13 +651,13 @@ class _JournalEntryPageState extends ConsumerState<JournalEntryPage>
       padding: const EdgeInsets.all(AppDimensions.md),
       decoration: BoxDecoration(
         color: _isBalanced
-            ? AppColors.secondary.withOpacity(0.05)
-            : AppColors.error.withOpacity(0.05),
+            ? AppColors.secondary.withValues(alpha: 0.05)
+            : AppColors.error.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(AppDimensions.radiusLg),
         border: Border.all(
           color: _isBalanced
-              ? AppColors.secondary.withOpacity(0.3)
-              : AppColors.error.withOpacity(0.3),
+              ? AppColors.secondary.withValues(alpha: 0.3)
+              : AppColors.error.withValues(alpha: 0.3),
         ),
       ),
       child: Row(
@@ -718,7 +720,7 @@ class _JournalEntryPageState extends ConsumerState<JournalEntryPage>
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(Icons.receipt_long_rounded,
-                size: 56, color: AppColors.textSecondary.withOpacity(0.3)),
+                size: 56, color: AppColors.textSecondary.withValues(alpha: 0.3)),
             const SizedBox(height: AppDimensions.sm),
             Text('No vouchers yet',
                 style: AppTextStyles.bodyMedium
@@ -751,7 +753,7 @@ class _JournalEntryPageState extends ConsumerState<JournalEntryPage>
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: AppColors.primary.withOpacity(0.1),
+                  color: AppColors.primary.withValues(alpha: 0.1),
                   borderRadius:
                       BorderRadius.circular(AppDimensions.radiusMd),
                 ),
@@ -779,8 +781,8 @@ class _JournalEntryPageState extends ConsumerState<JournalEntryPage>
                     const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 decoration: BoxDecoration(
                   color: isPosted
-                      ? AppColors.secondary.withOpacity(0.1)
-                      : AppColors.warning.withOpacity(0.1),
+                      ? AppColors.secondary.withValues(alpha: 0.1)
+                      : AppColors.warning.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(4),
                 ),
                 child: Text(status,

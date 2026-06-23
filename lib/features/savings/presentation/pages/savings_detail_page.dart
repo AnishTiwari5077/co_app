@@ -193,7 +193,7 @@ class _SavingsDetailPageState extends ConsumerState<SavingsDetailPage>
               children: [
                 const Icon(Icons.error_outline_rounded, color: AppColors.error, size: 48),
                 const SizedBox(height: 12),
-                Text('Failed to load account', style: AppTextStyles.titleSmall),
+                const Text('Failed to load account', style: AppTextStyles.titleSmall),
                 const SizedBox(height: 4),
                 Text(e.toString(),
                     style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondary),
@@ -395,7 +395,7 @@ class _TransactionsTab extends ConsumerWidget {
           children: [
             const Icon(Icons.error_outline_rounded, color: AppColors.error, size: 40),
             const SizedBox(height: 8),
-            Text('Failed to load transactions',
+            const Text('Failed to load transactions',
                 style: AppTextStyles.titleSmall),
             const SizedBox(height: 4),
             Text(state.error!,

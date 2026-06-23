@@ -19,8 +19,10 @@ class DashboardRecentTxn {
   final double amount;
   final DateTime transactionDate;
   DashboardRecentTxn({
-    required this.memberName, required this.transactionType,
-    required this.accountNumber, required this.amount,
+    required this.memberName,
+    required this.transactionType,
+    required this.accountNumber,
+    required this.amount,
     required this.transactionDate,
   });
   bool get isCredit => transactionType != 'Withdrawal';
@@ -30,7 +32,9 @@ class DashboardRecentTxn {
         transactionType: j['transactionType'] as String? ?? '',
         accountNumber: j['accountNumber'] as String? ?? '',
         amount: (j['amount'] as num?)?.toDouble() ?? 0,
-        transactionDate: DateTime.tryParse(j['transactionDate'] as String? ?? '') ?? DateTime.now(),
+        transactionDate:
+            DateTime.tryParse(j['transactionDate'] as String? ?? '') ??
+                DateTime.now(),
       );
 }
 
@@ -38,7 +42,10 @@ class DashboardSchemeDist {
   final String schemeType;
   final double totalBalance;
   final int accountCount;
-  DashboardSchemeDist({required this.schemeType, required this.totalBalance, required this.accountCount});
+  DashboardSchemeDist(
+      {required this.schemeType,
+      required this.totalBalance,
+      required this.accountCount});
   factory DashboardSchemeDist.fromJson(Map<String, dynamic> j) =>
       DashboardSchemeDist(
         schemeType: j['schemeType'] as String? ?? '',
@@ -51,8 +58,11 @@ class DashboardPendingItem {
   final String title, subtitle, itemType, urgency;
   final DateTime createdAt;
   DashboardPendingItem({
-    required this.title, required this.subtitle,
-    required this.itemType, required this.urgency, required this.createdAt,
+    required this.title,
+    required this.subtitle,
+    required this.itemType,
+    required this.urgency,
+    required this.createdAt,
   });
   factory DashboardPendingItem.fromJson(Map<String, dynamic> j) =>
       DashboardPendingItem(
@@ -60,7 +70,8 @@ class DashboardPendingItem {
         subtitle: j['subtitle'] as String? ?? '',
         itemType: j['itemType'] as String? ?? '',
         urgency: j['urgency'] as String? ?? 'NORMAL',
-        createdAt: DateTime.tryParse(j['createdAt'] as String? ?? '') ?? DateTime.now(),
+        createdAt: DateTime.tryParse(j['createdAt'] as String? ?? '') ??
+            DateTime.now(),
       );
 }
 
@@ -68,20 +79,33 @@ class DashboardActivity {
   final List<DashboardRecentTxn> recentTransactions;
   final List<DashboardSchemeDist> savingsDistribution;
   final List<DashboardPendingItem> pendingItems;
-  DashboardActivity({required this.recentTransactions, required this.savingsDistribution, required this.pendingItems});
-  factory DashboardActivity.fromJson(Map<String, dynamic> j) => DashboardActivity(
-    recentTransactions: ((j['recentTransactions'] as List?)?.cast<Map<String, dynamic>>() ?? [])
-        .map(DashboardRecentTxn.fromJson).toList(),
-    savingsDistribution: ((j['savingsDistribution'] as List?)?.cast<Map<String, dynamic>>() ?? [])
-        .map(DashboardSchemeDist.fromJson).toList(),
-    pendingItems: ((j['pendingItems'] as List?)?.cast<Map<String, dynamic>>() ?? [])
-        .map(DashboardPendingItem.fromJson).toList(),
-  );
+  DashboardActivity(
+      {required this.recentTransactions,
+      required this.savingsDistribution,
+      required this.pendingItems});
+  factory DashboardActivity.fromJson(Map<String, dynamic> j) =>
+      DashboardActivity(
+        recentTransactions:
+            ((j['recentTransactions'] as List?)?.cast<Map<String, dynamic>>() ??
+                    [])
+                .map(DashboardRecentTxn.fromJson)
+                .toList(),
+        savingsDistribution: ((j['savingsDistribution'] as List?)
+                    ?.cast<Map<String, dynamic>>() ??
+                [])
+            .map(DashboardSchemeDist.fromJson)
+            .toList(),
+        pendingItems:
+            ((j['pendingItems'] as List?)?.cast<Map<String, dynamic>>() ?? [])
+                .map(DashboardPendingItem.fromJson)
+                .toList(),
+      );
   factory DashboardActivity.empty() => DashboardActivity(
-    recentTransactions: [], savingsDistribution: [], pendingItems: []);
+      recentTransactions: [], savingsDistribution: [], pendingItems: []);
 }
 
-final dashboardActivityProvider = FutureProvider<DashboardActivity>((ref) async {
+final dashboardActivityProvider =
+    FutureProvider<DashboardActivity>((ref) async {
   final dio = ref.watch(dioProvider);
   try {
     final res = await dio.get('/api/v1/dashboard/activity');
@@ -92,7 +116,6 @@ final dashboardActivityProvider = FutureProvider<DashboardActivity>((ref) async 
     return DashboardActivity.empty();
   }
 });
-
 
 class DashboardPage extends ConsumerWidget {
   const DashboardPage({super.key});
@@ -164,7 +187,7 @@ class DashboardPage extends ConsumerWidget {
                 color: Colors.white, size: 20),
           ),
           const SizedBox(width: AppDimensions.sm),
-          Column(
+          const Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text('SahakariMS', style: AppTextStyles.titleMedium),
@@ -207,11 +230,11 @@ class DashboardPage extends ConsumerWidget {
             ? 'Good Afternoon'
             : 'Good Evening';
     final name = user?.fullName ?? 'User';
-    final branch = user?.branchName.isNotEmpty == true
-        ? user!.branchName
-        : 'Head Office';
+    final branch =
+        user?.branchName.isNotEmpty == true ? user!.branchName : 'Head Office';
     final now = DateTime.now();
-    final dateStr = '${_weekday(now.weekday)}, ${now.day} ${_month(now.month)} ${now.year}';
+    final dateStr =
+        '${_weekday(now.weekday)}, ${now.day} ${_month(now.month)} ${now.year}';
     return Container(
       padding: const EdgeInsets.all(AppDimensions.md),
       decoration: BoxDecoration(
@@ -246,7 +269,7 @@ class DashboardPage extends ConsumerWidget {
             width: 56,
             height: 56,
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
+              color: Colors.white.withValues(alpha: 0.2),
               shape: BoxShape.circle,
               border: Border.all(color: Colors.white30, width: 2),
             ),
@@ -266,22 +289,37 @@ class DashboardPage extends ConsumerWidget {
     );
   }
 
-  String _weekday(int w) => ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'][w - 1];
-  String _month(int m) => ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][m - 1];
+  String _weekday(int w) =>
+      ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][w - 1];
+  String _month(int m) => [
+        'Jan',
+        'Feb',
+        'Mar',
+        'Apr',
+        'May',
+        'Jun',
+        'Jul',
+        'Aug',
+        'Sep',
+        'Oct',
+        'Nov',
+        'Dec'
+      ][m - 1];
 
-  Widget _buildKpiRow(BuildContext context, AsyncValue<DashboardSummary> summaryAsync) {
+  Widget _buildKpiRow(
+      BuildContext context, AsyncValue<DashboardSummary> summaryAsync) {
     return summaryAsync.when(
       loading: () => const Center(
           child: Padding(
-            padding: EdgeInsets.all(AppDimensions.lg),
-            child: CircularProgressIndicator(),
-          )),
+        padding: EdgeInsets.all(AppDimensions.lg),
+        child: CircularProgressIndicator(),
+      )),
       error: (e, _) => Container(
         padding: const EdgeInsets.all(AppDimensions.md),
         decoration: BoxDecoration(
-          color: AppColors.error.withOpacity(0.05),
+          color: AppColors.error.withValues(alpha: 0.05),
           borderRadius: BorderRadius.circular(AppDimensions.radiusLg),
-          border: Border.all(color: AppColors.error.withOpacity(0.2)),
+          border: Border.all(color: AppColors.error.withValues(alpha: 0.2)),
         ),
         child: Row(
           children: [
@@ -289,8 +327,8 @@ class DashboardPage extends ConsumerWidget {
             const SizedBox(width: 8),
             Expanded(
               child: Text('Could not load live data. $e',
-                  style: AppTextStyles.bodySmall
-                      .copyWith(color: AppColors.error)),
+                  style:
+                      AppTextStyles.bodySmall.copyWith(color: AppColors.error)),
             ),
           ],
         ),
@@ -351,7 +389,8 @@ class DashboardPage extends ConsumerWidget {
                   value: '${s.npaPercent.toStringAsFixed(1)}%',
                   icon: Icons.warning_amber_rounded,
                   iconColor: AppColors.error,
-                  subtitle: 'Recovery: ${s.loanRecoveryRate.toStringAsFixed(1)}%',
+                  subtitle:
+                      'Recovery: ${s.loanRecoveryRate.toStringAsFixed(1)}%',
                   subtitlePositiveFlag: false,
                 ),
               ),
@@ -396,7 +435,7 @@ class DashboardPage extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Quick Actions', style: AppTextStyles.titleMedium),
+        const Text('Quick Actions', style: AppTextStyles.titleMedium),
         const SizedBox(height: AppDimensions.sm),
         Row(
           children: actions.map((a) {
@@ -430,7 +469,7 @@ class DashboardPage extends ConsumerWidget {
               width: 44,
               height: 44,
               decoration: BoxDecoration(
-                color: action.color.withOpacity(0.1),
+                color: action.color.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(AppDimensions.radiusMd),
               ),
               child: Icon(action.icon, color: action.color, size: 22),
@@ -448,83 +487,31 @@ class DashboardPage extends ConsumerWidget {
   }
 
   Widget _buildLoanChart() {
-    // Last 6 months labels (current month last)
     final now = DateTime.now();
     final monthLabels = List.generate(6, (i) {
-      final m = DateTime(now.year, now.month - 5 + i, 1);
+      final monthOffset = now.month - 5 + i;
+      final month = monthOffset <= 0 ? monthOffset + 12 : monthOffset;
       const names = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-      return names[m.month - 1];
+      return names[month - 1];
     });
+
+    const values = [65.0, 70.0, 68.0, 75.0, 72.0, 78.0];
+    final maxVal = values.reduce((a, b) => a > b ? a : b);
 
     return _ChartCard(
       title: 'Loan Portfolio Trend',
       subtitle: 'Last 6 months (NPR Lakhs)',
       child: SizedBox(
         height: 160,
-        child: LineChart(
-          LineChartData(
-            minX: 0,
-            maxX: 5,
-            gridData: FlGridData(
-              show: true,
-              drawVerticalLine: false,
-              getDrawingHorizontalLine: (value) =>
-                  const FlLine(color: Color(0xFFEEF2F7), strokeWidth: 1),
-            ),
-            titlesData: FlTitlesData(
-              leftTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-              rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-              topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-              bottomTitles: AxisTitles(
-                sideTitles: SideTitles(
-                  showTitles: true,
-                  interval: 1,
-                  reservedSize: 22,
-                  getTitlesWidget: (value, meta) {
-                    final idx = value.round();
-                    // Only show label exactly at integer spot positions 0–5
-                    if (value != value.roundToDouble() || idx < 0 || idx >= monthLabels.length) {
-                      return const SizedBox.shrink();
-                    }
-                    return Padding(
-                      padding: const EdgeInsets.only(top: 4),
-                      child: Text(monthLabels[idx], style: AppTextStyles.bodySmall),
-                    );
-                  },
-                ),
-              ),
-            ),
-            borderData: FlBorderData(show: false),
-            lineBarsData: [
-              LineChartBarData(
-                spots: const [
-                  FlSpot(0, 65),
-                  FlSpot(1, 70),
-                  FlSpot(2, 68),
-                  FlSpot(3, 75),
-                  FlSpot(4, 72),
-                  FlSpot(5, 78),
-                ],
-                isCurved: true,
-                color: AppColors.primary,
-                barWidth: 3,
-                belowBarData: BarAreaData(
-                  show: true,
-                  color: AppColors.primary.withOpacity(0.1),
-                ),
-                dotData: FlDotData(
-                  show: true,
-                  getDotPainter: (spot, percent, bar, index) =>
-                      FlDotCirclePainter(
-                    radius: 4,
-                    color: AppColors.primary,
-                    strokeWidth: 2,
-                    strokeColor: Colors.white,
-                  ),
-                ),
-              ),
-            ],
+        child: CustomPaint(
+          painter: _BarChartPainter(
+            values: values,
+            labels: monthLabels,
+            maxValue: maxVal,
+            barColor: AppColors.primary,
+            labelColor: AppColors.textSecondary,
           ),
+          child: const SizedBox.expand(),
         ),
       ),
     );
@@ -532,16 +519,19 @@ class DashboardPage extends ConsumerWidget {
 
   Widget _buildSavingsChart(List<DashboardSchemeDist> distribution) {
     final colors = [
-      AppColors.primary, AppColors.secondary,
-      AppColors.accent, const Color(0xFF7C3AED), const Color(0xFFEC4899),
+      AppColors.primary,
+      AppColors.secondary,
+      AppColors.accent,
+      const Color(0xFF7C3AED),
+      const Color(0xFFEC4899),
     ];
     final total = distribution.fold<double>(0, (s, d) => s + d.totalBalance);
 
     if (distribution.isEmpty || total == 0) {
-      return _ChartCard(
+      return const _ChartCard(
         title: 'Savings Distribution',
         subtitle: 'By account type',
-        child: const SizedBox(
+        child: SizedBox(
           height: 160,
           child: Center(child: Text('No savings data yet')),
         ),
@@ -567,7 +557,8 @@ class DashboardPage extends ConsumerWidget {
                       title: '$pct%',
                       color: colors[e.key % colors.length],
                       radius: 40,
-                      titleStyle: AppTextStyles.bodySmall.copyWith(color: Colors.white, fontSize: 10),
+                      titleStyle: AppTextStyles.bodySmall
+                          .copyWith(color: Colors.white, fontSize: 10),
                     );
                   }).toList(),
                 ),
@@ -600,15 +591,14 @@ class DashboardPage extends ConsumerWidget {
     return '$h:$m $ampm';
   }
 
-  String _fmtCompact(double v) =>
-      v.toStringAsFixed(0).replaceAllMapped(
-          RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]},');
+  String _fmtCompact(double v) => v.toStringAsFixed(0).replaceAllMapped(
+      RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]},');
 
   Widget _buildRecentTransactions(List<DashboardRecentTxn> transactions) {
     if (transactions.isEmpty) {
-      return _SectionCard(
+      return const _SectionCard(
         title: 'Recent Transactions',
-        child: const Padding(
+        child: Padding(
           padding: EdgeInsets.symmetric(vertical: AppDimensions.lg),
           child: Center(child: Text('No transactions yet')),
         ),
@@ -617,62 +607,79 @@ class DashboardPage extends ConsumerWidget {
     return _SectionCard(
       title: 'Recent Transactions',
       child: Column(
-        children: transactions.map((t) => Padding(
-          padding: const EdgeInsets.symmetric(vertical: AppDimensions.sm),
-          child: Row(
-            children: [
-              Container(
-                width: 40, height: 40,
-                decoration: BoxDecoration(
-                  color: t.isCredit
-                      ? AppColors.secondary.withValues(alpha: 0.1)
-                      : AppColors.error.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(AppDimensions.radiusMd),
-                ),
-                child: Icon(
-                  t.isCredit ? Icons.arrow_downward_rounded : Icons.arrow_upward_rounded,
-                  color: t.isCredit ? AppColors.secondary : AppColors.error,
-                  size: 18,
-                ),
-              ),
-              const SizedBox(width: AppDimensions.sm),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(t.memberName, style: AppTextStyles.titleSmall,
-                        maxLines: 1, overflow: TextOverflow.ellipsis),
-                    Text(t.transactionType,
-                        style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondary)),
-                  ],
-                ),
-              ),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Text(
-                    '${t.isCredit ? '+' : '-'}NPR ${_fmtCompact(t.amount)}',
-                    style: AppTextStyles.amountSmall.copyWith(
-                      color: t.isCredit ? AppColors.creditAmount : AppColors.debitAmount,
-                    ),
+        children: transactions
+            .map((t) => Padding(
+                  padding:
+                      const EdgeInsets.symmetric(vertical: AppDimensions.sm),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          color: t.isCredit
+                              ? AppColors.secondary.withValues(alpha: 0.1)
+                              : AppColors.error.withValues(alpha: 0.1),
+                          borderRadius:
+                              BorderRadius.circular(AppDimensions.radiusMd),
+                        ),
+                        child: Icon(
+                          t.isCredit
+                              ? Icons.arrow_downward_rounded
+                              : Icons.arrow_upward_rounded,
+                          color: t.isCredit
+                              ? AppColors.secondary
+                              : AppColors.error,
+                          size: 18,
+                        ),
+                      ),
+                      const SizedBox(width: AppDimensions.sm),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(t.memberName,
+                                style: AppTextStyles.titleSmall,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis),
+                            Text(t.transactionType,
+                                style: AppTextStyles.bodySmall
+                                    .copyWith(color: AppColors.textSecondary)),
+                          ],
+                        ),
+                      ),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Text(
+                            '${t.isCredit ? '+' : '-'}NPR ${_fmtCompact(t.amount)}',
+                            style: AppTextStyles.amountSmall.copyWith(
+                              color: t.isCredit
+                                  ? AppColors.creditAmount
+                                  : AppColors.debitAmount,
+                            ),
+                          ),
+                          Text(_fmtTime(t.transactionDate),
+                              style: AppTextStyles.bodySmall
+                                  .copyWith(color: AppColors.textSecondary)),
+                        ],
+                      ),
+                    ],
                   ),
-                  Text(_fmtTime(t.transactionDate),
-                      style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondary)),
-                ],
-              ),
-            ],
-          ),
-        )).toList(),
+                ))
+            .toList(),
       ),
     );
   }
 
-  Widget _buildPendingApprovals(BuildContext context, List<DashboardPendingItem> items) {
+  Widget _buildPendingApprovals(
+      BuildContext context, List<DashboardPendingItem> items) {
     return _SectionCard(
       title: 'Pending Approvals',
       titleAction: TextButton(
         onPressed: () => context.go(AppRoutes.members),
-        child: Text('View All', style: AppTextStyles.labelSmall.copyWith(color: AppColors.primary)),
+        child: Text('View All',
+            style: AppTextStyles.labelSmall.copyWith(color: AppColors.primary)),
       ),
       child: items.isEmpty
           ? const Padding(
@@ -680,17 +687,21 @@ class DashboardPage extends ConsumerWidget {
               child: Center(child: Text('No pending approvals 🎉')),
             )
           : Column(
-              children: items.asMap().entries.map((e) => Column(
-                children: [
-                  if (e.key > 0) const Divider(height: 1),
-                  _ApprovalItem(
-                    name: e.value.title,
-                    amount: e.value.subtitle,
-                    urgency: e.value.urgency,
-                    age: _timeAgo(e.value.createdAt),
-                  ),
-                ],
-              )).toList(),
+              children: items
+                  .asMap()
+                  .entries
+                  .map((e) => Column(
+                        children: [
+                          if (e.key > 0) const Divider(height: 1),
+                          _ApprovalItem(
+                            name: e.value.title,
+                            amount: e.value.subtitle,
+                            urgency: e.value.urgency,
+                            age: _timeAgo(e.value.createdAt),
+                          ),
+                        ],
+                      ))
+                  .toList(),
             ),
     );
   }
@@ -752,7 +763,8 @@ class _SectionCard extends StatelessWidget {
   final String title;
   final Widget child;
   final Widget? titleAction;
-  const _SectionCard({required this.title, required this.child, this.titleAction});
+  const _SectionCard(
+      {required this.title, required this.child, this.titleAction});
 
   @override
   Widget build(BuildContext context) {
@@ -781,17 +793,6 @@ class _SectionCard extends StatelessWidget {
   }
 }
 
-class _TxnItem {
-  final String name, type, amount, time;
-  final bool isCredit;
-  const _TxnItem(
-      {required this.name,
-      required this.type,
-      required this.amount,
-      required this.isCredit,
-      required this.time});
-}
-
 class _ApprovalItem extends StatelessWidget {
   final String name, amount, urgency, age;
   const _ApprovalItem(
@@ -812,8 +813,8 @@ class _ApprovalItem extends StatelessWidget {
                 horizontal: AppDimensions.xs, vertical: 2),
             decoration: BoxDecoration(
               color: isUrgent
-                  ? AppColors.error.withOpacity(0.1)
-                  : AppColors.warning.withOpacity(0.1),
+                  ? AppColors.error.withValues(alpha: 0.1)
+                  : AppColors.warning.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(AppDimensions.radiusSm),
             ),
             child: Text(
@@ -830,7 +831,9 @@ class _ApprovalItem extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(name,
-                    style: AppTextStyles.bodyMedium, maxLines: 1, overflow: TextOverflow.ellipsis),
+                    style: AppTextStyles.bodyMedium,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis),
                 Text(amount,
                     style: AppTextStyles.bodySmall
                         .copyWith(color: AppColors.textSecondary)),
@@ -838,8 +841,8 @@ class _ApprovalItem extends StatelessWidget {
             ),
           ),
           Text(age,
-              style:
-                  AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondary)),
+              style: AppTextStyles.bodySmall
+                  .copyWith(color: AppColors.textSecondary)),
         ],
       ),
     );
@@ -873,3 +876,88 @@ class _LegendItem extends StatelessWidget {
     );
   }
 }
+
+// ── Bar Chart Painter (replaces fl_chart LineChart for Windows stability) ─────
+
+class _BarChartPainter extends CustomPainter {
+  final List<double> values;
+  final List<String> labels;
+  final double maxValue;
+  final Color barColor;
+  final Color labelColor;
+
+  const _BarChartPainter({
+    required this.values,
+    required this.labels,
+    required this.maxValue,
+    required this.barColor,
+    required this.labelColor,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    const labelH = 18.0;
+    const topPad = 8.0;
+    final chartH = size.height - labelH - topPad;
+    final gapW = size.width / values.length;
+    final barW = gapW * 0.55;
+
+    // Horizontal grid lines
+    final gridPaint = Paint()
+      ..color = const Color(0xFFEEF2F7)
+      ..strokeWidth = 1;
+    for (int i = 0; i <= 4; i++) {
+      final y = topPad + chartH - (chartH * i / 4);
+      canvas.drawLine(Offset(0, y), Offset(size.width, y), gridPaint);
+    }
+
+    for (int i = 0; i < values.length; i++) {
+      final frac = maxValue > 0 ? values[i] / maxValue : 0.0;
+      final barH = (chartH * frac).clamp(2.0, chartH);
+      final x = gapW * i + (gapW - barW) / 2;
+      final y = topPad + chartH - barH;
+
+      // Bar fill
+      canvas.drawRRect(
+        RRect.fromRectAndCorners(
+          Rect.fromLTWH(x, y, barW, barH),
+          topLeft: const Radius.circular(4),
+          topRight: const Radius.circular(4),
+        ),
+        Paint()
+          ..color = barColor.withValues(alpha: 0.15)
+          ..style = PaintingStyle.fill,
+      );
+
+      // Top accent
+      canvas.drawRRect(
+        RRect.fromRectAndCorners(
+          Rect.fromLTWH(x, y, barW, 3),
+          topLeft: const Radius.circular(2),
+          topRight: const Radius.circular(2),
+        ),
+        Paint()
+          ..color = barColor
+          ..style = PaintingStyle.fill,
+      );
+
+      // Dot
+      canvas.drawCircle(Offset(x + barW / 2, y - 5), 3, Paint()..color = barColor);
+
+      // Month label
+      final tp = TextPainter(
+        text: TextSpan(
+          text: labels[i],
+          style: TextStyle(color: labelColor, fontSize: 10, fontWeight: FontWeight.w500),
+        ),
+        textDirection: TextDirection.ltr,
+      )..layout(maxWidth: gapW);
+      tp.paint(canvas, Offset(x + barW / 2 - tp.width / 2, topPad + chartH + 4));
+    }
+  }
+
+  @override
+  bool shouldRepaint(_BarChartPainter old) =>
+      old.values != values || old.maxValue != maxValue;
+}
+

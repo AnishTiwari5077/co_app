@@ -134,8 +134,20 @@ public class GetDashboardSummaryQueryHandler(IAppDbContext db, ICacheService cac
         var newMembers       = await db.Members.CountAsync(m => !m.IsDeleted && m.CreatedAt >= monthStart, ct);
         var npaPercent       = activeLoans > 0 ? Math.Round((decimal)npaLoans / activeLoans * 100, 2) : 0;
 
+        // Real recovery rate: total collected / total due (EMIs with DueDate <= today)
+        var todayOnly    = DateOnly.FromDateTime(today);
+        var dueEmiTotal  = await db.LoanEmiSchedules
+            .Where(e => e.DueDate <= todayOnly)
+            .SumAsync(e => (decimal?)e.EmiAmount, ct) ?? 0;
+        var paidEmiTotal = await db.LoanEmiSchedules
+            .Where(e => e.DueDate <= todayOnly)
+            .SumAsync(e => (decimal?)e.PaidAmount, ct) ?? 0;
+        var recoveryRate = dueEmiTotal > 0
+            ? Math.Round(paidEmiTotal / dueEmiTotal * 100, 1)
+            : 0;
+
         var summary = new DashboardSummaryDto(totalMembers, activeLoans, totalSavings, totalOutstanding,
-            todayDeposits, todayWithdrawals, 94.5m, npaPercent, newMembers, 0);
+            todayDeposits, todayWithdrawals, recoveryRate, npaPercent, newMembers, 0);
 
         try { await cache.SetAsync(cacheKey, summary, TimeSpan.FromMinutes(5), ct); }
         catch { /* Redis unavailable — skip cache write */ }

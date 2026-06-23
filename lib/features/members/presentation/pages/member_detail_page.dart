@@ -154,8 +154,8 @@ class _MemberDetailPageState extends ConsumerState<MemberDetailPage>
       await dio.post('/api/v1/members/$memberId/approve');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Row(
+          const SnackBar(
+            content: Row(
               children: [
                 Icon(Icons.check_circle_rounded, color: Colors.white),
                 SizedBox(width: 8),
@@ -206,7 +206,7 @@ class _MemberDetailPageState extends ConsumerState<MemberDetailPage>
             children: [
               const Icon(Icons.error_outline_rounded, size: 48, color: AppColors.error),
               const SizedBox(height: AppDimensions.md),
-              Text('Failed to load member', style: AppTextStyles.titleMedium),
+              const Text('Failed to load member', style: AppTextStyles.titleMedium),
               const SizedBox(height: AppDimensions.xs),
               Text('$e', style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondary),
                   textAlign: TextAlign.center),
@@ -290,7 +290,7 @@ class _MemberDetailPageState extends ConsumerState<MemberDetailPage>
                       style: TextStyle(
                           color: Colors.white, fontWeight: FontWeight.w600)),
                   style: TextButton.styleFrom(
-                    backgroundColor: Colors.white.withOpacity(0.15),
+                    backgroundColor: Colors.white.withValues(alpha: 0.15),
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(8)),
                   ),
@@ -339,7 +339,7 @@ class _MemberDetailPageState extends ConsumerState<MemberDetailPage>
                     width: 72,
                     height: 72,
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
+                      color: Colors.white.withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(AppDimensions.radiusXl),
                       border: Border.all(color: Colors.white30, width: 2),
                     ),
@@ -362,7 +362,7 @@ class _MemberDetailPageState extends ConsumerState<MemberDetailPage>
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                               decoration: BoxDecoration(
-                                color: AppColors.secondary.withOpacity(0.8),
+                                color: AppColors.secondary.withValues(alpha: 0.8),
                                 borderRadius: BorderRadius.circular(AppDimensions.radiusRound),
                               ),
                               child: Text(member.status,
@@ -373,7 +373,7 @@ class _MemberDetailPageState extends ConsumerState<MemberDetailPage>
                               Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                                 decoration: BoxDecoration(
-                                  color: Colors.white.withOpacity(0.2),
+                                  color: Colors.white.withValues(alpha: 0.2),
                                   borderRadius: BorderRadius.circular(AppDimensions.radiusRound),
                                 ),
                                 child: Text('KYC ✓',
@@ -410,7 +410,7 @@ class _MemberDetailPageState extends ConsumerState<MemberDetailPage>
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Are you sure you want to activate:',
+            const Text('Are you sure you want to activate:',
                 style: AppTextStyles.bodyMedium),
             const SizedBox(height: 8),
             Text(member.fullName,
@@ -423,7 +423,7 @@ class _MemberDetailPageState extends ConsumerState<MemberDetailPage>
             Container(
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: AppColors.secondary.withOpacity(0.08),
+                color: AppColors.secondary.withValues(alpha: 0.08),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Text(
@@ -560,7 +560,7 @@ class _SavingsTab extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.savings_outlined, size: 48, color: AppColors.textSecondary.withOpacity(0.4)),
+            Icon(Icons.savings_outlined, size: 48, color: AppColors.textSecondary.withValues(alpha: 0.4)),
             const SizedBox(height: AppDimensions.sm),
             Text('No savings accounts', style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textSecondary)),
           ],
@@ -586,7 +586,7 @@ class _SavingsTab extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: AppColors.secondary.withOpacity(0.1),
+                      color: AppColors.secondary.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(AppDimensions.radiusMd),
                     ),
                     child: const Icon(Icons.savings_rounded, color: AppColors.secondary, size: 20),
@@ -596,7 +596,7 @@ class _SavingsTab extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Savings Account', style: AppTextStyles.titleSmall),
+                        const Text('Savings Account', style: AppTextStyles.titleSmall),
                         Text(a.accountNumber,
                             style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondary)),
                       ],
@@ -664,7 +664,7 @@ class _LoansTab extends StatelessWidget {
                 children: [
                   Icon(Icons.account_balance_outlined,
                       size: 48,
-                      color: AppColors.textSecondary.withOpacity(0.4)),
+                      color: AppColors.textSecondary.withValues(alpha: 0.4)),
                   const SizedBox(height: AppDimensions.sm),
                   Text('No loans yet',
                       style: AppTextStyles.bodyMedium
@@ -693,7 +693,7 @@ class _LoansTab extends StatelessWidget {
                         Container(
                           padding: const EdgeInsets.all(8),
                           decoration: BoxDecoration(
-                            color: AppColors.primary.withOpacity(0.1),
+                            color: AppColors.primary.withValues(alpha: 0.1),
                             borderRadius:
                                 BorderRadius.circular(AppDimensions.radiusMd),
                           ),
@@ -705,7 +705,7 @@ class _LoansTab extends StatelessWidget {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text('Loan', style: AppTextStyles.titleSmall),
+                              const Text('Loan', style: AppTextStyles.titleSmall),
                               Text(l.loanNumber,
                                   style: AppTextStyles.bodySmall
                                       .copyWith(color: AppColors.textSecondary)),
@@ -754,7 +754,7 @@ class _SharesTab extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.pie_chart_outline_rounded, size: 48, color: AppColors.textSecondary.withOpacity(0.4)),
+          Icon(Icons.pie_chart_outline_rounded, size: 48, color: AppColors.textSecondary.withValues(alpha: 0.4)),
           const SizedBox(height: AppDimensions.sm),
           Text('Share data not available', style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textSecondary)),
         ],

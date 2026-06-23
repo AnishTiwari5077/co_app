@@ -49,7 +49,7 @@ class _MemberListPageState extends ConsumerState<MemberListPage> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: Text('Members', style: AppTextStyles.titleLarge),
+        title: const Text('Members', style: AppTextStyles.titleLarge),
         backgroundColor: AppColors.surface,
         elevation: 0,
         actions: [
@@ -137,7 +137,7 @@ class _MemberListPageState extends ConsumerState<MemberListPage> {
                     const Icon(Icons.error_outline_rounded,
                         color: AppColors.error, size: 48),
                     const SizedBox(height: AppDimensions.sm),
-                    Text('Failed to load members',
+                    const Text('Failed to load members',
                         style: AppTextStyles.titleSmall),
                     const SizedBox(height: AppDimensions.xs),
                     Text(e.toString(),
@@ -244,7 +244,7 @@ class _MemberCard extends StatelessWidget {
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   colors: [
-                    AppColors.primary.withOpacity(0.7),
+                    AppColors.primary.withValues(alpha: 0.7),
                     AppColors.primaryLight,
                   ],
                   begin: Alignment.topLeft,

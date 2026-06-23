@@ -107,7 +107,7 @@ class MainShell extends ConsumerWidget {
         ],
       ),
       bottomNavigationBar: Container(
-        decoration: BoxDecoration(
+        decoration: const BoxDecoration(
           border: Border(top: BorderSide(color: AppColors.outline, width: 1)),
         ),
         child: NavigationBar(
@@ -115,7 +115,7 @@ class MainShell extends ConsumerWidget {
           onDestinationSelected: (i) => context.go(tabs[i].path),
           elevation: 0,
           backgroundColor: Theme.of(context).colorScheme.surface,
-          indicatorColor: AppColors.primary.withOpacity(0.12),
+          indicatorColor: AppColors.primary.withValues(alpha: 0.12),
           labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
           destinations: tabs
               .map((item) => NavigationDestination(
@@ -232,7 +232,7 @@ class _UserMenuButton extends StatelessWidget {
                   children: [
                     CircleAvatar(
                       radius: 20,
-                      backgroundColor: color.withOpacity(0.15),
+                      backgroundColor: color.withValues(alpha: 0.15),
                       child: Text(
                         user.fullName.isNotEmpty
                             ? user.fullName[0].toUpperCase()
@@ -273,9 +273,9 @@ class _UserMenuButton extends StatelessWidget {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                   decoration: BoxDecoration(
-                    color: color.withOpacity(0.1),
+                    color: color.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: color.withOpacity(0.3)),
+                    border: Border.all(color: color.withValues(alpha: 0.3)),
                   ),
                   child: Text(
                     _roleLabel(user),
@@ -321,9 +321,9 @@ class _UserMenuButton extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
           decoration: BoxDecoration(
-            color: color.withOpacity(0.12),
+            color: color.withValues(alpha: 0.12),
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: color.withOpacity(0.4)),
+            border: Border.all(color: color.withValues(alpha: 0.4)),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
@@ -453,7 +453,7 @@ class _QuickTransactionSheetState extends ConsumerState<_QuickTransactionSheet> 
                                   dense: true,
                                   leading: CircleAvatar(
                                     radius: 18,
-                                    backgroundColor: const Color(0xFF059669).withOpacity(0.1),
+                                    backgroundColor: const Color(0xFF059669).withValues(alpha: 0.1),
                                     child: const Icon(Icons.savings_rounded, size: 16, color: Color(0xFF059669)),
                                   ),
                                   title: Text(a.memberName, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),

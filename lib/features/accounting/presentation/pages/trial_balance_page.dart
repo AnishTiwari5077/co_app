@@ -70,7 +70,7 @@ class TrialBalancePage extends ConsumerWidget {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: Text('Trial Balance', style: AppTextStyles.titleLarge),
+        title: const Text('Trial Balance', style: AppTextStyles.titleLarge),
         backgroundColor: AppColors.surface,
         elevation: 0,
         leading: IconButton(
@@ -90,7 +90,7 @@ class TrialBalancePage extends ConsumerWidget {
           child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
             const Icon(Icons.error_outline_rounded, color: AppColors.error, size: 48),
             const SizedBox(height: AppDimensions.md),
-            Text('Could not load trial balance', style: AppTextStyles.titleMedium),
+            const Text('Could not load trial balance', style: AppTextStyles.titleMedium),
             const SizedBox(height: AppDimensions.xs),
             Text(e.toString(),
                 style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondary),
@@ -142,8 +142,8 @@ class TrialBalancePage extends ConsumerWidget {
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
                     color: tb.isBalanced
-                        ? AppColors.secondary.withOpacity(0.12)
-                        : AppColors.error.withOpacity(0.12),
+                        ? AppColors.secondary.withValues(alpha: 0.12)
+                        : AppColors.error.withValues(alpha: 0.12),
                     borderRadius:
                         BorderRadius.circular(AppDimensions.radiusRound),
                   ),
@@ -214,7 +214,7 @@ class _GroupHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: AppColors.primary.withOpacity(0.06),
+      color: AppColors.primary.withValues(alpha: 0.06),
       padding: const EdgeInsets.symmetric(
           horizontal: AppDimensions.md, vertical: AppDimensions.xs),
       child: Text(title,

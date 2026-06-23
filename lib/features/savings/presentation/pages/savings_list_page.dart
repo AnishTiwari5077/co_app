@@ -109,7 +109,7 @@ class _SavingsListPageState extends ConsumerState<SavingsListPage>
     final state = ref.watch(_savingsListProvider);
     final all = state.items;
 
-    List<SavingAccountItem> _filter(List<SavingAccountItem> src) {
+    List<SavingAccountItem> filter(List<SavingAccountItem> src) {
       if (_query.isEmpty) return src;
       final q = _query.toLowerCase();
       return src.where((a) =>
@@ -120,7 +120,7 @@ class _SavingsListPageState extends ConsumerState<SavingsListPage>
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: Text('Savings', style: AppTextStyles.titleLarge),
+        title: const Text('Savings', style: AppTextStyles.titleLarge),
         backgroundColor: AppColors.surface,
         elevation: 0,
         actions: [
@@ -159,7 +159,7 @@ class _SavingsListPageState extends ConsumerState<SavingsListPage>
                     children: [
                       const Icon(Icons.wifi_off_rounded, color: AppColors.error, size: 48),
                       const SizedBox(height: AppDimensions.md),
-                      Text('Could not load savings', style: AppTextStyles.titleMedium),
+                      const Text('Could not load savings', style: AppTextStyles.titleMedium),
                       const SizedBox(height: AppDimensions.xs),
                       Text(state.error!, style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondary)),
                       const SizedBox(height: AppDimensions.md),
@@ -201,10 +201,10 @@ class _SavingsListPageState extends ConsumerState<SavingsListPage>
                         child: TabBarView(
                           controller: _tabController,
                           children: [
-                            _buildList(_filter(all)),
-                            _buildList(_filter(all.where((a) => a.accountType == 'Regular').toList())),
-                            _buildList(_filter(all.where((a) => a.accountType == 'FixedDeposit').toList())),
-                            _buildList(_filter(all.where((a) => a.accountType == 'RecurringDeposit').toList())),
+                            _buildList(filter(all)),
+                            _buildList(filter(all.where((a) => a.accountType == 'Regular').toList())),
+                            _buildList(filter(all.where((a) => a.accountType == 'FixedDeposit').toList())),
+                            _buildList(filter(all.where((a) => a.accountType == 'RecurringDeposit').toList())),
                           ],
                         ),
                       ),
@@ -334,7 +334,7 @@ class _AccountCard extends StatelessWidget {
               width: 44,
               height: 44,
               decoration: BoxDecoration(
-                color: _typeColor.withOpacity(0.1),
+                color: _typeColor.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(AppDimensions.radiusMd),
               ),
               child: Icon(_typeIcon, color: _typeColor, size: 22),
@@ -390,9 +390,9 @@ class _SumCard extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(AppDimensions.sm),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.07),
+          color: color.withValues(alpha: 0.07),
           borderRadius: BorderRadius.circular(AppDimensions.radiusMd),
-          border: Border.all(color: color.withOpacity(0.2)),
+          border: Border.all(color: color.withValues(alpha: 0.2)),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,

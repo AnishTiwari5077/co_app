@@ -99,11 +99,11 @@ class _DepositPageState extends ConsumerState<DepositPage> {
             const SizedBox(height: AppDimensions.md),
             Container(
               width: 72, height: 72,
-              decoration: BoxDecoration(color: AppColors.secondary.withOpacity(0.1), shape: BoxShape.circle),
+              decoration: BoxDecoration(color: AppColors.secondary.withValues(alpha: 0.1), shape: BoxShape.circle),
               child: const Icon(Icons.check_circle_rounded, color: AppColors.secondary, size: 40),
             ),
             const SizedBox(height: AppDimensions.md),
-            Text('Deposit Successful!', style: AppTextStyles.titleLarge),
+            const Text('Deposit Successful!', style: AppTextStyles.titleLarge),
             const SizedBox(height: AppDimensions.xs),
             Text('NPR ${_amountCtrl.text} deposited to account',
                 style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textSecondary),
@@ -138,7 +138,7 @@ class _DepositPageState extends ConsumerState<DepositPage> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: Text('Deposit', style: AppTextStyles.titleLarge),
+        title: const Text('Deposit', style: AppTextStyles.titleLarge),
         backgroundColor: AppColors.surface,
         elevation: 0,
         leading: IconButton(
@@ -187,7 +187,7 @@ class _DepositPageState extends ConsumerState<DepositPage> {
               ),
             ),
             const SizedBox(height: AppDimensions.lg),
-            Text('Deposit Amount', style: AppTextStyles.titleMedium),
+            const Text('Deposit Amount', style: AppTextStyles.titleMedium),
             const SizedBox(height: AppDimensions.md),
             AppTextField(
               controller: _amountCtrl,
@@ -232,7 +232,7 @@ class _DepositPageState extends ConsumerState<DepositPage> {
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Payment Mode', style: AppTextStyles.bodyMedium),
+                const Text('Payment Mode', style: AppTextStyles.bodyMedium),
                 const SizedBox(height: AppDimensions.xs),
                 Wrap(
                   spacing: AppDimensions.xs,

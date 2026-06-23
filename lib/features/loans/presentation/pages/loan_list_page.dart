@@ -122,7 +122,7 @@ class _LoanListPageState extends ConsumerState<LoanListPage>
     final all = loanState.items;
 
     // Filter by search query client-side
-    List<LoanListItem> _filter(List<LoanListItem> src) {
+    List<LoanListItem> filter(List<LoanListItem> src) {
       if (_query.isEmpty) return src;
       final q = _query.toLowerCase();
       return src.where((l) =>
@@ -133,7 +133,7 @@ class _LoanListPageState extends ConsumerState<LoanListPage>
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: Text('Loans', style: AppTextStyles.titleLarge),
+        title: const Text('Loans', style: AppTextStyles.titleLarge),
         backgroundColor: AppColors.surface,
         elevation: 0,
         bottom: TabBar(
@@ -170,7 +170,7 @@ class _LoanListPageState extends ConsumerState<LoanListPage>
                     children: [
                       const Icon(Icons.wifi_off_rounded, color: AppColors.error, size: 48),
                       const SizedBox(height: AppDimensions.md),
-                      Text('Could not load loans', style: AppTextStyles.titleMedium),
+                      const Text('Could not load loans', style: AppTextStyles.titleMedium),
                       const SizedBox(height: AppDimensions.xs),
                       Text(loanState.error!, style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondary)),
                       const SizedBox(height: AppDimensions.md),
@@ -212,10 +212,10 @@ class _LoanListPageState extends ConsumerState<LoanListPage>
                         child: TabBarView(
                           controller: _tabController,
                           children: [
-                            _buildList(_filter(all)),
-                            _buildList(_filter(all.where((l) => l.status == 'Active').toList())),
-                            _buildList(_filter(all.where((l) => l.status == 'Overdue' || l.overdueDays > 0).toList())),
-                            _buildList(_filter(all.where((l) => l.status == 'Pending').toList())),
+                            _buildList(filter(all)),
+                            _buildList(filter(all.where((l) => l.status == 'Active').toList())),
+                            _buildList(filter(all.where((l) => l.status == 'Overdue' || l.overdueDays > 0).toList())),
+                            _buildList(filter(all.where((l) => l.status == 'Pending').toList())),
                           ],
                         ),
                       ),
@@ -286,7 +286,7 @@ class _LoanCard extends StatelessWidget {
           color: AppColors.surface,
           borderRadius: BorderRadius.circular(AppDimensions.radiusLg),
           border: Border.all(
-            color: isOverdue ? AppColors.error.withOpacity(0.3) : const Color(0xFFE8EDF3),
+            color: isOverdue ? AppColors.error.withValues(alpha: 0.3) : const Color(0xFFE8EDF3),
           ),
         ),
         child: Column(
@@ -297,7 +297,7 @@ class _LoanCard extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: _typeColor.withOpacity(0.1),
+                    color: _typeColor.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(AppDimensions.radiusMd),
                   ),
                   child: Icon(_typeIcon, color: _typeColor, size: 20),
@@ -332,7 +332,7 @@ class _LoanCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: AppDimensions.sm, vertical: 6),
                 decoration: BoxDecoration(
-                  color: AppColors.error.withOpacity(0.1),
+                  color: AppColors.error.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(AppDimensions.radiusMd),
                 ),
                 child: Row(
@@ -415,9 +415,9 @@ class _SummaryChip extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: AppDimensions.sm, vertical: AppDimensions.xs),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.07),
+          color: color.withValues(alpha: 0.07),
           borderRadius: BorderRadius.circular(AppDimensions.radiusMd),
-          border: Border.all(color: color.withOpacity(0.2)),
+          border: Border.all(color: color.withValues(alpha: 0.2)),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,

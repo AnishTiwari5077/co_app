@@ -125,7 +125,7 @@ class _LoginPageState extends ConsumerState<LoginPage>
                             ] else
                               const SizedBox(height: 60),
 
-                            Text('Welcome back', style: AppTextStyles.headlineLarge),
+                            const Text('Welcome back', style: AppTextStyles.headlineLarge),
                             const SizedBox(height: 8),
                             Text('Sign in to your SahakariMS account',
                               style: AppTextStyles.bodyMedium.copyWith(
@@ -172,9 +172,9 @@ class _LoginPageState extends ConsumerState<LoginPage>
                                     Container(
                                       padding: const EdgeInsets.all(12),
                                       decoration: BoxDecoration(
-                                        color: AppColors.error.withOpacity(0.08),
+                                        color: AppColors.error.withValues(alpha: 0.08),
                                         borderRadius: BorderRadius.circular(AppDimensions.radiusMd),
-                                        border: Border.all(color: AppColors.error.withOpacity(0.3)),
+                                        border: Border.all(color: AppColors.error.withValues(alpha: 0.3)),
                                       ),
                                       child: Row(
                                         children: [
@@ -225,7 +225,7 @@ class _LoginPageState extends ConsumerState<LoginPage>
           width: 40,
           height: 40,
           decoration: BoxDecoration(
-            color: light ? Colors.white.withOpacity(0.2) : AppColors.primary.withOpacity(0.1),
+            color: light ? Colors.white.withValues(alpha: 0.2) : AppColors.primary.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(10),
           ),
           child: Icon(

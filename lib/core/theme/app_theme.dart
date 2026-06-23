@@ -278,7 +278,7 @@ class AppTheme {
       ),
 
       // ── Text Theme ─────────────────────────────────────────────────────
-      textTheme: TextTheme(
+      textTheme: const TextTheme(
         displayLarge: AppTextStyles.displayLarge,
         displayMedium: AppTextStyles.displayMedium,
         headlineLarge: AppTextStyles.headlineLarge,

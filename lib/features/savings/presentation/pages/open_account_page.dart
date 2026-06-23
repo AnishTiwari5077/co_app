@@ -264,14 +264,14 @@ class _OpenAccountPageState extends ConsumerState<OpenAccountPage> {
               width: 72,
               height: 72,
               decoration: BoxDecoration(
-                color: AppColors.secondary.withOpacity(0.1),
+                color: AppColors.secondary.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
               child: const Icon(Icons.savings_rounded,
                   color: AppColors.secondary, size: 40),
             ),
             const SizedBox(height: AppDimensions.md),
-            Text('Account Opened!', style: AppTextStyles.titleLarge),
+            const Text('Account Opened!', style: AppTextStyles.titleLarge),
             const SizedBox(height: AppDimensions.xs),
             Text(accountNumber,
                 style: AppTextStyles.titleMedium
@@ -304,7 +304,7 @@ class _OpenAccountPageState extends ConsumerState<OpenAccountPage> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: Text('Open Savings Account', style: AppTextStyles.titleLarge),
+        title: const Text('Open Savings Account', style: AppTextStyles.titleLarge),
         backgroundColor: AppColors.surface,
         elevation: 0,
         leading: IconButton(
@@ -411,7 +411,7 @@ class _OpenAccountPageState extends ConsumerState<OpenAccountPage> {
       key: const ValueKey('member'),
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Select Member', style: AppTextStyles.titleMedium),
+        const Text('Select Member', style: AppTextStyles.titleMedium),
         const SizedBox(height: AppDimensions.md),
 
         if (_selectedMember == null) ...[
@@ -447,7 +447,7 @@ class _OpenAccountPageState extends ConsumerState<OpenAccountPage> {
                 border: Border.all(color: const Color(0xFFE0E7EF)),
                 boxShadow: [
                   BoxShadow(
-                      color: Colors.black.withOpacity(0.06),
+                      color: Colors.black.withValues(alpha: 0.06),
                       blurRadius: 8,
                       offset: const Offset(0, 3))
                 ],
@@ -466,7 +466,7 @@ class _OpenAccountPageState extends ConsumerState<OpenAccountPage> {
                     onTap: () => _selectMember(m),
                     leading: CircleAvatar(
                       backgroundColor: isActive
-                          ? AppColors.primary.withOpacity(0.12)
+                          ? AppColors.primary.withValues(alpha: 0.12)
                           : AppColors.surfaceVariant,
                       child: Text(
                         m.fullName.isNotEmpty
@@ -490,8 +490,8 @@ class _OpenAccountPageState extends ConsumerState<OpenAccountPage> {
                           horizontal: 8, vertical: 3),
                       decoration: BoxDecoration(
                         color: isActive
-                            ? AppColors.secondary.withOpacity(0.1)
-                            : AppColors.error.withOpacity(0.1),
+                            ? AppColors.secondary.withValues(alpha: 0.1)
+                            : AppColors.error.withValues(alpha: 0.1),
                         borderRadius:
                             BorderRadius.circular(AppDimensions.radiusSm),
                       ),
@@ -524,9 +524,9 @@ class _OpenAccountPageState extends ConsumerState<OpenAccountPage> {
           Container(
             padding: const EdgeInsets.all(AppDimensions.md),
             decoration: BoxDecoration(
-              color: AppColors.primary.withOpacity(0.05),
+              color: AppColors.primary.withValues(alpha: 0.05),
               borderRadius: BorderRadius.circular(AppDimensions.radiusLg),
-              border: Border.all(color: AppColors.primary.withOpacity(0.2)),
+              border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
             ),
             child: Row(
               children: [
@@ -607,7 +607,7 @@ class _OpenAccountPageState extends ConsumerState<OpenAccountPage> {
       key: const ValueKey('scheme'),
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Select Savings Scheme', style: AppTextStyles.titleMedium),
+        const Text('Select Savings Scheme', style: AppTextStyles.titleMedium),
         const SizedBox(height: AppDimensions.md),
         ..._schemes.map((scheme) {
           final isSelected = _selectedScheme?.id == scheme.id;
@@ -619,7 +619,7 @@ class _OpenAccountPageState extends ConsumerState<OpenAccountPage> {
               padding: const EdgeInsets.all(AppDimensions.md),
               decoration: BoxDecoration(
                 color: isSelected
-                    ? scheme.color.withOpacity(0.06)
+                    ? scheme.color.withValues(alpha: 0.06)
                     : AppColors.surface,
                 borderRadius:
                     BorderRadius.circular(AppDimensions.radiusLg),
@@ -636,7 +636,7 @@ class _OpenAccountPageState extends ConsumerState<OpenAccountPage> {
                     width: 48,
                     height: 48,
                     decoration: BoxDecoration(
-                      color: scheme.color.withOpacity(0.12),
+                      color: scheme.color.withValues(alpha: 0.12),
                       borderRadius:
                           BorderRadius.circular(AppDimensions.radiusMd),
                     ),
@@ -656,7 +656,7 @@ class _OpenAccountPageState extends ConsumerState<OpenAccountPage> {
                               padding: const EdgeInsets.symmetric(
                                   horizontal: 6, vertical: 2),
                               decoration: BoxDecoration(
-                                color: scheme.color.withOpacity(0.1),
+                                color: scheme.color.withValues(alpha: 0.1),
                                 borderRadius: BorderRadius.circular(4),
                               ),
                               child: Text(scheme.typeLabel,
@@ -712,7 +712,7 @@ class _OpenAccountPageState extends ConsumerState<OpenAccountPage> {
             gradient: LinearGradient(
               colors: [
                 AppColors.primary,
-                AppColors.primary.withOpacity(0.8)
+                AppColors.primary.withValues(alpha: 0.8)
               ],
             ),
             borderRadius:
@@ -724,7 +724,7 @@ class _OpenAccountPageState extends ConsumerState<OpenAccountPage> {
               Row(
                 children: [
                   CircleAvatar(
-                    backgroundColor: Colors.white.withOpacity(0.2),
+                    backgroundColor: Colors.white.withValues(alpha: 0.2),
                     radius: 20,
                     child: Text(
                       _selectedMember?.fullName.isNotEmpty == true
@@ -772,17 +772,17 @@ class _OpenAccountPageState extends ConsumerState<OpenAccountPage> {
         ),
         const SizedBox(height: AppDimensions.lg),
 
-        Text('Initial Deposit', style: AppTextStyles.titleMedium),
+        const Text('Initial Deposit', style: AppTextStyles.titleMedium),
         const SizedBox(height: AppDimensions.sm),
 
         // Optional custom account number
         TextField(
           controller: _accountNumberCtrl,
           textCapitalization: TextCapitalization.characters,
-          decoration: InputDecoration(
+          decoration: const InputDecoration(
             labelText: 'Account Number (optional)',
             hintText: 'e.g. SAV-2083-00010  — leave blank to auto-generate',
-            prefixIcon: const Icon(Icons.tag_rounded),
+            prefixIcon: Icon(Icons.tag_rounded),
             helperText: 'If left blank, the system will generate one automatically',
           ),
         ),
@@ -833,7 +833,7 @@ class _OpenAccountPageState extends ConsumerState<OpenAccountPage> {
         ),
         const SizedBox(height: AppDimensions.md),
 
-        Text('Deposit Mode', style: AppTextStyles.bodyMedium),
+        const Text('Deposit Mode', style: AppTextStyles.bodyMedium),
         const SizedBox(height: AppDimensions.xs),
         Wrap(
           spacing: AppDimensions.xs,

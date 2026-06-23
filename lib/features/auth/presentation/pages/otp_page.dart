@@ -26,8 +26,12 @@ class _OtpPageState extends ConsumerState<OtpPage> {
 
   @override
   void dispose() {
-    for (final c in _controllers) c.dispose();
-    for (final f in _focusNodes) f.dispose();
+    for (final c in _controllers) {
+      c.dispose();
+    }
+    for (final f in _focusNodes) {
+      f.dispose();
+    }
     super.dispose();
   }
 
@@ -74,14 +78,14 @@ class _OtpPageState extends ConsumerState<OtpPage> {
                 width: 72,
                 height: 72,
                 decoration: BoxDecoration(
-                  color: AppColors.primary.withOpacity(0.1),
+                  color: AppColors.primary.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(AppDimensions.radiusXl),
                 ),
                 child: const Icon(Icons.lock_outline_rounded,
                     color: AppColors.primary, size: 36),
               ),
               const SizedBox(height: AppDimensions.lg),
-              Text('Verify OTP', style: AppTextStyles.headlineMedium),
+              const Text('Verify OTP', style: AppTextStyles.headlineMedium),
               const SizedBox(height: AppDimensions.xs),
               Text(
                 'Enter the 6-digit code sent to\n${widget.phone}',
@@ -108,7 +112,9 @@ class _OtpPageState extends ConsumerState<OtpPage> {
                 child: TextButton(
                   onPressed: () {
                     setState(() {
-                      for (final c in _controllers) c.clear();
+                      for (final c in _controllers) {
+                        c.clear();
+                      }
                       _focusNodes[0].requestFocus();
                     });
                   },
@@ -152,7 +158,7 @@ class _OtpPageState extends ConsumerState<OtpPage> {
           ),
           enabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(AppDimensions.radiusMd),
-            borderSide: BorderSide(color: AppColors.primary.withOpacity(0.3)),
+            borderSide: BorderSide(color: AppColors.primary.withValues(alpha: 0.3)),
           ),
         ),
         onChanged: (value) => _onDigitEntered(index, value),
