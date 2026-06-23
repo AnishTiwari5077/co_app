@@ -10,6 +10,7 @@ import '../../../../core/theme/app_dimensions.dart';
 import '../../../../shared/widgets/app_button.dart';
 import '../../../../shared/widgets/app_text_field.dart';
 import '../../../../core/api/api_client.dart';
+import 'voucher_pdf_generator.dart';
 
 // ── Chart of Account model ────────────────────────────────────────────────────
 
@@ -50,6 +51,7 @@ class _JournalLine {
   List<ChartOfAccountItem> suggestions = [];
   bool showSuggestions = false;
   bool searching = false;
+  bool loaded = false; // guard: only load-all once on first tap
   Timer? debounce;
 
   _JournalLine({this.account, required this.isDebit, this.amount = 0})
@@ -89,9 +91,9 @@ class _JournalEntryPageState extends ConsumerState<JournalEntryPage>
   bool _loadingVouchers = false;
 
   static String _nepaliDateToday() {
-    // Simple fallback — real NP date conversion would use a library
+    // Bikram Sambat ≈ AD + 57 (varies by month; correct for Jan–Jul)
     final now = DateTime.now();
-    return '${now.year - 57}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+    return '${now.year + 57}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
   }
 
   double get _totalDebit =>
@@ -130,20 +132,16 @@ class _JournalEntryPageState extends ConsumerState<JournalEntryPage>
 
   void _onAccountSearch(_JournalLine line, String query) {
     line.debounce?.cancel();
-    if (query.trim().isEmpty) {
-      setState(() {
-        line.suggestions = [];
-        line.showSuggestions = false;
-      });
-      return;
-    }
-    line.debounce = Timer(const Duration(milliseconds: 300), () async {
+    // Empty query = load ALL accounts (show on tap)
+    line.debounce = Timer(const Duration(milliseconds: 250), () async {
       setState(() => line.searching = true);
       try {
         final dio = ref.read(dioProvider);
+        final params = <String, dynamic>{'postableOnly': 'true'};
+        if (query.trim().isNotEmpty) params['search'] = query.trim();
         final response = await dio.get(
           '/api/v1/accounting/chart-of-accounts',
-          queryParameters: {'search': query.trim(), 'postableOnly': 'true'},
+          queryParameters: params,
         );
         final envelope = response.data as Map<String, dynamic>;
         final raw = (envelope['data'] as List?) ?? [];
@@ -155,6 +153,7 @@ class _JournalEntryPageState extends ConsumerState<JournalEntryPage>
             line.suggestions = items;
             line.showSuggestions = true;
             line.searching = false;
+            line.loaded = true; // prevent repeated load-all calls
           });
         }
       } catch (_) {
@@ -204,12 +203,35 @@ class _JournalEntryPageState extends ConsumerState<JournalEntryPage>
       return;
     }
 
+    // Validate: every line that has an amount must have an account
+    final linesWithAmount = _entries.where((e) => e.amount > 0).toList();
+    final missingAccount = linesWithAmount.where((e) => e.account == null).toList();
+    if (missingAccount.isNotEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(
+          '${missingAccount.length} line(s) have an amount but no account selected. '
+          'Please select an account for every entry.',
+        ),
+        backgroundColor: AppColors.error,
+        duration: const Duration(seconds: 4),
+      ));
+      return;
+    }
+
+    if (linesWithAmount.length < 2) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('A voucher needs at least one Debit and one Credit line.'),
+        backgroundColor: AppColors.error,
+      ));
+      return;
+    }
+
     setState(() => _isPosting = true);
     try {
       final dio = ref.read(dioProvider);
-      // Parse date string directly — format is YYYY-MM-DD
+      // Parse date string directly — format is YYYY-MM-DD (BS date stored as-is)
       final dateParts = _voucherDateCtrl.text.trim().split('-');
-      final y = dateParts.elementAtOrNull(0) ?? '${DateTime.now().year - 57}';
+      final y = dateParts.elementAtOrNull(0) ?? '${DateTime.now().year + 57}';
       final m = (dateParts.elementAtOrNull(1) ?? '${DateTime.now().month}').padLeft(2, '0');
       final d = (dateParts.elementAtOrNull(2) ?? '${DateTime.now().day}').padLeft(2, '0');
       final voucherDateStr = '$y-$m-$d';
@@ -251,12 +273,17 @@ class _JournalEntryPageState extends ConsumerState<JournalEntryPage>
           ]);
           _vouchers = [];
         });
+        _loadVouchers();
       }
     } on DioException catch (e) {
       if (mounted) {
         setState(() => _isPosting = false);
-        final msg = (e.response?.data as Map<String, dynamic>?)?['message']
-            as String? ?? e.message ?? 'Failed to post voucher';
+        // ApiResponse envelope: { "error": { "message": "..." } }
+        final data = e.response?.data as Map<String, dynamic>?;
+        final msg = (data?['error'] as Map<String, dynamic>?)?['message'] as String?
+            ?? data?['message'] as String?
+            ?? e.message
+            ?? 'Failed to post voucher';
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
             content: Text(msg), backgroundColor: AppColors.error));
       }
@@ -265,7 +292,299 @@ class _JournalEntryPageState extends ConsumerState<JournalEntryPage>
     }
   }
 
-  // ── Build ─────────────────────────────────────────────────────────────────
+  // ── Save Draft ────────────────────────────────────────────────────────────
+
+  Future<void> _saveDraft() async {
+    final narration = _narrationCtrl.text.trim();
+    if (narration.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Narration is required even for drafts'),
+          backgroundColor: AppColors.error));
+      return;
+    }
+    final linesWithData = _entries.where((e) => e.account != null && e.amount > 0).toList();
+    if (linesWithData.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Add at least one account entry to save as draft'),
+          backgroundColor: AppColors.error));
+      return;
+    }
+
+    setState(() => _isPosting = true);
+    try {
+      final dio = ref.read(dioProvider);
+      final dateParts = _voucherDateCtrl.text.trim().split('-');
+      final y = dateParts.elementAtOrNull(0) ?? '${DateTime.now().year + 57}';
+      final m = (dateParts.elementAtOrNull(1) ?? '${DateTime.now().month}').padLeft(2, '0');
+      final d = (dateParts.elementAtOrNull(2) ?? '${DateTime.now().day}').padLeft(2, '0');
+
+      await dio.post('/api/v1/accounting/vouchers', data: {
+        'voucherType': _selectedVoucherType,
+        'voucherDate': '$y-$m-$d',
+        'narration': narration,
+        'saveAsDraft': true,
+        'entries': linesWithData
+            .map((e) => {
+                  'accountId': e.account!.id,
+                  'entryType': e.isDebit ? 'Debit' : 'Credit',
+                  'amount': e.amount,
+                  'narration': narration,
+                })
+            .toList(),
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('Draft saved!',
+              style: AppTextStyles.bodyMedium.copyWith(color: Colors.white)),
+          backgroundColor: AppColors.warning,
+        ));
+        setState(() {
+          _isPosting = false;
+          _narrationCtrl.clear();
+          for (final e in _entries) e.dispose();
+          _entries.clear();
+          _entries.addAll([_JournalLine(isDebit: true), _JournalLine(isDebit: false)]);
+          _vouchers = [];
+        });
+        _loadVouchers();
+      }
+    } on DioException catch (e) {
+      if (mounted) {
+        setState(() => _isPosting = false);
+        final data = e.response?.data as Map<String, dynamic>?;
+        final msg = (data?['error'] as Map<String, dynamic>?)?['message'] as String?
+            ?? e.message ?? 'Failed to save draft';
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(msg), backgroundColor: AppColors.error));
+      }
+    } catch (_) {
+      if (mounted) setState(() => _isPosting = false);
+    }
+  }
+
+  // ── Voucher Detail Sheet ──────────────────────────────────────────────────
+
+  void _showVoucherDetail(Map<String, dynamic> v) {
+    final entries = (v['entries'] as List?)
+            ?.map((e) => e as Map<String, dynamic>)
+            .toList() ??
+        [];
+    final status = v['status'] as String? ?? 'Draft';
+    final isPosted = status == 'Posted';
+    final totalDebit = entries
+        .where((e) => e['entryType'] == 'Debit')
+        .fold<double>(0, (s, e) => s + ((e['amount'] as num?)?.toDouble() ?? 0));
+    final totalCredit = entries
+        .where((e) => e['entryType'] == 'Credit')
+        .fold<double>(0, (s, e) => s + ((e['amount'] as num?)?.toDouble() ?? 0));
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => DraggableScrollableSheet(
+        initialChildSize: 0.7,
+        maxChildSize: 0.95,
+        minChildSize: 0.4,
+        builder: (_, ctrl) => Container(
+          decoration: const BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          child: Column(
+            children: [
+              // Handle
+              Center(
+                child: Container(
+                  margin: const EdgeInsets.only(top: 12, bottom: 8),
+                  width: 40, height: 4,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFE0E0E0),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              // Header
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(v['voucherNumber'] as String? ?? '—',
+                              style: AppTextStyles.titleMedium),
+                          Text('${v['voucherType'] ?? ''}  •  ${v['voucherDate'] ?? ''}',
+                              style: AppTextStyles.bodySmall
+                                  .copyWith(color: AppColors.textSecondary)),
+                        ],
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: isPosted
+                            ? AppColors.secondary.withValues(alpha: 0.1)
+                            : AppColors.warning.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(status,
+                          style: AppTextStyles.labelSmall.copyWith(
+                              color: isPosted ? AppColors.secondary : AppColors.warning,
+                              fontWeight: FontWeight.bold)),
+                    ),
+                  ],
+                ),
+              ),
+              const Divider(height: 1),
+              // Narration
+              if ((v['narration'] as String?)?.isNotEmpty == true)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 12, 20, 4),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.notes_rounded, size: 16, color: AppColors.textSecondary),
+                      const SizedBox(width: 8),
+                      Expanded(child: Text(v['narration'] as String,
+                          style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondary))),
+                    ],
+                  ),
+                ),
+              // Entries table header
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 12, 20, 4),
+                child: Row(
+                  children: [
+                    Expanded(flex: 4, child: Text('Account',
+                        style: AppTextStyles.labelSmall.copyWith(color: AppColors.textSecondary))),
+                    SizedBox(width: 50, child: Text('Type',
+                        style: AppTextStyles.labelSmall.copyWith(color: AppColors.textSecondary),
+                        textAlign: TextAlign.center)),
+                    SizedBox(width: 90, child: Text('Amount',
+                        style: AppTextStyles.labelSmall.copyWith(color: AppColors.textSecondary),
+                        textAlign: TextAlign.right)),
+                  ],
+                ),
+              ),
+              const Divider(height: 1, indent: 20, endIndent: 20),
+              // Entries
+              Expanded(
+                child: ListView.builder(
+                  controller: ctrl,
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  itemCount: entries.length,
+                  itemBuilder: (_, i) {
+                    final e = entries[i];
+                    final isDebit = e['entryType'] == 'Debit';
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            flex: 4,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(e['accountName'] as String? ?? '—',
+                                    style: AppTextStyles.bodySmall,
+                                    overflow: TextOverflow.ellipsis),
+                                Text(e['accountCode'] as String? ?? '',
+                                    style: AppTextStyles.labelSmall
+                                        .copyWith(color: AppColors.textSecondary)),
+                              ],
+                            ),
+                          ),
+                          SizedBox(
+                            width: 50,
+                            child: Center(
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: isDebit
+                                      ? AppColors.error.withValues(alpha: 0.1)
+                                      : AppColors.secondary.withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: Text(isDebit ? 'Dr' : 'Cr',
+                                    style: AppTextStyles.labelSmall.copyWith(
+                                        color: isDebit ? AppColors.error : AppColors.secondary,
+                                        fontWeight: FontWeight.bold)),
+                              ),
+                            ),
+                          ),
+                          SizedBox(
+                            width: 90,
+                            child: Text(
+                              'NPR ${((e['amount'] as num?)?.toDouble() ?? 0).toStringAsFixed(2)}',
+                              style: AppTextStyles.bodySmall.copyWith(
+                                  color: isDebit ? AppColors.error : AppColors.secondary,
+                                  fontWeight: FontWeight.w600),
+                              textAlign: TextAlign.right,
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              ),
+              // Totals
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: const BoxDecoration(
+                  border: Border(top: BorderSide(color: Color(0xFFE8EDF3))),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: [
+                    Column(
+                      children: [
+                        Text('Total Debit',
+                            style: AppTextStyles.labelSmall.copyWith(color: AppColors.textSecondary)),
+                        Text('NPR ${totalDebit.toStringAsFixed(2)}',
+                            style: AppTextStyles.labelLarge.copyWith(color: AppColors.error)),
+                      ],
+                    ),
+                    Column(
+                      children: [
+                        Text('Total Credit',
+                            style: AppTextStyles.labelSmall.copyWith(color: AppColors.textSecondary)),
+                        Text('NPR ${totalCredit.toStringAsFixed(2)}',
+                            style: AppTextStyles.labelLarge.copyWith(color: AppColors.secondary)),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              // Download / Print button
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                child: SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: () => VoucherPdfGenerator.previewAndPrint(context, v),
+                    icon: const Icon(Icons.download_rounded, size: 18),
+                    label: const Text('Download / Print PDF'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(AppDimensions.radiusMd),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+
 
   @override
   Widget build(BuildContext context) {
@@ -276,6 +595,16 @@ class _JournalEntryPageState extends ConsumerState<JournalEntryPage>
         backgroundColor: AppColors.surface,
         elevation: 0,
         actions: [
+          TextButton(
+            onPressed: () => context.push('/accounting/chart-of-accounts'),
+            child: Text('Accounts',
+                style: AppTextStyles.labelLarge.copyWith(color: AppColors.secondary)),
+          ),
+          TextButton(
+            onPressed: () => context.push('/accounting/fiscal-years'),
+            child: Text('Fiscal Years',
+                style: AppTextStyles.labelLarge.copyWith(color: AppColors.accent)),
+          ),
           TextButton(
             onPressed: () => context.push('/accounting/trial-balance'),
             child: Text('Trial Balance',
@@ -326,7 +655,7 @@ class _JournalEntryPageState extends ConsumerState<JournalEntryPage>
             Expanded(
               child: AppButton(
                 label: 'Save Draft',
-                onPressed: () {},
+                onPressed: _isPosting ? null : _saveDraft,
                 variant: ButtonVariant.outlined,
                 icon: Icons.save_outlined,
               ),
@@ -336,7 +665,7 @@ class _JournalEntryPageState extends ConsumerState<JournalEntryPage>
               flex: 2,
               child: AppButton(
                 label: 'Post Voucher',
-                onPressed: _isBalanced ? _postVoucher : null,
+                onPressed: (_isBalanced && !_isPosting) ? _postVoucher : null,
                 isLoading: _isPosting,
                 icon: Icons.check_circle_outlined,
               ),
@@ -465,6 +794,14 @@ class _JournalEntryPageState extends ConsumerState<JournalEntryPage>
                 flex: 3,
                 child: TextField(
                   controller: entry.searchCtrl,
+                  onTap: () {
+                    if (!entry.loaded) {
+                      // First tap: load all accounts
+                      _onAccountSearch(entry, '');
+                    } else {
+                      setState(() => entry.showSuggestions = true);
+                    }
+                  },
                   onChanged: (v) {
                     if (entry.account != null) {
                       setState(() => entry.account = null);
@@ -578,41 +915,47 @@ class _JournalEntryPageState extends ConsumerState<JournalEntryPage>
                       offset: const Offset(0, 3))
                 ],
               ),
-              child: ListView.separated(
-                shrinkWrap: true,
-                padding: EdgeInsets.zero,
-                itemCount: entry.suggestions.length,
-                separatorBuilder: (_, __) =>
-                    const Divider(height: 1, indent: 12),
-                itemBuilder: (ctx, i) {
-                  final acc = entry.suggestions[i];
-                  return ListTile(
-                    dense: true,
-                    onTap: () => _selectAccount(entry, acc),
-                    leading: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 6, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: _typeColor(acc.accountType).withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: Text(acc.accountType[0],
-                          style: AppTextStyles.labelSmall.copyWith(
-                            color: _typeColor(acc.accountType),
-                            fontSize: 10,
-                          )),
-                    ),
-                    title: Text(acc.accountName,
-                        style: AppTextStyles.bodySmall),
-                    subtitle: Text(acc.accountCode,
-                        style: AppTextStyles.bodySmall
-                            .copyWith(color: AppColors.textSecondary)),
-                    trailing: Text(
-                        'NPR ${acc.currentBalance.toStringAsFixed(0)}',
-                        style: AppTextStyles.bodySmall
-                            .copyWith(color: AppColors.textSecondary)),
-                  );
-                },
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(AppDimensions.radiusMd),
+                child: Material(
+                  color: AppColors.surface,
+                  child: ListView.separated(
+                    shrinkWrap: true,
+                    padding: EdgeInsets.zero,
+                    itemCount: entry.suggestions.length,
+                    separatorBuilder: (_, __) =>
+                        const Divider(height: 1, indent: 12),
+                    itemBuilder: (ctx, i) {
+                      final acc = entry.suggestions[i];
+                      return ListTile(
+                        dense: true,
+                        onTap: () => _selectAccount(entry, acc),
+                        leading: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: _typeColor(acc.accountType).withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(acc.accountType[0],
+                              style: AppTextStyles.labelSmall.copyWith(
+                                color: _typeColor(acc.accountType),
+                                fontSize: 10,
+                              )),
+                        ),
+                        title: Text(acc.accountName,
+                            style: AppTextStyles.bodySmall),
+                        subtitle: Text(acc.accountCode,
+                            style: AppTextStyles.bodySmall
+                                .copyWith(color: AppColors.textSecondary)),
+                        trailing: Text(
+                            'NPR ${acc.currentBalance.toStringAsFixed(0)}',
+                            style: AppTextStyles.bodySmall
+                                .copyWith(color: AppColors.textSecondary)),
+                      );
+                    },
+                  ),
+                ),
               ),
             ),
           if (entry.showSuggestions &&
@@ -741,7 +1084,9 @@ class _JournalEntryPageState extends ConsumerState<JournalEntryPage>
         final v = _vouchers[i];
         final status = v['status'] as String? ?? 'Draft';
         final isPosted = status == 'Posted';
-        return Container(
+        return GestureDetector(
+          onTap: () => _showVoucherDetail(v),
+          child: Container(
           padding: const EdgeInsets.all(AppDimensions.md),
           decoration: BoxDecoration(
             color: AppColors.surface,
@@ -793,7 +1138,8 @@ class _JournalEntryPageState extends ConsumerState<JournalEntryPage>
               ),
             ],
           ),
-        );
+        ), // Container
+        ); // GestureDetector
       },
     );
   }

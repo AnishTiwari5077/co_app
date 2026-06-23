@@ -178,10 +178,13 @@ public class GetSavingAccountsQueryHandler(IAppDbContext db)
             .Where(a => !a.IsDeleted);
 
         if (!string.IsNullOrEmpty(q.Search))
+        {
+            var s = q.Search.ToLower();
             query = query.Where(a =>
-                a.AccountNumber.Contains(q.Search) ||
-                a.Member.FirstName.Contains(q.Search) ||
-                a.Member.LastName.Contains(q.Search));
+                a.AccountNumber.ToLower().Contains(s) ||
+                a.Member!.FirstName.ToLower().Contains(s) ||
+                a.Member.LastName.ToLower().Contains(s));
+        }
 
         if (!string.IsNullOrEmpty(q.AccountType))
             query = query.Where(a => a.Scheme!.SchemeType == q.AccountType);

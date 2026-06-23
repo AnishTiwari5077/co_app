@@ -62,7 +62,8 @@ dependencies:
   connectivity_plus: ^6.0.3
 
   # ─── PDF & Printing ──────────────────────────────────────────────────────────
-  # pdf/printing removed (native deps - add back when needed)
+  pdf: ^3.11.1
+  printing: ^5.13.2
 
   # ─── Notifications ───────────────────────────────────────────────────────────
 

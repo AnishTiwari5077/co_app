@@ -34,4 +34,5 @@ class AppRoutes {
   // Accounting sub-routes
   static const String trialBalance = '/accounting/trial-balance';
   static const String ledger       = '/accounting/ledger';
+  static const String fiscalYears  = '/accounting/fiscal-years';
 }

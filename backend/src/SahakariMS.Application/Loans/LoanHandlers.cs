@@ -300,10 +300,13 @@ public class GetLoansQueryHandler(IAppDbContext db)
             .Where(l => !l.IsDeleted);
 
         if (!string.IsNullOrEmpty(q.Search))
+        {
+            var s = q.Search.ToLower();
             query = query.Where(l =>
-                l.LoanNumber.Contains(q.Search) ||
-                l.Member.FirstName.Contains(q.Search) ||
-                l.Member.LastName.Contains(q.Search));
+                l.LoanNumber.ToLower().Contains(s) ||
+                l.Member!.FirstName.ToLower().Contains(s) ||
+                l.Member.LastName.ToLower().Contains(s));
+        }
 
         if (!string.IsNullOrEmpty(q.Status))
             query = query.Where(l => l.Status == q.Status);

@@ -138,15 +138,23 @@ class ErrorInterceptor extends Interceptor {
         return 'No internet connection. Please try again.';
       case DioExceptionType.badResponse:
         final status = err.response?.statusCode;
-        if (status == 400) {
-          final errors = err.response?.data?['errors'] as Map?;
-          if (errors != null) return errors.values.first.toString();
-          return err.response?.data?['message'] ?? 'Invalid request.';
+        if (status == 400 || status == 422) {
+          final data = err.response?.data;
+          if (data is Map) {
+            // ApiResponse envelope: { "error": { "message": "..." } }
+            final errorObj = data['error'];
+            if (errorObj is Map) return errorObj['message'] as String? ?? 'Invalid request.';
+            // ASP.NET model validation: { "errors": { "field": ["msg"] } }
+            final errors = data['errors'] as Map?;
+            if (errors != null) return errors.values.first.toString();
+            // Fallback top-level message
+            return data['message'] as String? ?? 'Invalid request.';
+          }
+          return 'Invalid request.';
         }
         if (status == 403) return 'You do not have permission for this action.';
         if (status == 404) return 'The requested resource was not found.';
         if (status == 409) return 'A conflict occurred. Please check your data.';
-        if (status == 422) return err.response?.data?['message'] ?? 'Validation failed.';
         if (status != null && status >= 500) return 'Server error. Please try again later.';
         return 'An unexpected error occurred.';
       default:

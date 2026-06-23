@@ -8,7 +8,7 @@ using SahakariMS.Shared.Common;
 namespace SahakariMS.Application.Accounting;
 
 public record CreateVoucherRequest(string VoucherType, DateOnly VoucherDate, string? Narration,
-    List<VoucherEntryRequest> Entries);
+    List<VoucherEntryRequest> Entries, bool SaveAsDraft = false);
 public record VoucherEntryRequest(Guid AccountId, string EntryType, decimal Amount, string? Narration);
 public record TrialBalanceDto(DateOnly AsOfDate, string BranchName,
     List<TrialBalanceRowDto> Accounts, decimal TotalDebit, decimal TotalCredit, bool IsBalanced);
@@ -31,35 +31,44 @@ public class CreateVoucherCommandHandler(IAppDbContext db, IUnitOfWork uow, ISeq
     public async Task<Result<Guid>> Handle(CreateVoucherCommand cmd, CancellationToken ct)
     {
         var r = cmd.Request;
-        var totalDebit  = r.Entries.Where(e => e.EntryType == "Debit").Sum(e => e.Amount);
-        var totalCredit = r.Entries.Where(e => e.EntryType == "Credit").Sum(e => e.Amount);
 
-        if (totalDebit != totalCredit)
-            return Result<Guid>.Failure("UNBALANCED_VOUCHER",
-                $"Voucher is unbalanced. Debit: {totalDebit:N2}, Credit: {totalCredit:N2}.");
+        // Only enforce balance for posted vouchers, not drafts
+        if (!r.SaveAsDraft)
+        {
+            var totalDebit  = r.Entries.Where(e => e.EntryType == "Debit").Sum(e => e.Amount);
+            var totalCredit = r.Entries.Where(e => e.EntryType == "Credit").Sum(e => e.Amount);
+            if (totalDebit != totalCredit)
+                return Result<Guid>.Failure("UNBALANCED_VOUCHER",
+                    $"Voucher is unbalanced. Debit: {totalDebit:N2}, Credit: {totalCredit:N2}.");
+        }
 
         var fiscalYear = await db.FiscalYears.FirstOrDefaultAsync(fy => fy.IsCurrent && !fy.IsClosed, ct);
         if (fiscalYear is null)
             return Result<Guid>.Failure("NO_FISCAL_YEAR", "No active fiscal year found.");
 
+        var status = r.SaveAsDraft ? "Draft" : "Posted";
         var voucherNo = await seq.NextVoucherNumberAsync(r.VoucherType, cmd.BranchId, DateTime.UtcNow.Year + 57);
         var voucher = new Voucher
         {
             BranchId = cmd.BranchId, FiscalYearId = fiscalYear.Id,
             VoucherNumber = voucherNo, VoucherType = r.VoucherType,
             VoucherDate = r.VoucherDate, Narration = r.Narration,
-            Status = "Posted", IsBalanced = true, PreparedBy = cmd.ActorId, CreatedBy = cmd.ActorId
+            Status = status, IsBalanced = !r.SaveAsDraft, PreparedBy = cmd.ActorId, CreatedBy = cmd.ActorId
         };
 
-        foreach (var e in r.Entries)
+        foreach (var e in r.Entries.Where(e => e.Amount > 0))
         {
             voucher.Entries.Add(new VoucherEntry
             {
                 AccountId = e.AccountId, EntryType = e.EntryType, Amount = e.Amount, Narration = e.Narration
             });
-            var account = await db.ChartOfAccounts.FindAsync([e.AccountId], ct);
-            if (account != null)
-                account.CurrentBalance += e.EntryType == "Debit" ? e.Amount : -e.Amount;
+            // Only update account balances for posted vouchers
+            if (!r.SaveAsDraft)
+            {
+                var account = await db.ChartOfAccounts.FindAsync([e.AccountId], ct);
+                if (account != null)
+                    account.CurrentBalance += e.EntryType == "Debit" ? e.Amount : -e.Amount;
+            }
         }
 
         await db.Vouchers.AddAsync(voucher, ct);
@@ -166,15 +175,19 @@ public class GetChartOfAccountsQueryHandler(IAppDbContext db)
 {
     public async Task<Result<List<ChartOfAccountDto>>> Handle(GetChartOfAccountsQuery q, CancellationToken ct)
     {
-        var query = db.ChartOfAccounts.AsNoTracking().Where(a => a.IsActive && !a.IsDeleted);
+        var query = db.ChartOfAccounts.AsNoTracking().Where(a => !a.IsDeleted);
 
+        // When managing accounts (postableOnly=false), show all including inactive
         if (q.PostableOnly)
-            query = query.Where(a => a.AllowDirectPosting);
+            query = query.Where(a => a.IsActive && a.AllowDirectPosting);
 
         if (!string.IsNullOrEmpty(q.Search))
+        {
+            var s = q.Search.ToLower();
             query = query.Where(a =>
-                a.AccountCode.Contains(q.Search) ||
-                a.AccountName.Contains(q.Search));
+                a.AccountCode.ToLower().Contains(s) ||
+                a.AccountName.ToLower().Contains(s));
+        }
 
         if (!string.IsNullOrEmpty(q.AccountType))
             query = query.Where(a => a.AccountType == q.AccountType);
@@ -187,6 +200,94 @@ public class GetChartOfAccountsQueryHandler(IAppDbContext db)
             .ToListAsync(ct);
 
         return Result<List<ChartOfAccountDto>>.Success(items);
+    }
+}
+
+// ── Create Chart of Account ────────────────────────────────────────────────────
+
+public record CreateChartOfAccountRequest(
+    string AccountCode, string AccountName, string AccountNameNp,
+    string AccountType, string AccountGroup, bool AllowDirectPosting = true);
+
+public record CreateChartOfAccountCommand(CreateChartOfAccountRequest Request, Guid ActorId)
+    : IRequest<Result<Guid>>;
+
+public class CreateChartOfAccountCommandHandler(IAppDbContext db, IUnitOfWork uow)
+    : IRequestHandler<CreateChartOfAccountCommand, Result<Guid>>
+{
+    public async Task<Result<Guid>> Handle(CreateChartOfAccountCommand cmd, CancellationToken ct)
+    {
+        var r = cmd.Request;
+
+        if (await db.ChartOfAccounts.AnyAsync(a => a.AccountCode == r.AccountCode && !a.IsDeleted, ct))
+            return Result<Guid>.Failure("DUPLICATE_CODE", $"Account code '{r.AccountCode}' already exists.");
+
+        var validTypes = new[] { "Asset", "Liability", "Equity", "Income", "Expense" };
+        if (!validTypes.Contains(r.AccountType))
+            return Result<Guid>.Failure("INVALID_TYPE", $"AccountType must be one of: {string.Join(", ", validTypes)}.");
+
+        var account = new ChartOfAccount
+        {
+            AccountCode = r.AccountCode.Trim(),
+            AccountName = r.AccountName.Trim(),
+            AccountNameNp = r.AccountNameNp?.Trim() ?? string.Empty,
+            AccountType = r.AccountType,
+            AccountGroup = r.AccountGroup?.Trim() ?? r.AccountType,
+            AllowDirectPosting = r.AllowDirectPosting,
+            IsActive = true,
+            CurrentBalance = 0,
+            CreatedBy = cmd.ActorId
+        };
+
+        await db.ChartOfAccounts.AddAsync(account, ct);
+        await uow.SaveChangesAsync(ct);
+        return Result<Guid>.Success(account.Id);
+    }
+}
+
+// ── Toggle Active (Activate / Deactivate) ─────────────────────────────────────
+
+public record ToggleChartOfAccountCommand(Guid AccountId, Guid ActorId) : IRequest<Result<bool>>;
+
+public class ToggleChartOfAccountCommandHandler(IAppDbContext db, IUnitOfWork uow)
+    : IRequestHandler<ToggleChartOfAccountCommand, Result<bool>>
+{
+    public async Task<Result<bool>> Handle(ToggleChartOfAccountCommand cmd, CancellationToken ct)
+    {
+        var account = await db.ChartOfAccounts.FindAsync([cmd.AccountId], ct);
+        if (account is null || account.IsDeleted)
+            return Result<bool>.Failure("NOT_FOUND", "Account not found.");
+
+        account.IsActive = !account.IsActive;
+        account.UpdatedBy = cmd.ActorId;
+        await uow.SaveChangesAsync(ct);
+        return Result<bool>.Success(account.IsActive);
+    }
+}
+
+// ── Delete Chart of Account (soft) ────────────────────────────────────────────
+
+public record DeleteChartOfAccountCommand(Guid AccountId, Guid ActorId) : IRequest<Result<bool>>;
+
+public class DeleteChartOfAccountCommandHandler(IAppDbContext db, IUnitOfWork uow)
+    : IRequestHandler<DeleteChartOfAccountCommand, Result<bool>>
+{
+    public async Task<Result<bool>> Handle(DeleteChartOfAccountCommand cmd, CancellationToken ct)
+    {
+        var account = await db.ChartOfAccounts.FindAsync([cmd.AccountId], ct);
+        if (account is null || account.IsDeleted)
+            return Result<bool>.Failure("NOT_FOUND", "Account not found.");
+
+        // Prevent deleting accounts that have transactions
+        var hasEntries = await db.VoucherEntries.AnyAsync(e => e.AccountId == cmd.AccountId && !e.IsDeleted, ct);
+        if (hasEntries)
+            return Result<bool>.Failure("HAS_TRANSACTIONS", "Cannot delete an account that has posted transactions.");
+
+        account.IsDeleted = true;
+        account.IsActive = false;
+        account.UpdatedBy = cmd.ActorId;
+        await uow.SaveChangesAsync(ct);
+        return Result<bool>.Success(true);
     }
 }
 
@@ -368,5 +469,112 @@ public class GetLedgerQueryHandler(IAppDbContext db)
         return Result<LedgerDto>.Success(new LedgerDto(
             account.AccountCode, account.AccountName, account.AccountType,
             0, account.CurrentBalance, entries, totalDebit, totalCredit));
+    }
+}
+
+// ── Fiscal Year DTOs & Commands ───────────────────────────────────────────────
+
+public record FiscalYearDto(Guid Id, string YearCode, DateOnly StartDate, DateOnly EndDate,
+    bool IsCurrent, bool IsClosed, DateTime? ClosedAt);
+
+public record CreateFiscalYearRequest(string YearCode, DateOnly StartDate, DateOnly EndDate);
+
+// ── Get Fiscal Years ──────────────────────────────────────────────────────────
+
+public record GetFiscalYearsQuery() : IRequest<Result<List<FiscalYearDto>>>;
+
+public class GetFiscalYearsQueryHandler(IAppDbContext db)
+    : IRequestHandler<GetFiscalYearsQuery, Result<List<FiscalYearDto>>>
+{
+    public async Task<Result<List<FiscalYearDto>>> Handle(GetFiscalYearsQuery q, CancellationToken ct)
+    {
+        var years = await db.FiscalYears.AsNoTracking()
+            .Where(fy => !fy.IsDeleted)
+            .OrderByDescending(fy => fy.StartDate)
+            .Select(fy => new FiscalYearDto(fy.Id, fy.YearCode, fy.StartDate, fy.EndDate,
+                fy.IsCurrent, fy.IsClosed, fy.ClosedAt))
+            .ToListAsync(ct);
+        return Result<List<FiscalYearDto>>.Success(years);
+    }
+}
+
+// ── Create Fiscal Year ────────────────────────────────────────────────────────
+
+public record CreateFiscalYearCommand(CreateFiscalYearRequest Request, Guid ActorId)
+    : IRequest<Result<Guid>>;
+
+public class CreateFiscalYearCommandHandler(IAppDbContext db, IUnitOfWork uow)
+    : IRequestHandler<CreateFiscalYearCommand, Result<Guid>>
+{
+    public async Task<Result<Guid>> Handle(CreateFiscalYearCommand cmd, CancellationToken ct)
+    {
+        var r = cmd.Request;
+
+        // Validate year code uniqueness
+        if (await db.FiscalYears.AnyAsync(fy => fy.YearCode == r.YearCode && !fy.IsDeleted, ct))
+            return Result<Guid>.Failure("DUPLICATE_YEAR", $"Fiscal year '{r.YearCode}' already exists.");
+
+        if (r.EndDate <= r.StartDate)
+            return Result<Guid>.Failure("INVALID_DATES", "End date must be after start date.");
+
+        var fy = new FiscalYear
+        {
+            YearCode = r.YearCode,
+            StartDate = r.StartDate,
+            EndDate = r.EndDate,
+            IsCurrent = false,
+            IsClosed = false,
+            CreatedBy = cmd.ActorId
+        };
+        await db.FiscalYears.AddAsync(fy, ct);
+        await uow.SaveChangesAsync(ct);
+        return Result<Guid>.Success(fy.Id);
+    }
+}
+
+// ── Set Current Fiscal Year ───────────────────────────────────────────────────
+
+public record SetCurrentFiscalYearCommand(Guid FiscalYearId, Guid ActorId) : IRequest<Result<bool>>;
+
+public class SetCurrentFiscalYearCommandHandler(IAppDbContext db, IUnitOfWork uow)
+    : IRequestHandler<SetCurrentFiscalYearCommand, Result<bool>>
+{
+    public async Task<Result<bool>> Handle(SetCurrentFiscalYearCommand cmd, CancellationToken ct)
+    {
+        var target = await db.FiscalYears.FindAsync([cmd.FiscalYearId], ct);
+        if (target is null) return Result<bool>.Failure("NOT_FOUND", "Fiscal year not found.");
+        if (target.IsClosed) return Result<bool>.Failure("YEAR_CLOSED", "Cannot activate a closed fiscal year.");
+
+        // Deactivate any currently active year
+        var current = await db.FiscalYears.FirstOrDefaultAsync(fy => fy.IsCurrent && !fy.IsDeleted, ct);
+        if (current is not null) current.IsCurrent = false;
+
+        target.IsCurrent = true;
+        target.UpdatedBy = cmd.ActorId;
+        await uow.SaveChangesAsync(ct);
+        return Result<bool>.Success(true);
+    }
+}
+
+// ── Close Fiscal Year ─────────────────────────────────────────────────────────
+
+public record CloseFiscalYearCommand(Guid FiscalYearId, Guid ActorId) : IRequest<Result<bool>>;
+
+public class CloseFiscalYearCommandHandler(IAppDbContext db, IUnitOfWork uow)
+    : IRequestHandler<CloseFiscalYearCommand, Result<bool>>
+{
+    public async Task<Result<bool>> Handle(CloseFiscalYearCommand cmd, CancellationToken ct)
+    {
+        var fy = await db.FiscalYears.FindAsync([cmd.FiscalYearId], ct);
+        if (fy is null) return Result<bool>.Failure("NOT_FOUND", "Fiscal year not found.");
+        if (fy.IsClosed) return Result<bool>.Failure("ALREADY_CLOSED", "Fiscal year is already closed.");
+
+        fy.IsClosed = true;
+        fy.IsCurrent = false;
+        fy.ClosedAt = DateTime.UtcNow;
+        fy.ClosedBy = cmd.ActorId;
+        fy.UpdatedBy = cmd.ActorId;
+        await uow.SaveChangesAsync(ct);
+        return Result<bool>.Success(true);
     }
 }

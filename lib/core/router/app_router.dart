@@ -20,6 +20,8 @@ import '../../features/savings/presentation/pages/open_account_page.dart';
 import '../../features/accounting/presentation/pages/journal_entry_page.dart';
 import '../../features/accounting/presentation/pages/trial_balance_page.dart';
 import '../../features/accounting/presentation/pages/ledger_page.dart';
+import '../../features/accounting/presentation/pages/fiscal_year_page.dart';
+import '../../features/accounting/presentation/pages/chart_of_accounts_page.dart';
 import '../../features/reports/presentation/pages/reports_page.dart';
 import '../../features/settings/presentation/pages/settings_page.dart';
 import '../../features/notifications/presentation/pages/notifications_page.dart';
@@ -209,6 +211,16 @@ final routerProvider = Provider<GoRouter>((ref) {
                 path: 'ledger',
                 name: 'ledger',
                 builder: (context, state) => const LedgerPage(),
+              ),
+              GoRoute(
+                path: 'fiscal-years',
+                name: 'fiscal-years',
+                builder: (context, state) => const FiscalYearPage(),
+              ),
+              GoRoute(
+                path: 'chart-of-accounts',
+                name: 'chart-of-accounts',
+                builder: (context, state) => const ChartOfAccountsPage(),
               ),
             ],
           ),

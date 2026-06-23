@@ -43,8 +43,14 @@ public class GetMembersQueryHandler(IAppDbContext db)
         var query = db.Members.AsNoTracking().Where(m => !m.IsDeleted);
 
         if (!string.IsNullOrEmpty(q.Search))
-            query = query.Where(m => m.FirstName.Contains(q.Search) || m.LastName.Contains(q.Search)
-                || m.MemberCode.Contains(q.Search) || m.PhoneNumber.Contains(q.Search));
+        {
+            var s = q.Search.ToLower();
+            query = query.Where(m =>
+                m.FirstName.ToLower().Contains(s) ||
+                m.LastName.ToLower().Contains(s) ||
+                m.MemberCode.ToLower().Contains(s) ||
+                m.PhoneNumber.ToLower().Contains(s));
+        }
 
         if (!string.IsNullOrEmpty(q.Status))
             query = query.Where(m => m.Status == q.Status);

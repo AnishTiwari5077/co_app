@@ -94,6 +94,86 @@ public class MembersController(IMediator mediator) : ControllerBase
         return Ok(ApiResponse<object>.Ok(new { message = "Member approved." }));
     }
 
+
+
+    /// <summary>GET /accounting/chart-of-accounts/manage - all accounts for management (includes inactive).</summary>
+    [HttpGet("chart-of-accounts/manage")]
+    [Authorize(Roles = "ADMIN")]
+    public async Task<IActionResult> GetAllAccounts(CancellationToken ct)
+    {
+        var result = await mediator.Send(new Application.Accounting.GetChartOfAccountsQuery(PostableOnly: false), ct);
+        if (!result.IsSuccess) return BadRequest(ApiResponse<object>.Fail(result.ErrorCode!, result.ErrorMessage!));
+        return Ok(ApiResponse<List<Application.Accounting.ChartOfAccountDto>>.Ok(result.Value!));
+    }
+
+    /// <summary>POST /accounting/chart-of-accounts - create a new account.</summary>
+    [HttpPost("chart-of-accounts")]
+    [Authorize(Roles = "ADMIN")]
+    public async Task<IActionResult> CreateAccount([FromBody] Application.Accounting.CreateChartOfAccountRequest request, CancellationToken ct)
+    {
+        var result = await mediator.Send(new Application.Accounting.CreateChartOfAccountCommand(request, GetCurrentUserId()), ct);
+        if (!result.IsSuccess) return BadRequest(ApiResponse<object>.Fail(result.ErrorCode!, result.ErrorMessage!));
+        return Created($"/api/v1/accounting/chart-of-accounts/{result.Value}", new { id = result.Value });
+    }
+
+    /// <summary>PUT /accounting/chart-of-accounts/{id}/toggle - activate or deactivate.</summary>
+    [HttpPut("chart-of-accounts/{id:guid}/toggle")]
+    [Authorize(Roles = "ADMIN")]
+    public async Task<IActionResult> ToggleAccount(Guid id, CancellationToken ct)
+    {
+        var result = await mediator.Send(new Application.Accounting.ToggleChartOfAccountCommand(id, GetCurrentUserId()), ct);
+        if (!result.IsSuccess) return BadRequest(ApiResponse<object>.Fail(result.ErrorCode!, result.ErrorMessage!));
+        return Ok(ApiResponse<object>.Ok(new { isActive = result.Value }));
+    }
+
+    /// <summary>DELETE /accounting/chart-of-accounts/{id} - soft delete account.</summary>
+    [HttpDelete("chart-of-accounts/{id:guid}")]
+    [Authorize(Roles = "ADMIN")]
+    public async Task<IActionResult> DeleteAccount(Guid id, CancellationToken ct)
+    {
+        var result = await mediator.Send(new Application.Accounting.DeleteChartOfAccountCommand(id, GetCurrentUserId()), ct);
+        if (!result.IsSuccess) return BadRequest(ApiResponse<object>.Fail(result.ErrorCode!, result.ErrorMessage!));
+        return Ok(ApiResponse<object>.Ok(new { }));
+    }
+    /// <summary>GET /accounting/fiscal-years - list all fiscal years.</summary>
+    [HttpGet("fiscal-years")]
+    [Authorize(Roles = "ADMIN,MANAGER")]
+    public async Task<IActionResult> GetFiscalYears(CancellationToken ct)
+    {
+        var result = await mediator.Send(new Application.Accounting.GetFiscalYearsQuery(), ct);
+        if (!result.IsSuccess) return BadRequest(ApiResponse<object>.Fail(result.ErrorCode!, result.ErrorMessage!));
+        return Ok(ApiResponse<List<Application.Accounting.FiscalYearDto>>.Ok(result.Value!));
+    }
+
+    /// <summary>POST /accounting/fiscal-years - create a new fiscal year.</summary>
+    [HttpPost("fiscal-years")]
+    [Authorize(Roles = "ADMIN")]
+    public async Task<IActionResult> CreateFiscalYear([FromBody] Application.Accounting.CreateFiscalYearRequest request, CancellationToken ct)
+    {
+        var result = await mediator.Send(new Application.Accounting.CreateFiscalYearCommand(request, GetCurrentUserId()), ct);
+        if (!result.IsSuccess) return BadRequest(ApiResponse<object>.Fail(result.ErrorCode!, result.ErrorMessage!));
+        return Created($"/api/v1/accounting/fiscal-years/{result.Value}", new { id = result.Value });
+    }
+
+    /// <summary>PUT /accounting/fiscal-years/{id}/set-current - mark as active.</summary>
+    [HttpPut("fiscal-years/{id:guid}/set-current")]
+    [Authorize(Roles = "ADMIN")]
+    public async Task<IActionResult> SetCurrentFiscalYear(Guid id, CancellationToken ct)
+    {
+        var result = await mediator.Send(new Application.Accounting.SetCurrentFiscalYearCommand(id, GetCurrentUserId()), ct);
+        if (!result.IsSuccess) return BadRequest(ApiResponse<object>.Fail(result.ErrorCode!, result.ErrorMessage!));
+        return Ok(ApiResponse<object>.Ok(new { }));
+    }
+
+    /// <summary>PUT /accounting/fiscal-years/{id}/close - close (lock) a fiscal year.</summary>
+    [HttpPut("fiscal-years/{id:guid}/close")]
+    [Authorize(Roles = "ADMIN")]
+    public async Task<IActionResult> CloseFiscalYear(Guid id, CancellationToken ct)
+    {
+        var result = await mediator.Send(new Application.Accounting.CloseFiscalYearCommand(id, GetCurrentUserId()), ct);
+        if (!result.IsSuccess) return BadRequest(ApiResponse<object>.Fail(result.ErrorCode!, result.ErrorMessage!));
+        return Ok(ApiResponse<object>.Ok(new { }));
+    }
     private Guid GetCurrentUserId() =>
         Guid.TryParse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value, out var id)
             ? id : Guid.Empty;
@@ -190,6 +270,86 @@ public class SavingsController(IMediator mediator) : ControllerBase
             ApiResponse<Application.Savings.OpenSavingAccountResponse>.Ok(result.Value!));
     }
 
+
+
+    /// <summary>GET /accounting/chart-of-accounts/manage - all accounts for management (includes inactive).</summary>
+    [HttpGet("chart-of-accounts/manage")]
+    [Authorize(Roles = "ADMIN")]
+    public async Task<IActionResult> GetAllAccounts(CancellationToken ct)
+    {
+        var result = await mediator.Send(new Application.Accounting.GetChartOfAccountsQuery(PostableOnly: false), ct);
+        if (!result.IsSuccess) return BadRequest(ApiResponse<object>.Fail(result.ErrorCode!, result.ErrorMessage!));
+        return Ok(ApiResponse<List<Application.Accounting.ChartOfAccountDto>>.Ok(result.Value!));
+    }
+
+    /// <summary>POST /accounting/chart-of-accounts - create a new account.</summary>
+    [HttpPost("chart-of-accounts")]
+    [Authorize(Roles = "ADMIN")]
+    public async Task<IActionResult> CreateAccount([FromBody] Application.Accounting.CreateChartOfAccountRequest request, CancellationToken ct)
+    {
+        var result = await mediator.Send(new Application.Accounting.CreateChartOfAccountCommand(request, GetCurrentUserId()), ct);
+        if (!result.IsSuccess) return BadRequest(ApiResponse<object>.Fail(result.ErrorCode!, result.ErrorMessage!));
+        return Created($"/api/v1/accounting/chart-of-accounts/{result.Value}", new { id = result.Value });
+    }
+
+    /// <summary>PUT /accounting/chart-of-accounts/{id}/toggle - activate or deactivate.</summary>
+    [HttpPut("chart-of-accounts/{id:guid}/toggle")]
+    [Authorize(Roles = "ADMIN")]
+    public async Task<IActionResult> ToggleAccount(Guid id, CancellationToken ct)
+    {
+        var result = await mediator.Send(new Application.Accounting.ToggleChartOfAccountCommand(id, GetCurrentUserId()), ct);
+        if (!result.IsSuccess) return BadRequest(ApiResponse<object>.Fail(result.ErrorCode!, result.ErrorMessage!));
+        return Ok(ApiResponse<object>.Ok(new { isActive = result.Value }));
+    }
+
+    /// <summary>DELETE /accounting/chart-of-accounts/{id} - soft delete account.</summary>
+    [HttpDelete("chart-of-accounts/{id:guid}")]
+    [Authorize(Roles = "ADMIN")]
+    public async Task<IActionResult> DeleteAccount(Guid id, CancellationToken ct)
+    {
+        var result = await mediator.Send(new Application.Accounting.DeleteChartOfAccountCommand(id, GetCurrentUserId()), ct);
+        if (!result.IsSuccess) return BadRequest(ApiResponse<object>.Fail(result.ErrorCode!, result.ErrorMessage!));
+        return Ok(ApiResponse<object>.Ok(new { }));
+    }
+    /// <summary>GET /accounting/fiscal-years - list all fiscal years.</summary>
+    [HttpGet("fiscal-years")]
+    [Authorize(Roles = "ADMIN,MANAGER")]
+    public async Task<IActionResult> GetFiscalYears(CancellationToken ct)
+    {
+        var result = await mediator.Send(new Application.Accounting.GetFiscalYearsQuery(), ct);
+        if (!result.IsSuccess) return BadRequest(ApiResponse<object>.Fail(result.ErrorCode!, result.ErrorMessage!));
+        return Ok(ApiResponse<List<Application.Accounting.FiscalYearDto>>.Ok(result.Value!));
+    }
+
+    /// <summary>POST /accounting/fiscal-years - create a new fiscal year.</summary>
+    [HttpPost("fiscal-years")]
+    [Authorize(Roles = "ADMIN")]
+    public async Task<IActionResult> CreateFiscalYear([FromBody] Application.Accounting.CreateFiscalYearRequest request, CancellationToken ct)
+    {
+        var result = await mediator.Send(new Application.Accounting.CreateFiscalYearCommand(request, GetCurrentUserId()), ct);
+        if (!result.IsSuccess) return BadRequest(ApiResponse<object>.Fail(result.ErrorCode!, result.ErrorMessage!));
+        return Created($"/api/v1/accounting/fiscal-years/{result.Value}", new { id = result.Value });
+    }
+
+    /// <summary>PUT /accounting/fiscal-years/{id}/set-current - mark as active.</summary>
+    [HttpPut("fiscal-years/{id:guid}/set-current")]
+    [Authorize(Roles = "ADMIN")]
+    public async Task<IActionResult> SetCurrentFiscalYear(Guid id, CancellationToken ct)
+    {
+        var result = await mediator.Send(new Application.Accounting.SetCurrentFiscalYearCommand(id, GetCurrentUserId()), ct);
+        if (!result.IsSuccess) return BadRequest(ApiResponse<object>.Fail(result.ErrorCode!, result.ErrorMessage!));
+        return Ok(ApiResponse<object>.Ok(new { }));
+    }
+
+    /// <summary>PUT /accounting/fiscal-years/{id}/close - close (lock) a fiscal year.</summary>
+    [HttpPut("fiscal-years/{id:guid}/close")]
+    [Authorize(Roles = "ADMIN")]
+    public async Task<IActionResult> CloseFiscalYear(Guid id, CancellationToken ct)
+    {
+        var result = await mediator.Send(new Application.Accounting.CloseFiscalYearCommand(id, GetCurrentUserId()), ct);
+        if (!result.IsSuccess) return BadRequest(ApiResponse<object>.Fail(result.ErrorCode!, result.ErrorMessage!));
+        return Ok(ApiResponse<object>.Ok(new { }));
+    }
     private Guid GetCurrentUserId() =>
         Guid.TryParse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value, out var id)
             ? id : Guid.Empty;
@@ -314,6 +474,86 @@ public class LoansController(IMediator mediator) : ControllerBase
             result.Value!.Data, result.Value.Page, result.Value.PageSize, result.Value.TotalCount));
     }
 
+
+
+    /// <summary>GET /accounting/chart-of-accounts/manage - all accounts for management (includes inactive).</summary>
+    [HttpGet("chart-of-accounts/manage")]
+    [Authorize(Roles = "ADMIN")]
+    public async Task<IActionResult> GetAllAccounts(CancellationToken ct)
+    {
+        var result = await mediator.Send(new Application.Accounting.GetChartOfAccountsQuery(PostableOnly: false), ct);
+        if (!result.IsSuccess) return BadRequest(ApiResponse<object>.Fail(result.ErrorCode!, result.ErrorMessage!));
+        return Ok(ApiResponse<List<Application.Accounting.ChartOfAccountDto>>.Ok(result.Value!));
+    }
+
+    /// <summary>POST /accounting/chart-of-accounts - create a new account.</summary>
+    [HttpPost("chart-of-accounts")]
+    [Authorize(Roles = "ADMIN")]
+    public async Task<IActionResult> CreateAccount([FromBody] Application.Accounting.CreateChartOfAccountRequest request, CancellationToken ct)
+    {
+        var result = await mediator.Send(new Application.Accounting.CreateChartOfAccountCommand(request, GetCurrentUserId()), ct);
+        if (!result.IsSuccess) return BadRequest(ApiResponse<object>.Fail(result.ErrorCode!, result.ErrorMessage!));
+        return Created($"/api/v1/accounting/chart-of-accounts/{result.Value}", new { id = result.Value });
+    }
+
+    /// <summary>PUT /accounting/chart-of-accounts/{id}/toggle - activate or deactivate.</summary>
+    [HttpPut("chart-of-accounts/{id:guid}/toggle")]
+    [Authorize(Roles = "ADMIN")]
+    public async Task<IActionResult> ToggleAccount(Guid id, CancellationToken ct)
+    {
+        var result = await mediator.Send(new Application.Accounting.ToggleChartOfAccountCommand(id, GetCurrentUserId()), ct);
+        if (!result.IsSuccess) return BadRequest(ApiResponse<object>.Fail(result.ErrorCode!, result.ErrorMessage!));
+        return Ok(ApiResponse<object>.Ok(new { isActive = result.Value }));
+    }
+
+    /// <summary>DELETE /accounting/chart-of-accounts/{id} - soft delete account.</summary>
+    [HttpDelete("chart-of-accounts/{id:guid}")]
+    [Authorize(Roles = "ADMIN")]
+    public async Task<IActionResult> DeleteAccount(Guid id, CancellationToken ct)
+    {
+        var result = await mediator.Send(new Application.Accounting.DeleteChartOfAccountCommand(id, GetCurrentUserId()), ct);
+        if (!result.IsSuccess) return BadRequest(ApiResponse<object>.Fail(result.ErrorCode!, result.ErrorMessage!));
+        return Ok(ApiResponse<object>.Ok(new { }));
+    }
+    /// <summary>GET /accounting/fiscal-years - list all fiscal years.</summary>
+    [HttpGet("fiscal-years")]
+    [Authorize(Roles = "ADMIN,MANAGER")]
+    public async Task<IActionResult> GetFiscalYears(CancellationToken ct)
+    {
+        var result = await mediator.Send(new Application.Accounting.GetFiscalYearsQuery(), ct);
+        if (!result.IsSuccess) return BadRequest(ApiResponse<object>.Fail(result.ErrorCode!, result.ErrorMessage!));
+        return Ok(ApiResponse<List<Application.Accounting.FiscalYearDto>>.Ok(result.Value!));
+    }
+
+    /// <summary>POST /accounting/fiscal-years - create a new fiscal year.</summary>
+    [HttpPost("fiscal-years")]
+    [Authorize(Roles = "ADMIN")]
+    public async Task<IActionResult> CreateFiscalYear([FromBody] Application.Accounting.CreateFiscalYearRequest request, CancellationToken ct)
+    {
+        var result = await mediator.Send(new Application.Accounting.CreateFiscalYearCommand(request, GetCurrentUserId()), ct);
+        if (!result.IsSuccess) return BadRequest(ApiResponse<object>.Fail(result.ErrorCode!, result.ErrorMessage!));
+        return Created($"/api/v1/accounting/fiscal-years/{result.Value}", new { id = result.Value });
+    }
+
+    /// <summary>PUT /accounting/fiscal-years/{id}/set-current - mark as active.</summary>
+    [HttpPut("fiscal-years/{id:guid}/set-current")]
+    [Authorize(Roles = "ADMIN")]
+    public async Task<IActionResult> SetCurrentFiscalYear(Guid id, CancellationToken ct)
+    {
+        var result = await mediator.Send(new Application.Accounting.SetCurrentFiscalYearCommand(id, GetCurrentUserId()), ct);
+        if (!result.IsSuccess) return BadRequest(ApiResponse<object>.Fail(result.ErrorCode!, result.ErrorMessage!));
+        return Ok(ApiResponse<object>.Ok(new { }));
+    }
+
+    /// <summary>PUT /accounting/fiscal-years/{id}/close - close (lock) a fiscal year.</summary>
+    [HttpPut("fiscal-years/{id:guid}/close")]
+    [Authorize(Roles = "ADMIN")]
+    public async Task<IActionResult> CloseFiscalYear(Guid id, CancellationToken ct)
+    {
+        var result = await mediator.Send(new Application.Accounting.CloseFiscalYearCommand(id, GetCurrentUserId()), ct);
+        if (!result.IsSuccess) return BadRequest(ApiResponse<object>.Fail(result.ErrorCode!, result.ErrorMessage!));
+        return Ok(ApiResponse<object>.Ok(new { }));
+    }
     private Guid GetCurrentUserId() =>
         Guid.TryParse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value, out var id)
             ? id : Guid.Empty;
@@ -381,6 +621,86 @@ public class AccountingController(IMediator mediator) : ControllerBase
         return Ok(ApiResponse<Application.Accounting.LedgerDto>.Ok(result.Value!));
     }
 
+
+
+    /// <summary>GET /accounting/chart-of-accounts/manage - all accounts for management (includes inactive).</summary>
+    [HttpGet("chart-of-accounts/manage")]
+    [Authorize(Roles = "ADMIN")]
+    public async Task<IActionResult> GetAllAccounts(CancellationToken ct)
+    {
+        var result = await mediator.Send(new Application.Accounting.GetChartOfAccountsQuery(PostableOnly: false), ct);
+        if (!result.IsSuccess) return BadRequest(ApiResponse<object>.Fail(result.ErrorCode!, result.ErrorMessage!));
+        return Ok(ApiResponse<List<Application.Accounting.ChartOfAccountDto>>.Ok(result.Value!));
+    }
+
+    /// <summary>POST /accounting/chart-of-accounts - create a new account.</summary>
+    [HttpPost("chart-of-accounts")]
+    [Authorize(Roles = "ADMIN")]
+    public async Task<IActionResult> CreateAccount([FromBody] Application.Accounting.CreateChartOfAccountRequest request, CancellationToken ct)
+    {
+        var result = await mediator.Send(new Application.Accounting.CreateChartOfAccountCommand(request, GetCurrentUserId()), ct);
+        if (!result.IsSuccess) return BadRequest(ApiResponse<object>.Fail(result.ErrorCode!, result.ErrorMessage!));
+        return Created($"/api/v1/accounting/chart-of-accounts/{result.Value}", new { id = result.Value });
+    }
+
+    /// <summary>PUT /accounting/chart-of-accounts/{id}/toggle - activate or deactivate.</summary>
+    [HttpPut("chart-of-accounts/{id:guid}/toggle")]
+    [Authorize(Roles = "ADMIN")]
+    public async Task<IActionResult> ToggleAccount(Guid id, CancellationToken ct)
+    {
+        var result = await mediator.Send(new Application.Accounting.ToggleChartOfAccountCommand(id, GetCurrentUserId()), ct);
+        if (!result.IsSuccess) return BadRequest(ApiResponse<object>.Fail(result.ErrorCode!, result.ErrorMessage!));
+        return Ok(ApiResponse<object>.Ok(new { isActive = result.Value }));
+    }
+
+    /// <summary>DELETE /accounting/chart-of-accounts/{id} - soft delete account.</summary>
+    [HttpDelete("chart-of-accounts/{id:guid}")]
+    [Authorize(Roles = "ADMIN")]
+    public async Task<IActionResult> DeleteAccount(Guid id, CancellationToken ct)
+    {
+        var result = await mediator.Send(new Application.Accounting.DeleteChartOfAccountCommand(id, GetCurrentUserId()), ct);
+        if (!result.IsSuccess) return BadRequest(ApiResponse<object>.Fail(result.ErrorCode!, result.ErrorMessage!));
+        return Ok(ApiResponse<object>.Ok(new { }));
+    }
+    /// <summary>GET /accounting/fiscal-years - list all fiscal years.</summary>
+    [HttpGet("fiscal-years")]
+    [Authorize(Roles = "ADMIN,MANAGER")]
+    public async Task<IActionResult> GetFiscalYears(CancellationToken ct)
+    {
+        var result = await mediator.Send(new Application.Accounting.GetFiscalYearsQuery(), ct);
+        if (!result.IsSuccess) return BadRequest(ApiResponse<object>.Fail(result.ErrorCode!, result.ErrorMessage!));
+        return Ok(ApiResponse<List<Application.Accounting.FiscalYearDto>>.Ok(result.Value!));
+    }
+
+    /// <summary>POST /accounting/fiscal-years - create a new fiscal year.</summary>
+    [HttpPost("fiscal-years")]
+    [Authorize(Roles = "ADMIN")]
+    public async Task<IActionResult> CreateFiscalYear([FromBody] Application.Accounting.CreateFiscalYearRequest request, CancellationToken ct)
+    {
+        var result = await mediator.Send(new Application.Accounting.CreateFiscalYearCommand(request, GetCurrentUserId()), ct);
+        if (!result.IsSuccess) return BadRequest(ApiResponse<object>.Fail(result.ErrorCode!, result.ErrorMessage!));
+        return Created($"/api/v1/accounting/fiscal-years/{result.Value}", new { id = result.Value });
+    }
+
+    /// <summary>PUT /accounting/fiscal-years/{id}/set-current - mark as active.</summary>
+    [HttpPut("fiscal-years/{id:guid}/set-current")]
+    [Authorize(Roles = "ADMIN")]
+    public async Task<IActionResult> SetCurrentFiscalYear(Guid id, CancellationToken ct)
+    {
+        var result = await mediator.Send(new Application.Accounting.SetCurrentFiscalYearCommand(id, GetCurrentUserId()), ct);
+        if (!result.IsSuccess) return BadRequest(ApiResponse<object>.Fail(result.ErrorCode!, result.ErrorMessage!));
+        return Ok(ApiResponse<object>.Ok(new { }));
+    }
+
+    /// <summary>PUT /accounting/fiscal-years/{id}/close - close (lock) a fiscal year.</summary>
+    [HttpPut("fiscal-years/{id:guid}/close")]
+    [Authorize(Roles = "ADMIN")]
+    public async Task<IActionResult> CloseFiscalYear(Guid id, CancellationToken ct)
+    {
+        var result = await mediator.Send(new Application.Accounting.CloseFiscalYearCommand(id, GetCurrentUserId()), ct);
+        if (!result.IsSuccess) return BadRequest(ApiResponse<object>.Fail(result.ErrorCode!, result.ErrorMessage!));
+        return Ok(ApiResponse<object>.Ok(new { }));
+    }
     private Guid GetCurrentUserId() =>
         Guid.TryParse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value, out var id)
             ? id : Guid.Empty;

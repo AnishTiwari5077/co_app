@@ -13,8 +13,11 @@ class AccountPickerItem {
   final String id, accountCode, accountName, accountType, accountGroup;
   final double currentBalance;
   const AccountPickerItem({
-    required this.id, required this.accountCode, required this.accountName,
-    required this.accountType, required this.accountGroup,
+    required this.id,
+    required this.accountCode,
+    required this.accountName,
+    required this.accountType,
+    required this.accountGroup,
     required this.currentBalance,
   });
   factory AccountPickerItem.fromJson(Map<String, dynamic> j) =>
@@ -35,19 +38,23 @@ class LedgerEntry {
   final String? narration;
   final double amount, runningBalance;
   const LedgerEntry({
-    required this.voucherNumber, required this.voucherType,
-    required this.voucherDate, required this.entryType,
-    this.narration, required this.amount, required this.runningBalance,
+    required this.voucherNumber,
+    required this.voucherType,
+    required this.voucherDate,
+    required this.entryType,
+    this.narration,
+    required this.amount,
+    required this.runningBalance,
   });
   factory LedgerEntry.fromJson(Map<String, dynamic> j) => LedgerEntry(
-    voucherNumber: j['voucherNumber'] as String? ?? '',
-    voucherType: j['voucherType'] as String? ?? '',
-    voucherDate: j['voucherDate'] as String? ?? '',
-    entryType: j['entryType'] as String? ?? '',
-    narration: j['narration'] as String?,
-    amount: (j['amount'] as num?)?.toDouble() ?? 0,
-    runningBalance: (j['runningBalance'] as num?)?.toDouble() ?? 0,
-  );
+        voucherNumber: j['voucherNumber'] as String? ?? '',
+        voucherType: j['voucherType'] as String? ?? '',
+        voucherDate: j['voucherDate'] as String? ?? '',
+        entryType: j['entryType'] as String? ?? '',
+        narration: j['narration'] as String?,
+        amount: (j['amount'] as num?)?.toDouble() ?? 0,
+        runningBalance: (j['runningBalance'] as num?)?.toDouble() ?? 0,
+      );
 }
 
 class LedgerData {
@@ -55,29 +62,33 @@ class LedgerData {
   final double openingBalance, currentBalance, totalDebit, totalCredit;
   final List<LedgerEntry> entries;
   const LedgerData({
-    required this.accountCode, required this.accountName,
-    required this.accountType, required this.openingBalance,
-    required this.currentBalance, required this.totalDebit,
-    required this.totalCredit, required this.entries,
+    required this.accountCode,
+    required this.accountName,
+    required this.accountType,
+    required this.openingBalance,
+    required this.currentBalance,
+    required this.totalDebit,
+    required this.totalCredit,
+    required this.entries,
   });
   factory LedgerData.fromJson(Map<String, dynamic> j) => LedgerData(
-    accountCode: j['accountCode'] as String? ?? '',
-    accountName: j['accountName'] as String? ?? '',
-    accountType: j['accountType'] as String? ?? '',
-    openingBalance: (j['openingBalance'] as num?)?.toDouble() ?? 0,
-    currentBalance: (j['currentBalance'] as num?)?.toDouble() ?? 0,
-    totalDebit: (j['totalDebit'] as num?)?.toDouble() ?? 0,
-    totalCredit: (j['totalCredit'] as num?)?.toDouble() ?? 0,
-    entries: (j['entries'] as List<dynamic>? ?? [])
-        .map((e) => LedgerEntry.fromJson(e as Map<String, dynamic>))
-        .toList(),
-  );
+        accountCode: j['accountCode'] as String? ?? '',
+        accountName: j['accountName'] as String? ?? '',
+        accountType: j['accountType'] as String? ?? '',
+        openingBalance: (j['openingBalance'] as num?)?.toDouble() ?? 0,
+        currentBalance: (j['currentBalance'] as num?)?.toDouble() ?? 0,
+        totalDebit: (j['totalDebit'] as num?)?.toDouble() ?? 0,
+        totalCredit: (j['totalCredit'] as num?)?.toDouble() ?? 0,
+        entries: (j['entries'] as List<dynamic>? ?? [])
+            .map((e) => LedgerEntry.fromJson(e as Map<String, dynamic>))
+            .toList(),
+      );
 }
 
 // ── Providers ─────────────────────────────────────────────────────────────────
 
-final _ledgerProvider =
-    FutureProvider.autoDispose.family<LedgerData, String>((ref, accountId) async {
+final _ledgerProvider = FutureProvider.autoDispose
+    .family<LedgerData, String>((ref, accountId) async {
   final dio = ref.watch(dioProvider);
   final res = await dio.get('/api/v1/accounting/ledger/$accountId');
   final data =
@@ -125,7 +136,8 @@ class _LedgerPageState extends ConsumerState<LedgerPage> {
         final res = await dio.get('/api/v1/accounting/chart-of-accounts',
             queryParameters: {'search': query.trim(), 'postableOnly': 'false'});
         final raw =
-            ((res.data as Map<String, dynamic>)['data'] as List<dynamic>? ?? []);
+            ((res.data as Map<String, dynamic>)['data'] as List<dynamic>? ??
+                []);
         if (mounted) {
           setState(() {
             _suggestions = raw
@@ -204,8 +216,7 @@ class _LedgerPageState extends ConsumerState<LedgerPage> {
                 margin: const EdgeInsets.only(top: 4),
                 decoration: BoxDecoration(
                   color: AppColors.surface,
-                  borderRadius:
-                      BorderRadius.circular(AppDimensions.radiusMd),
+                  borderRadius: BorderRadius.circular(AppDimensions.radiusMd),
                   border: Border.all(color: const Color(0xFFE0E7EF)),
                   boxShadow: [
                     BoxShadow(
@@ -229,22 +240,18 @@ class _LedgerPageState extends ConsumerState<LedgerPage> {
                         padding: const EdgeInsets.symmetric(
                             horizontal: 6, vertical: 2),
                         decoration: BoxDecoration(
-                          color:
-                              AppColors.primary.withValues(alpha: 0.08),
+                          color: AppColors.primary.withValues(alpha: 0.08),
                           borderRadius: BorderRadius.circular(4),
                         ),
                         child: Text(s.accountType,
-                            style: AppTextStyles.labelSmall
-                                .copyWith(
-                                    color: AppColors.primary,
-                                    fontSize: 9)),
+                            style: AppTextStyles.labelSmall.copyWith(
+                                color: AppColors.primary, fontSize: 9)),
                       ),
-                      title: Text(s.accountName,
-                          style: AppTextStyles.bodySmall),
+                      title:
+                          Text(s.accountName, style: AppTextStyles.bodySmall),
                       subtitle: Text(s.accountCode,
                           style: AppTextStyles.bodySmall.copyWith(
-                              color: AppColors.textSecondary,
-                              fontSize: 11)),
+                              color: AppColors.textSecondary, fontSize: 11)),
                       trailing: Text(
                         _fmtAmt(s.currentBalance),
                         style: AppTextStyles.labelSmall.copyWith(
@@ -267,8 +274,7 @@ class _LedgerPageState extends ConsumerState<LedgerPage> {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         const Icon(Icons.account_balance_wallet_outlined,
-                            size: 64,
-                            color: AppColors.textSecondary),
+                            size: 64, color: AppColors.textSecondary),
                         const SizedBox(height: AppDimensions.md),
                         Text('Search and select an account',
                             style: AppTextStyles.titleMedium
@@ -309,8 +315,7 @@ class _LedgerView extends ConsumerWidget {
           const Icon(Icons.error_outline_rounded,
               color: AppColors.error, size: 48),
           const SizedBox(height: AppDimensions.md),
-          const Text('Could not load ledger',
-              style: AppTextStyles.titleMedium),
+          const Text('Could not load ledger', style: AppTextStyles.titleMedium),
           const SizedBox(height: AppDimensions.xs),
           Text(e.toString(),
               style: AppTextStyles.bodySmall
@@ -331,13 +336,16 @@ class _LedgerView extends ConsumerWidget {
               horizontal: AppDimensions.md, vertical: AppDimensions.sm),
           child: Row(children: [
             Expanded(
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text('${ledger.accountCode} — ${ledger.accountName}',
-                    style: AppTextStyles.titleSmall),
-                Text('${ledger.accountType}  •  Current Balance: ${_fmtAmt(ledger.currentBalance)}',
-                    style: AppTextStyles.bodySmall
-                        .copyWith(color: AppColors.textSecondary)),
-              ]),
+              child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('${ledger.accountCode} — ${ledger.accountName}',
+                        style: AppTextStyles.titleSmall),
+                    Text(
+                        '${ledger.accountType}  •  Current Balance: ${_fmtAmt(ledger.currentBalance)}',
+                        style: AppTextStyles.bodySmall
+                            .copyWith(color: AppColors.textSecondary)),
+                  ]),
             ),
             Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
               Text('Dr: ${_fmtK(ledger.totalDebit)}',
@@ -356,26 +364,31 @@ class _LedgerView extends ConsumerWidget {
           padding: const EdgeInsets.symmetric(
               horizontal: AppDimensions.md, vertical: AppDimensions.xs),
           child: Row(children: [
-            Expanded(flex: 2,
+            Expanded(
+                flex: 2,
                 child: Text('Date',
                     style: AppTextStyles.labelSmall
                         .copyWith(color: AppColors.primary))),
-            Expanded(flex: 4,
+            Expanded(
+                flex: 4,
                 child: Text('Narration',
                     style: AppTextStyles.labelSmall
                         .copyWith(color: AppColors.primary))),
-            Expanded(child: Text('Debit',
-                style: AppTextStyles.labelSmall
-                    .copyWith(color: AppColors.primary),
-                textAlign: TextAlign.right)),
-            Expanded(child: Text('Credit',
-                style: AppTextStyles.labelSmall
-                    .copyWith(color: AppColors.primary),
-                textAlign: TextAlign.right)),
-            Expanded(child: Text('Balance',
-                style: AppTextStyles.labelSmall
-                    .copyWith(color: AppColors.primary),
-                textAlign: TextAlign.right)),
+            Expanded(
+                child: Text('Debit',
+                    style: AppTextStyles.labelSmall
+                        .copyWith(color: AppColors.primary),
+                    textAlign: TextAlign.right)),
+            Expanded(
+                child: Text('Credit',
+                    style: AppTextStyles.labelSmall
+                        .copyWith(color: AppColors.primary),
+                    textAlign: TextAlign.right)),
+            Expanded(
+                child: Text('Balance',
+                    style: AppTextStyles.labelSmall
+                        .copyWith(color: AppColors.primary),
+                    textAlign: TextAlign.right)),
           ]),
         ),
 
@@ -383,14 +396,16 @@ class _LedgerView extends ConsumerWidget {
         Expanded(
           child: ledger.entries.isEmpty
               ? Center(
-                  child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-                    const Icon(Icons.receipt_long_outlined,
-                        size: 48, color: AppColors.textSecondary),
-                    const SizedBox(height: AppDimensions.sm),
-                    Text('No transactions yet',
-                        style: AppTextStyles.bodyMedium
-                            .copyWith(color: AppColors.textSecondary)),
-                  ]),
+                  child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.receipt_long_outlined,
+                            size: 48, color: AppColors.textSecondary),
+                        const SizedBox(height: AppDimensions.sm),
+                        Text('No transactions yet',
+                            style: AppTextStyles.bodyMedium
+                                .copyWith(color: AppColors.textSecondary)),
+                      ]),
                 )
               : ListView.separated(
                   itemCount: ledger.entries.length,
@@ -404,24 +419,29 @@ class _LedgerView extends ConsumerWidget {
                           horizontal: AppDimensions.md,
                           vertical: AppDimensions.xs),
                       child: Row(children: [
-                        Expanded(flex: 2,
+                        Expanded(
+                          flex: 2,
                           child: Text(
                             e.voucherDate.length >= 10
                                 ? e.voucherDate.substring(0, 10)
                                 : e.voucherDate,
-                            style: AppTextStyles.bodySmall.copyWith(fontSize: 11),
+                            style:
+                                AppTextStyles.bodySmall.copyWith(fontSize: 11),
                           ),
                         ),
-                        Expanded(flex: 4,
-                          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                            Text(e.narration ?? e.voucherType,
-                                style: AppTextStyles.bodySmall,
-                                overflow: TextOverflow.ellipsis),
-                            Text(e.voucherNumber,
-                                style: AppTextStyles.bodySmall.copyWith(
-                                    color: AppColors.textSecondary,
-                                    fontSize: 10)),
-                          ]),
+                        Expanded(
+                          flex: 4,
+                          child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(e.narration ?? e.voucherType,
+                                    style: AppTextStyles.bodySmall,
+                                    overflow: TextOverflow.ellipsis),
+                                Text(e.voucherNumber,
+                                    style: AppTextStyles.bodySmall.copyWith(
+                                        color: AppColors.textSecondary,
+                                        fontSize: 10)),
+                              ]),
                         ),
                         Expanded(
                           child: Text(
