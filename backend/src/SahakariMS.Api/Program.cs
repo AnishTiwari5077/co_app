@@ -95,8 +95,15 @@ builder.Services.AddSwaggerGen(c =>
     });
 });
 
+var allowedOrigins = builder.Configuration
+    .GetSection("AllowedOrigins").Get<string[]>()
+    ?? ["http://localhost:3000", "http://localhost:5173", "http://localhost:5111"];
+
 builder.Services.AddCors(opts =>
-    opts.AddDefaultPolicy(p => p.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod()));
+    opts.AddDefaultPolicy(p => p
+        .WithOrigins(allowedOrigins)
+        .AllowAnyHeader()
+        .AllowAnyMethod()));
 
 // ── Build ─────────────────────────────────────────────────────────────────────
 var app = builder.Build();
@@ -122,10 +129,23 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "SahakariMS v1"));
 }
 
+if (!app.Environment.IsDevelopment())
+{
+    app.UseHttpsRedirection();
+    app.UseHsts();
+}
+
 app.UseCors();
 app.UseAuthentication();
 app.UseAuthorization();
-app.UseHangfireDashboard("/hangfire");
+// Hangfire dashboard — protected in production
+app.UseHangfireDashboard("/hangfire", new DashboardOptions
+{
+    // In production only allow authenticated ADMIN users
+    Authorization = app.Environment.IsDevelopment()
+        ? [new Hangfire.Dashboard.LocalRequestsOnlyAuthorizationFilter()]
+        : [new HangfireAdminAuthFilter()]
+});
 
 // ── Recurring Jobs ────────────────────────────────────────────────────────────
 // Runs every day at midnight UTC: marks overdue EMIs and updates NPA classification

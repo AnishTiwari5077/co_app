@@ -1,0 +1,12 @@
+F:\c_app\backend\src\SahakariMS.Shared\bin\Release\net8.0\SahakariMS.Shared.deps.json
+F:\c_app\backend\src\SahakariMS.Shared\bin\Release\net8.0\SahakariMS.Shared.dll
+F:\c_app\backend\src\SahakariMS.Shared\bin\Release\net8.0\SahakariMS.Shared.pdb
+F:\c_app\backend\src\SahakariMS.Shared\obj\Release\net8.0\SahakariMS.Shared.GeneratedMSBuildEditorConfig.editorconfig
+F:\c_app\backend\src\SahakariMS.Shared\obj\Release\net8.0\SahakariMS.Shared.AssemblyInfoInputs.cache
+F:\c_app\backend\src\SahakariMS.Shared\obj\Release\net8.0\SahakariMS.Shared.AssemblyInfo.cs
+F:\c_app\backend\src\SahakariMS.Shared\obj\Release\net8.0\SahakariMS.Shared.csproj.CoreCompileInputs.cache
+F:\c_app\backend\src\SahakariMS.Shared\obj\Release\net8.0\SahakariMS.Shared.sourcelink.json
+F:\c_app\backend\src\SahakariMS.Shared\obj\Release\net8.0\SahakariMS.Shared.dll
+F:\c_app\backend\src\SahakariMS.Shared\obj\Release\net8.0\refint\SahakariMS.Shared.dll
+F:\c_app\backend\src\SahakariMS.Shared\obj\Release\net8.0\SahakariMS.Shared.pdb
+F:\c_app\backend\src\SahakariMS.Shared\obj\Release\net8.0\ref\SahakariMS.Shared.dll

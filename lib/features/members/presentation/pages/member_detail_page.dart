@@ -673,7 +673,7 @@ class _MemberDetailPageState extends ConsumerState<MemberDetailPage>
                       borderRadius: BorderRadius.circular(AppDimensions.radiusXl),
                       child: member.photoUrl != null
                           ? Image.network(
-                              'http://localhost:5111${member.photoUrl}',
+                              '${AppConfig.baseUrl}${member.photoUrl}',
                               width: 72,
                               height: 72,
                               fit: BoxFit.cover,
@@ -1257,7 +1257,7 @@ class _MemberDocumentsSectionState
   }
 
   Future<void> _view(String docType) async {
-    const baseUrl = 'http://localhost:5111';
+    final baseUrl = AppConfig.baseUrl;
     final url = _effectiveUrl(docType);
     if (url == null) return;
     final fullUrl = '$baseUrl$url';
@@ -1290,19 +1290,21 @@ class _MemberDocumentsSectionState
     showDialog(
       context: context,
       builder: (ctx) {
+        final screenH = MediaQuery.of(ctx).size.height;
+        final screenW = MediaQuery.of(ctx).size.width;
         return Dialog(
           backgroundColor: Colors.black,
           insetPadding: const EdgeInsets.all(24),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          child: ConstrainedBox(
-            constraints: BoxConstraints(
-              maxHeight: MediaQuery.of(ctx).size.height * 0.85,
-              maxWidth: MediaQuery.of(ctx).size.width * 0.90,
-            ),
+          child: SizedBox(
+            // Fixed concrete size — required so Expanded works
+            height: screenH * 0.82,
+            width: screenW * 0.88,
             child: Column(
-              mainAxisSize: MainAxisSize.min,
+              // max fills the SizedBox, so Expanded can divide the space
+              mainAxisSize: MainAxisSize.max,
               children: [
-                // ── Header ──────────────────────────────────────────────
+                // ── Header bar ───────────────────────────────────────────
                 Container(
                   decoration: const BoxDecoration(
                     color: Color(0xCC000000),
@@ -1333,25 +1335,22 @@ class _MemberDocumentsSectionState
                     ],
                   ),
                 ),
-                // ── Image (Flexible prevents overflow) ─────────────────
-                Flexible(
+                // ── Image — Expanded fills exact remaining height ────────
+                Expanded(
                   child: InteractiveViewer(
                     minScale: 0.5,
                     maxScale: 4.0,
                     child: Image.network(
                       fullUrl,
                       fit: BoxFit.contain,
+                      width: double.infinity,
                       loadingBuilder: (_, child, progress) => progress == null
                           ? child
                           : const Center(
-                              child: Padding(
-                                padding: EdgeInsets.all(48),
-                                child: CircularProgressIndicator(
-                                    color: Colors.white),
-                              ),
+                              child: CircularProgressIndicator(
+                                  color: Colors.white),
                             ),
-                      errorBuilder: (_, __, ___) => const Padding(
-                        padding: EdgeInsets.all(48),
+                      errorBuilder: (_, __, ___) => const Center(
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
