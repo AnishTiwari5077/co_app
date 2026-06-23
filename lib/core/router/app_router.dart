@@ -8,6 +8,7 @@ import '../../features/dashboard/presentation/pages/dashboard_page.dart';
 import '../../features/members/presentation/pages/member_list_page.dart';
 import '../../features/members/presentation/pages/member_detail_page.dart';
 import '../../features/members/presentation/pages/member_registration_page.dart';
+import '../../features/members/presentation/pages/member_edit_page.dart';
 import '../../features/loans/presentation/pages/loan_list_page.dart';
 import '../../features/loans/presentation/pages/loan_detail_page.dart';
 import '../../features/loans/presentation/pages/loan_application_page.dart';
@@ -113,6 +114,15 @@ final routerProvider = Provider<GoRouter>((ref) {
                 builder: (context, state) => MemberDetailPage(
                   memberId: state.pathParameters['id']!,
                 ),
+                routes: [
+                  GoRoute(
+                    path: 'edit',
+                    name: 'member-edit',
+                    builder: (context, state) => MemberEditPage(
+                      memberId: state.pathParameters['id']!,
+                    ),
+                  ),
+                ],
               ),
             ],
           ),

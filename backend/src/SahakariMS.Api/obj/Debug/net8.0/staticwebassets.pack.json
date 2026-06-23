@@ -1,6 +1,10 @@
 {
   "Files": [
     {
+      "Id": "F:\\c_app\\backend\\src\\SahakariMS.Api\\wwwroot\\uploads\\members\\dcf3bf05-5c42-42d0-a681-66c99ec610df\\photo_20260623165259.jpg",
+      "PackagePath": "staticwebassets\\uploads\\members\\dcf3bf05-5c42-42d0-a681-66c99ec610df\\photo_20260623165259.jpg"
+    },
+    {
       "Id": "F:\\c_app\\backend\\src\\SahakariMS.Api\\wwwroot\\uploads\\members\\f0fd6eb5-f71b-404c-b287-18a6c3ca312d\\citizenship_20260623154656.jpg",
       "PackagePath": "staticwebassets\\uploads\\members\\f0fd6eb5-f71b-404c-b287-18a6c3ca312d\\citizenship_20260623154656.jpg"
     },

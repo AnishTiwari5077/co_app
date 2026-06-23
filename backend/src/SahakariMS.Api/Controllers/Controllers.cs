@@ -105,6 +105,16 @@ public class MembersController(IMediator mediator) : ControllerBase
         return Ok(ApiResponse<object>.Ok(new { message = $"Member status updated." }));
     }
 
+    /// <summary>PUT /members/{id} — Admin and Manager can update member profile info.</summary>
+    [HttpPut("{id:guid}")]
+    [Authorize(Roles = "ADMIN,MANAGER")]
+    public async Task<IActionResult> UpdateMember(Guid id, [FromBody] Application.Members.UpdateMemberRequest request, CancellationToken ct)
+    {
+        var result = await mediator.Send(new Application.Members.UpdateMemberCommand(id, request, GetCurrentUserId()), ct);
+        if (!result.IsSuccess) return BadRequest(ApiResponse<object>.Fail(result.ErrorCode!, result.ErrorMessage!));
+        return Ok(ApiResponse<object>.Ok(new { message = "Member updated successfully." }));
+    }
+
     /// <summary>DELETE /members/{id} — Admin only. Soft-deletes a Pending or Inactive member with no financial history.</summary>
     [HttpDelete("{id:guid}")]
     [Authorize(Roles = "ADMIN")]

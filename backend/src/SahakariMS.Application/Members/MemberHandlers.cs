@@ -221,7 +221,50 @@ public class UpdateMemberStatusCommandHandler(IAppDbContext db, IUnitOfWork uow,
     }
 }
 
-// ── Delete Member Command ─────────────────────────────────────────────────────
+// ── Update Member Profile Command ─────────────────────────────────────────────
+
+public record UpdateMemberRequest(
+    string FirstName, string? MiddleName, string LastName,
+    string? Gender, string? DateOfBirthAd, string? Occupation,
+    string PhoneNumber, string? Email,
+    string? AddressDistrict, string? AddressMunicipality,
+    string? AddressWard, string? AddressTole,
+    string? CitizenshipNumber, string? PanNumber);
+
+public record UpdateMemberCommand(Guid MemberId, UpdateMemberRequest Request, Guid ActorId) : IRequest<Result>;
+
+public class UpdateMemberCommandHandler(IAppDbContext db, IUnitOfWork uow)
+    : IRequestHandler<UpdateMemberCommand, Result>
+{
+    public async Task<Result> Handle(UpdateMemberCommand cmd, CancellationToken ct)
+    {
+        var r = cmd.Request;
+        var member = await db.Members.FindAsync([cmd.MemberId], ct);
+        if (member is null || member.IsDeleted)
+            return Result.Failure("NOT_FOUND", "Member not found.");
+
+        member.FirstName           = r.FirstName.Trim();
+        member.MiddleName          = string.IsNullOrWhiteSpace(r.MiddleName) ? null : r.MiddleName.Trim();
+        member.LastName            = r.LastName.Trim();
+        member.Gender              = r.Gender;
+        member.DateOfBirthAd       = r.DateOfBirthAd is { Length: > 0 } s &&
+                                      DateOnly.TryParse(s, out var dob) ? dob : null;
+        member.Occupation          = r.Occupation;
+        member.PhoneNumber         = r.PhoneNumber.Trim();
+        member.Email               = string.IsNullOrWhiteSpace(r.Email) ? null : r.Email.Trim();
+        member.AddressDistrict     = r.AddressDistrict;
+        member.AddressMunicipality = r.AddressMunicipality;
+        member.AddressWard         = r.AddressWard;
+        member.AddressTole         = r.AddressTole;
+        member.CitizenshipNumber   = r.CitizenshipNumber;
+        member.PanNumber           = r.PanNumber;
+        member.UpdatedBy           = cmd.ActorId;
+
+        await uow.SaveChangesAsync(ct);
+        return Result.Success();
+    }
+}
+
 
 public record DeleteMemberCommand(Guid MemberId, Guid ActorId) : IRequest<Result>;
 

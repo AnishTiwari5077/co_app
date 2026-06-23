@@ -568,7 +568,12 @@ class _MemberDetailPageState extends ConsumerState<MemberDetailPage>
                 ),
         IconButton(
           icon: const Icon(Icons.edit_outlined, color: Colors.white),
-          onPressed: () {},
+          tooltip: 'Edit Member',
+          onPressed: () async {
+            await context.push('/members/${member.id}/edit');
+            // Refresh detail page after edit
+            ref.invalidate(memberDetailProvider(member.id));
+          },
         ),
         PopupMenuButton<String>(
           icon: (_isUpdatingStatus)
@@ -664,7 +669,22 @@ class _MemberDetailPageState extends ConsumerState<MemberDetailPage>
                       borderRadius: BorderRadius.circular(AppDimensions.radiusXl),
                       border: Border.all(color: Colors.white30, width: 2),
                     ),
-                    child: const Icon(Icons.person_rounded, color: Colors.white, size: 36),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(AppDimensions.radiusXl),
+                      child: member.photoUrl != null
+                          ? Image.network(
+                              'http://localhost:5111${member.photoUrl}',
+                              width: 72,
+                              height: 72,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) => const Icon(
+                                  Icons.person_rounded,
+                                  color: Colors.white,
+                                  size: 36),
+                            )
+                          : const Icon(Icons.person_rounded,
+                              color: Colors.white, size: 36),
+                    ),
                   ),
                   const SizedBox(width: AppDimensions.md),
                   Expanded(
@@ -1240,15 +1260,119 @@ class _MemberDocumentsSectionState
     const baseUrl = 'http://localhost:5111';
     final url = _effectiveUrl(docType);
     if (url == null) return;
-    final uri = Uri.parse('$baseUrl$url');
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
-    } else if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text('Cannot open file. Try downloading it.'),
-        behavior: SnackBarBehavior.floating,
-      ));
+    final fullUrl = '$baseUrl$url';
+    final isPdf = url.toLowerCase().endsWith('.pdf');
+
+    if (!mounted) return;
+    if (isPdf) {
+      // For PDFs, try to open externally
+      final uri = Uri.parse(fullUrl);
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      } else if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Cannot open PDF. Try a different viewer.'),
+          behavior: SnackBarBehavior.floating,
+        ));
+      }
+      return;
     }
+
+    // For images, show in-app dialog
+    final docs = [
+      _DocEntry('Citizenship Certificate', 'citizenship', Icons.badge_outlined, AppColors.primary),
+      _DocEntry('Passport-size Photo', 'photo', Icons.photo_camera_outlined, AppColors.secondary),
+      _DocEntry('Digital Signature', 'signature', Icons.draw_outlined, const Color(0xFF7C3AED)),
+    ];
+    final label = docs.firstWhere((d) => d.type == docType,
+        orElse: () => _DocEntry(docType, docType, Icons.image_outlined, AppColors.primary)).label;
+
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        return Dialog(
+          backgroundColor: Colors.black,
+          insetPadding: const EdgeInsets.all(24),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(ctx).size.height * 0.85,
+              maxWidth: MediaQuery.of(ctx).size.width * 0.90,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // ── Header ──────────────────────────────────────────────
+                Container(
+                  decoration: const BoxDecoration(
+                    color: Color(0xCC000000),
+                    borderRadius:
+                        BorderRadius.vertical(top: Radius.circular(12)),
+                  ),
+                  padding: const EdgeInsets.fromLTRB(16, 8, 8, 8),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.image_outlined,
+                          color: Colors.white70, size: 18),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          label,
+                          style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 14),
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close_rounded,
+                            color: Colors.white70, size: 20),
+                        onPressed: () => Navigator.of(ctx).pop(),
+                        visualDensity: VisualDensity.compact,
+                      ),
+                    ],
+                  ),
+                ),
+                // ── Image (Flexible prevents overflow) ─────────────────
+                Flexible(
+                  child: InteractiveViewer(
+                    minScale: 0.5,
+                    maxScale: 4.0,
+                    child: Image.network(
+                      fullUrl,
+                      fit: BoxFit.contain,
+                      loadingBuilder: (_, child, progress) => progress == null
+                          ? child
+                          : const Center(
+                              child: Padding(
+                                padding: EdgeInsets.all(48),
+                                child: CircularProgressIndicator(
+                                    color: Colors.white),
+                              ),
+                            ),
+                      errorBuilder: (_, __, ___) => const Padding(
+                        padding: EdgeInsets.all(48),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.broken_image_rounded,
+                                color: Colors.white38, size: 56),
+                            SizedBox(height: 12),
+                            Text('Could not load image',
+                                style: TextStyle(
+                                    color: Colors.white54, fontSize: 13)),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
 
   @override
