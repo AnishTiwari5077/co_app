@@ -160,7 +160,7 @@ class ReportsPdfGenerator {
                 final name =
                     '${m['firstName'] ?? ''} ${m['middleName'] ?? ''} ${m['lastName'] ?? ''}'
                         .trim();
-                final status = m['status'] as String? ?? '—';
+                final status = m['status'] as String? ?? 'N/A';
                 final statusColor = status == 'Active'
                     ? _secondary
                     : status == 'Pending'
@@ -173,10 +173,10 @@ class ReportsPdfGenerator {
                       color: i.isEven ? PdfColors.white : _light),
                   children: [
                     _td('${i + 1}'),
-                    _td(m['memberCode'] as String? ?? '—'),
+                    _td(m['memberCode'] as String? ?? 'N/A'),
                     _td(name),
-                    _td(m['phoneNumber'] as String? ?? '—'),
-                    _td(m['addressDistrict'] as String? ?? '—'),
+                    _td(m['phoneNumber'] as String? ?? 'N/A'),
+                    _td(m['addressDistrict'] as String? ?? 'N/A'),
                     _tdBadge(status, statusColor),
                     _td(_shortDate(m['membershipDate'])),
                   ],
@@ -263,7 +263,7 @@ class ReportsPdfGenerator {
               ...data.asMap().entries.map((e) {
                 final i = e.key;
                 final l = e.value;
-                final status = l['status'] as String? ?? '—';
+                final status = l['status'] as String? ?? 'N/A';
                 final statusColor = status == 'Disbursed' || status == 'Active'
                     ? _secondary
                     : status == 'Overdue'
@@ -276,8 +276,8 @@ class ReportsPdfGenerator {
                   decoration: pw.BoxDecoration(
                       color: i.isEven ? PdfColors.white : _light),
                   children: [
-                    _td(l['loanNumber'] as String? ?? '—'),
-                    _td(l['memberName'] as String? ?? '—'),
+                    _td(l['loanNumber'] as String? ?? 'N/A'),
+                    _td(l['memberName'] as String? ?? 'N/A'),
                     _tdBadge(status, statusColor),
                     _td(_fmt.format((l['approvedAmount'] as num?)?.toDouble() ?? 0), right: true),
                     _td(_fmt.format((l['outstandingBalance'] as num?)?.toDouble() ?? 0), right: true),
@@ -365,9 +365,9 @@ class ReportsPdfGenerator {
                       color: i.isEven ? PdfColors.white : _light),
                   children: [
                     _td('${i + 1}'),
-                    _td(a['accountNumber'] as String? ?? '—'),
-                    _td(a['memberName'] as String? ?? '—'),
-                    _td(a['schemeName'] as String? ?? '—'),
+                    _td(a['accountNumber'] as String? ?? 'N/A'),
+                    _td(a['memberName'] as String? ?? 'N/A'),
+                    _td(a['schemeName'] as String? ?? 'N/A'),
                     _td(
                       _fmt.format((a['balance'] as num?)?.toDouble() ?? 0),
                       right: true,
@@ -443,12 +443,12 @@ class ReportsPdfGenerator {
                   decoration: pw.BoxDecoration(
                       color: i.isEven ? PdfColors.white : _light),
                   children: [
-                    _td(en['accountCode'] as String? ?? '—'),
-                    _td(en['accountName'] as String? ?? '—'),
-                    _td(en['accountType'] as String? ?? '—'),
-                    _td(debit > 0 ? _fmt.format(debit) : '—',
+                    _td(en['accountCode'] as String? ?? 'N/A'),
+                    _td(en['accountName'] as String? ?? 'N/A'),
+                    _td(en['accountType'] as String? ?? 'N/A'),
+                    _td(debit > 0 ? _fmt.format(debit) : '-',
                         right: true, color: debit > 0 ? _error : _grey),
-                    _td(credit > 0 ? _fmt.format(credit) : '—',
+                    _td(credit > 0 ? _fmt.format(credit) : '-',
                         right: true, color: credit > 0 ? _secondary : _grey),
                   ],
                 );
@@ -524,7 +524,7 @@ class ReportsPdfGenerator {
   static pw.Widget Function(pw.Context) get _footer => (ctx) => pw.Row(
         mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
         children: [
-          pw.Text('SahakariMS v1.0 — Confidential',
+          pw.Text('SahakariMS v1.0 - Confidential',
               style: pw.TextStyle(fontSize: 7, color: _grey)),
           pw.Text('Page ${ctx.pageNumber} of ${ctx.pagesCount}',
               style: pw.TextStyle(fontSize: 7, color: _grey)),
@@ -612,7 +612,7 @@ class ReportsPdfGenerator {
       );
 
   static String _shortDate(dynamic raw) {
-    if (raw == null) return '—';
+    if (raw == null) return 'N/A';
     final s = raw.toString();
     if (s.length >= 10) return s.substring(0, 10);
     return s;
