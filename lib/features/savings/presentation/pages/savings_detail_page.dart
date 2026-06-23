@@ -9,6 +9,7 @@ import '../../../../shared/widgets/status_badge.dart';
 import '../../../../shared/widgets/common_widgets.dart';
 import '../../../../shared/widgets/app_button.dart';
 import '../../../../core/api/api_client.dart';
+import 'savings_pdf_generator.dart';
 
 // ── Models ────────────────────────────────────────────────────────────────────
 
@@ -228,6 +229,41 @@ class _SavingsDetailPageState extends ConsumerState<SavingsDetailPage>
               onPressed: () => context.pop(),
             ),
             actions: [
+              // Download Statement button
+              Consumer(builder: (ctx, ref, _) {
+                final txnState = ref.watch(_txnProvider(widget.accountId));
+                return IconButton(
+                  icon: const Icon(Icons.download_rounded, color: Colors.white),
+                  tooltip: 'Download Statement PDF',
+                  onPressed: () => SavingsPdfGenerator.previewAndPrint(
+                    context,
+                    account: {
+                      'accountNumber': detail.accountNumber,
+                      'memberName': detail.memberName,
+                      'accountType': detail.accountType,
+                      'schemeName': detail.schemeName,
+                      'status': detail.status,
+                      'branch': detail.branch,
+                      'openDate': detail.openDate,
+                      'balance': detail.balance,
+                      'interestRate': detail.interestRate,
+                      'totalDeposits': detail.totalDeposits,
+                      'totalWithdrawals': detail.totalWithdrawals,
+                    },
+                    transactions: txnState.items
+                        .map((t) => {
+                              'transactionDate': t.transactionDate.toIso8601String(),
+                              'receiptNumber': t.receiptNumber,
+                              'transactionType': t.transactionType,
+                              'mode': t.mode,
+                              'amount': t.amount,
+                              'balanceAfter': t.balanceAfter,
+                              'narration': t.narration,
+                            })
+                        .toList(),
+                  ),
+                );
+              }),
               IconButton(
                 icon: const Icon(Icons.refresh_rounded, color: Colors.white),
                 onPressed: () {
