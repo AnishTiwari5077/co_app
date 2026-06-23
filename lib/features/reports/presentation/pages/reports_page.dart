@@ -1,8 +1,43 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/theme/app_dimensions.dart';
+import '../../../../core/api/api_client.dart';
+import 'reports_pdf_generator.dart';
+
+// ── Providers ─────────────────────────────────────────────────────────────────
+
+final _membersReportProvider = FutureProvider<List<Map<String, dynamic>>>((ref) async {
+  final dio = ref.watch(dioProvider);
+  final res = await dio.get('/api/v1/members', queryParameters: {'pageSize': 500});
+  final envelope = res.data as Map<String, dynamic>;
+  return (envelope['data'] as List<dynamic>? ?? []).cast<Map<String, dynamic>>();
+});
+
+final _loansReportProvider = FutureProvider<List<Map<String, dynamic>>>((ref) async {
+  final dio = ref.watch(dioProvider);
+  final res = await dio.get('/api/v1/loans', queryParameters: {'pageSize': 500});
+  final envelope = res.data as Map<String, dynamic>;
+  return (envelope['data'] as List<dynamic>? ?? []).cast<Map<String, dynamic>>();
+});
+
+final _savingsReportProvider = FutureProvider<List<Map<String, dynamic>>>((ref) async {
+  final dio = ref.watch(dioProvider);
+  final res = await dio.get('/api/v1/savings/accounts', queryParameters: {'pageSize': 500});
+  final envelope = res.data as Map<String, dynamic>;
+  return (envelope['data'] as List<dynamic>? ?? []).cast<Map<String, dynamic>>();
+});
+
+final _trialBalanceProvider = FutureProvider.family<Map<String, dynamic>, String>((ref, date) async {
+  final dio = ref.watch(dioProvider);
+  final res = await dio.get('/api/v1/accounting/trial-balance', queryParameters: {'asOfDate': date});
+  final envelope = res.data as Map<String, dynamic>;
+  return (envelope['data'] as Map<String, dynamic>?) ?? {};
+});
+
+// ── Page ──────────────────────────────────────────────────────────────────────
 
 class ReportsPage extends ConsumerWidget {
   const ReportsPage({super.key});
@@ -15,76 +50,425 @@ class ReportsPage extends ConsumerWidget {
         title: const Text('Reports', style: AppTextStyles.titleLarge),
         backgroundColor: AppColors.surface,
         elevation: 0,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh_rounded),
+            tooltip: 'Refresh data',
+            onPressed: () {
+              ref.invalidate(_membersReportProvider);
+              ref.invalidate(_loansReportProvider);
+              ref.invalidate(_savingsReportProvider);
+            },
+          ),
+        ],
       ),
       body: ListView(
         padding: const EdgeInsets.all(AppDimensions.md),
-        children: const [
+        children: [
           _ReportCategory(
             title: 'Financial Reports',
             icon: Icons.account_balance_outlined,
             color: AppColors.primary,
             reports: [
-              _ReportItem(title: 'Trial Balance', subtitle: 'Debit/Credit summary by account', icon: Icons.balance_rounded),
-              _ReportItem(title: 'Income Statement', subtitle: 'Profit & Loss for fiscal year', icon: Icons.trending_up_rounded),
-              _ReportItem(title: 'Balance Sheet', subtitle: 'Assets, Liabilities & Equity', icon: Icons.account_balance_rounded),
-              _ReportItem(title: 'Cash Flow Statement', subtitle: 'Cash inflows and outflows', icon: Icons.currency_rupee_rounded),
+              _ReportItem(
+                title: 'Trial Balance',
+                subtitle: 'Debit/Credit summary by account',
+                icon: Icons.balance_rounded,
+                onTap: (ctx, ref) => _showTrialBalanceSheet(ctx, ref),
+              ),
+              _ReportItem(
+                title: 'Member List',
+                subtitle: 'All registered members with status',
+                icon: Icons.people_rounded,
+                onTap: (ctx, ref) =>
+                    _showReportSheet(ctx, ref, 'Member List Report',
+                        'All registered members', Icons.people_rounded,
+                        AppColors.primary, () async {
+                      final members = await ref.read(_membersReportProvider.future);
+                      if (ctx.mounted) {
+                        await ReportsPdfGenerator.previewMemberList(ctx, members);
+                      }
+                    }),
+              ),
+              _ReportItem(
+                title: 'Savings Summary',
+                subtitle: 'All savings accounts & balances',
+                icon: Icons.savings_rounded,
+                onTap: (ctx, ref) =>
+                    _showReportSheet(ctx, ref, 'Savings Summary Report',
+                        'All savings accounts', Icons.savings_rounded,
+                        AppColors.secondary, () async {
+                      final accounts = await ref.read(_savingsReportProvider.future);
+                      if (ctx.mounted) {
+                        await ReportsPdfGenerator.previewSavingsSummary(ctx, accounts);
+                      }
+                    }),
+              ),
             ],
           ),
-          SizedBox(height: AppDimensions.md),
+          const SizedBox(height: AppDimensions.md),
           _ReportCategory(
             title: 'Loan Reports',
             icon: Icons.account_balance_wallet_outlined,
             color: AppColors.accent,
             reports: [
-              _ReportItem(title: 'Loan Portfolio', subtitle: 'All active loans by type', icon: Icons.list_alt_rounded),
-              _ReportItem(title: 'NPA Report', subtitle: 'Non-performing assets analysis', icon: Icons.warning_amber_rounded),
-              _ReportItem(title: 'Overdue Loans', subtitle: 'Past due installments report', icon: Icons.schedule_outlined),
-              _ReportItem(title: 'Loan Recovery', subtitle: 'Monthly EMI collection report', icon: Icons.payments_rounded),
-              _ReportItem(title: 'Disbursement Report', subtitle: 'Loans disbursed by period', icon: Icons.send_rounded),
+              _ReportItem(
+                title: 'Loan Portfolio',
+                subtitle: 'All active loans by status',
+                icon: Icons.list_alt_rounded,
+                onTap: (ctx, ref) =>
+                    _showReportSheet(ctx, ref, 'Loan Portfolio Report',
+                        'All loans', Icons.list_alt_rounded, AppColors.accent,
+                        () async {
+                      final loans = await ref.read(_loansReportProvider.future);
+                      if (ctx.mounted) {
+                        await ReportsPdfGenerator.previewLoanPortfolio(ctx, loans);
+                      }
+                    }),
+              ),
+              _ReportItem(
+                title: 'NPA Report',
+                subtitle: 'Non-performing assets (overdue > 90 days)',
+                icon: Icons.warning_amber_rounded,
+                onTap: (ctx, ref) =>
+                    _showReportSheet(ctx, ref, 'NPA Report',
+                        'Non-performing assets', Icons.warning_amber_rounded,
+                        AppColors.error, () async {
+                      final loans = await ref.read(_loansReportProvider.future);
+                      if (ctx.mounted) {
+                        await ReportsPdfGenerator.previewNpaReport(ctx, loans);
+                      }
+                    }),
+              ),
+              _ReportItem(
+                title: 'Overdue Loans',
+                subtitle: 'Past due installments report',
+                icon: Icons.schedule_outlined,
+                onTap: (ctx, ref) =>
+                    _showReportSheet(ctx, ref, 'Overdue Loans',
+                        'Loans with outstanding overdue amounts',
+                        Icons.schedule_outlined, AppColors.error, () async {
+                      final loans = await ref.read(_loansReportProvider.future);
+                      if (ctx.mounted) {
+                        await ReportsPdfGenerator.previewOverdueLoans(ctx, loans);
+                      }
+                    }),
+              ),
+              _ReportItem(
+                title: 'Disbursed Loans',
+                subtitle: 'All disbursed loans',
+                icon: Icons.send_rounded,
+                onTap: (ctx, ref) =>
+                    _showReportSheet(ctx, ref, 'Disbursed Loans Report',
+                        'All loans with Disbursed status',
+                        Icons.send_rounded, AppColors.accent, () async {
+                      final loans = await ref.read(_loansReportProvider.future);
+                      if (ctx.mounted) {
+                        await ReportsPdfGenerator.previewLoanPortfolio(
+                            ctx, loans,
+                            statusFilter: 'Disbursed');
+                      }
+                    }),
+              ),
             ],
           ),
-          SizedBox(height: AppDimensions.md),
-          _ReportCategory(
-            title: 'Savings Reports',
-            icon: Icons.savings_outlined,
-            color: AppColors.secondary,
-            reports: [
-              _ReportItem(title: 'Savings Summary', subtitle: 'Total savings by account type', icon: Icons.summarize_rounded),
-              _ReportItem(title: 'Interest Accrual', subtitle: 'Daily interest calculation', icon: Icons.calculate_rounded),
-              _ReportItem(title: 'Dormant Accounts', subtitle: 'Inactive accounts > 12 months', icon: Icons.hourglass_empty_rounded),
-              _ReportItem(title: 'Fixed Deposit Maturity', subtitle: 'FDs maturing this month', icon: Icons.lock_clock_outlined),
-            ],
-          ),
-          SizedBox(height: AppDimensions.md),
+          const SizedBox(height: AppDimensions.md),
           _ReportCategory(
             title: 'Member Reports',
             icon: Icons.people_outline_rounded,
-            color: Color(0xFF7C3AED),
+            color: const Color(0xFF7C3AED),
             reports: [
-              _ReportItem(title: 'Member List', subtitle: 'All members with status', icon: Icons.people_rounded),
-              _ReportItem(title: 'New Members', subtitle: 'Members registered this month', icon: Icons.person_add_rounded),
-              _ReportItem(title: 'Member Demographics', subtitle: 'Gender, age, district breakdown', icon: Icons.bar_chart_rounded),
-              _ReportItem(title: 'Share Capital Report', subtitle: 'Shares held per member', icon: Icons.pie_chart_rounded),
+              _ReportItem(
+                title: 'Active Members',
+                subtitle: 'Members with Active status',
+                icon: Icons.person_rounded,
+                onTap: (ctx, ref) =>
+                    _showReportSheet(ctx, ref, 'Active Members Report',
+                        'All active members', Icons.person_rounded,
+                        const Color(0xFF7C3AED), () async {
+                      final all = await ref.read(_membersReportProvider.future);
+                      final members =
+                          all.where((m) => m['status'] == 'Active').toList();
+                      if (ctx.mounted) {
+                        await ReportsPdfGenerator.previewMemberList(ctx, members);
+                      }
+                    }),
+              ),
+              _ReportItem(
+                title: 'Pending Approvals',
+                subtitle: 'Members awaiting activation',
+                icon: Icons.pending_actions_rounded,
+                onTap: (ctx, ref) =>
+                    _showReportSheet(ctx, ref, 'Pending Members Report',
+                        'Members awaiting approval',
+                        Icons.pending_actions_rounded, AppColors.accent,
+                        () async {
+                      final all = await ref.read(_membersReportProvider.future);
+                      final members =
+                          all.where((m) => m['status'] == 'Pending').toList();
+                      if (ctx.mounted) {
+                        await ReportsPdfGenerator.previewMemberList(ctx, members);
+                      }
+                    }),
+              ),
+              _ReportItem(
+                title: 'Full Member Registry',
+                subtitle: 'All members with full details',
+                icon: Icons.people_rounded,
+                onTap: (ctx, ref) =>
+                    _showReportSheet(ctx, ref, 'Member Registry',
+                        'Complete member list', Icons.people_rounded,
+                        const Color(0xFF7C3AED), () async {
+                      final members =
+                          await ref.read(_membersReportProvider.future);
+                      if (ctx.mounted) {
+                        await ReportsPdfGenerator.previewMemberList(ctx, members);
+                      }
+                    }),
+              ),
             ],
           ),
-          SizedBox(height: AppDimensions.md),
-          _ReportCategory(
-            title: 'Compliance Reports',
-            icon: Icons.gavel_rounded,
-            color: AppColors.error,
-            reports: [
-              _ReportItem(title: 'COPOMIS Export', subtitle: 'Quarterly DoC submission XML', icon: Icons.description_rounded),
-              _ReportItem(title: 'PEARLS Ratios', subtitle: 'Credit union performance metrics', icon: Icons.analytics_rounded),
-              _ReportItem(title: 'AML Report', subtitle: 'Large transaction flags', icon: Icons.security_rounded),
-              _ReportItem(title: 'Audit Trail', subtitle: 'System activity log export', icon: Icons.history_rounded),
-            ],
-          ),
-          SizedBox(height: AppDimensions.xxl),
+          const SizedBox(height: AppDimensions.xxl),
         ],
       ),
     );
   }
+
+  static Future<void> _showTrialBalanceSheet(
+      BuildContext ctx, WidgetRef ref) async {
+    DateTime selectedDate = DateTime.now();
+
+    await showModalBottomSheet(
+      context: ctx,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius:
+            BorderRadius.vertical(top: Radius.circular(AppDimensions.radiusXl)),
+      ),
+      builder: (sheetCtx) => StatefulBuilder(
+        builder: (sheetCtx, setLocal) => Padding(
+          padding: const EdgeInsets.all(AppDimensions.lg),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(children: [
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(Icons.balance_rounded,
+                      color: AppColors.primary, size: 22),
+                ),
+                const SizedBox(width: 12),
+                const Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Trial Balance', style: AppTextStyles.titleLarge),
+                    Text('Debit/Credit summary by account',
+                        style: AppTextStyles.bodySmall),
+                  ],
+                ),
+              ]),
+              const SizedBox(height: AppDimensions.md),
+              const Divider(),
+              const SizedBox(height: AppDimensions.sm),
+              const Text('As of Date', style: AppTextStyles.labelMedium),
+              const SizedBox(height: 6),
+              InkWell(
+                onTap: () async {
+                  final picked = await showDatePicker(
+                    context: sheetCtx,
+                    initialDate: selectedDate,
+                    firstDate: DateTime(2020),
+                    lastDate: DateTime.now(),
+                  );
+                  if (picked != null) setLocal(() => selectedDate = picked);
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 12, vertical: 12),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: AppColors.primary.withValues(alpha: 0.4)),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(children: [
+                    const Icon(Icons.calendar_today_rounded,
+                        size: 16, color: AppColors.primary),
+                    const SizedBox(width: 8),
+                    Text(DateFormat('yyyy-MM-dd').format(selectedDate),
+                        style: AppTextStyles.bodyMedium
+                            .copyWith(color: AppColors.primary)),
+                    const Spacer(),
+                    const Icon(Icons.edit_rounded,
+                        size: 14, color: AppColors.textSecondary),
+                  ]),
+                ),
+              ),
+              const SizedBox(height: AppDimensions.lg),
+              _GenerateButton(
+                label: 'Generate Trial Balance PDF',
+                icon: Icons.picture_as_pdf_rounded,
+                color: AppColors.primary,
+                onTap: () async {
+                  Navigator.pop(sheetCtx);
+                  final dateStr =
+                      DateFormat('yyyy-MM-dd').format(selectedDate);
+                  try {
+                    final tb = await ref
+                        .read(_trialBalanceProvider(dateStr).future);
+                    if (ctx.mounted) {
+                      await ReportsPdfGenerator.previewTrialBalance(
+                          ctx, tb, dateStr);
+                    }
+                  } catch (e) {
+                    if (ctx.mounted) {
+                      ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(
+                        content: Text('Failed: ${e.toString()}'),
+                        backgroundColor: AppColors.error,
+                        behavior: SnackBarBehavior.floating,
+                      ));
+                    }
+                  }
+                },
+              ),
+              const SizedBox(height: AppDimensions.md),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  static Future<void> _showReportSheet(
+    BuildContext ctx,
+    WidgetRef ref,
+    String title,
+    String subtitle,
+    IconData icon,
+    Color color,
+    Future<void> Function() onGenerate,
+  ) async {
+    await showModalBottomSheet(
+      context: ctx,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius:
+            BorderRadius.vertical(top: Radius.circular(AppDimensions.radiusXl)),
+      ),
+      builder: (sheetCtx) => Padding(
+        padding: const EdgeInsets.all(AppDimensions.lg),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(icon, color: color, size: 22),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(title, style: AppTextStyles.titleLarge),
+                    Text(subtitle, style: AppTextStyles.bodySmall),
+                  ],
+                ),
+              ),
+            ]),
+            const SizedBox(height: AppDimensions.md),
+            const Divider(),
+            const SizedBox(height: AppDimensions.sm),
+            _GenerateButton(
+              label: 'Export as PDF',
+              icon: Icons.picture_as_pdf_rounded,
+              color: color,
+              onTap: () async {
+                Navigator.pop(sheetCtx);
+                try {
+                  await onGenerate();
+                } catch (e) {
+                  if (ctx.mounted) {
+                    ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(
+                      content: Text('Failed: ${e.toString()}'),
+                      backgroundColor: AppColors.error,
+                      behavior: SnackBarBehavior.floating,
+                    ));
+                  }
+                }
+              },
+            ),
+            const SizedBox(height: AppDimensions.md),
+          ],
+        ),
+      ),
+    );
+  }
 }
+
+// ── Reusable generate button ──────────────────────────────────────────────────
+
+class _GenerateButton extends StatefulWidget {
+  final String label;
+  final IconData icon;
+  final Color color;
+  final Future<void> Function() onTap;
+  const _GenerateButton(
+      {required this.label,
+      required this.icon,
+      required this.color,
+      required this.onTap});
+
+  @override
+  State<_GenerateButton> createState() => _GenerateButtonState();
+}
+
+class _GenerateButtonState extends State<_GenerateButton> {
+  bool _loading = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: double.infinity,
+      child: FilledButton.icon(
+        onPressed: _loading
+            ? null
+            : () async {
+                setState(() => _loading = true);
+                await widget.onTap();
+                if (mounted) setState(() => _loading = false);
+              },
+        style: FilledButton.styleFrom(
+          backgroundColor: widget.color,
+          padding: const EdgeInsets.symmetric(vertical: 14),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        ),
+        icon: _loading
+            ? const SizedBox(
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(
+                    strokeWidth: 2, color: Colors.white))
+            : Icon(widget.icon, size: 18),
+        label: Text(_loading ? 'Generating...' : widget.label,
+            style: const TextStyle(fontWeight: FontWeight.w600)),
+      ),
+    );
+  }
+}
+
+// ── Report Category & Item widgets ────────────────────────────────────────────
 
 class _ReportCategory extends StatelessWidget {
   final String title;
@@ -104,20 +488,19 @@ class _ReportCategory extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(6),
-              decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(AppDimensions.radiusSm),
-              ),
-              child: Icon(icon, color: color, size: 18),
+        Row(children: [
+          Container(
+            padding: const EdgeInsets.all(6),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(AppDimensions.radiusSm),
             ),
-            const SizedBox(width: AppDimensions.xs),
-            Text(title, style: AppTextStyles.titleMedium.copyWith(color: color)),
-          ],
-        ),
+            child: Icon(icon, color: color, size: 18),
+          ),
+          const SizedBox(width: AppDimensions.xs),
+          Text(title,
+              style: AppTextStyles.titleMedium.copyWith(color: color)),
+        ]),
         const SizedBox(height: AppDimensions.sm),
         Container(
           decoration: BoxDecoration(
@@ -128,102 +511,77 @@ class _ReportCategory extends StatelessWidget {
           child: Column(
             children: List.generate(reports.length, (i) {
               final r = reports[i];
-              return Column(
-                children: [
-                  InkWell(
-                    onTap: () => _showReportOptions(context, r),
+              return Column(children: [
+                Consumer(
+                  builder: (ctx, ref, _) => InkWell(
+                    onTap: () => r.onTap(ctx, ref),
                     borderRadius: i == 0
-                        ? const BorderRadius.vertical(top: Radius.circular(AppDimensions.radiusLg))
+                        ? const BorderRadius.vertical(
+                            top: Radius.circular(AppDimensions.radiusLg))
                         : i == reports.length - 1
-                            ? const BorderRadius.vertical(bottom: Radius.circular(AppDimensions.radiusLg))
+                            ? const BorderRadius.vertical(
+                                bottom: Radius.circular(AppDimensions.radiusLg))
                             : BorderRadius.zero,
                     child: Padding(
                       padding: const EdgeInsets.all(AppDimensions.md),
-                      child: Row(
-                        children: [
-                          Container(
-                            width: 40, height: 40,
-                            decoration: BoxDecoration(
-                              color: color.withValues(alpha: 0.08),
-                              borderRadius: BorderRadius.circular(AppDimensions.radiusMd),
-                            ),
-                            child: Icon(r.icon, color: color, size: 20),
+                      child: Row(children: [
+                        Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
+                            color: color.withValues(alpha: 0.08),
+                            borderRadius:
+                                BorderRadius.circular(AppDimensions.radiusMd),
                           ),
-                          const SizedBox(width: AppDimensions.sm),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(r.title, style: AppTextStyles.titleSmall),
-                                Text(r.subtitle,
-                                    style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondary)),
-                              ],
-                            ),
-                          ),
-                          Row(
-                            mainAxisSize: MainAxisSize.min,
+                          child: Icon(r.icon, color: color, size: 20),
+                        ),
+                        const SizedBox(width: AppDimensions.sm),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              IconButton(
-                                icon: const Icon(Icons.download_rounded, size: 18),
-                                color: AppColors.textSecondary,
-                                onPressed: () {},
-                                tooltip: 'Export PDF',
-                                padding: EdgeInsets.zero,
-                              ),
-                              const Icon(Icons.chevron_right_rounded, color: AppColors.textSecondary),
+                              Text(r.title, style: AppTextStyles.titleSmall),
+                              Text(r.subtitle,
+                                  style: AppTextStyles.bodySmall.copyWith(
+                                      color: AppColors.textSecondary)),
                             ],
                           ),
-                        ],
-                      ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: color.withValues(alpha: 0.08),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.picture_as_pdf_rounded,
+                                  size: 14, color: color),
+                              const SizedBox(width: 4),
+                              Text('PDF',
+                                  style: TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w600,
+                                      color: color)),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        const Icon(Icons.chevron_right_rounded,
+                            color: AppColors.textSecondary),
+                      ]),
                     ),
                   ),
-                  if (i < reports.length - 1)
-                    const Divider(height: 1, indent: AppDimensions.md),
-                ],
-              );
+                ),
+                if (i < reports.length - 1)
+                  const Divider(height: 1, indent: AppDimensions.md),
+              ]);
             }),
           ),
         ),
       ],
-    );
-  }
-
-  void _showReportOptions(BuildContext context, _ReportItem report) {
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(AppDimensions.radiusXl)),
-      ),
-      builder: (ctx) => Padding(
-        padding: const EdgeInsets.all(AppDimensions.lg),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(report.title, style: AppTextStyles.titleLarge),
-            Text(report.subtitle, style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondary)),
-            const SizedBox(height: AppDimensions.md),
-            const Divider(),
-            const SizedBox(height: AppDimensions.sm),
-            ListTile(
-              leading: const Icon(Icons.visibility_rounded, color: AppColors.primary),
-              title: const Text('View Report'),
-              onTap: () => Navigator.pop(ctx),
-            ),
-            ListTile(
-              leading: const Icon(Icons.picture_as_pdf_rounded, color: AppColors.error),
-              title: const Text('Export as PDF'),
-              onTap: () => Navigator.pop(ctx),
-            ),
-            ListTile(
-              leading: const Icon(Icons.table_chart_rounded, color: AppColors.secondary),
-              title: const Text('Export as Excel'),
-              onTap: () => Navigator.pop(ctx),
-            ),
-            const SizedBox(height: AppDimensions.md),
-          ],
-        ),
-      ),
     );
   }
 }
@@ -231,5 +589,10 @@ class _ReportCategory extends StatelessWidget {
 class _ReportItem {
   final String title, subtitle;
   final IconData icon;
-  const _ReportItem({required this.title, required this.subtitle, required this.icon});
+  final Future<void> Function(BuildContext ctx, WidgetRef ref) onTap;
+  const _ReportItem(
+      {required this.title,
+      required this.subtitle,
+      required this.icon,
+      required this.onTap});
 }
