@@ -68,6 +68,7 @@ dependencies:
   # ─── Notifications ───────────────────────────────────────────────────────────
 
   # ─── Image & Camera ──────────────────────────────────────────────────────────
+  file_picker: ^8.1.2
   # image_picker removed (native deps - add back when needed)
 
 dev_dependencies:

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/theme/app_dimensions.dart';
@@ -24,6 +26,8 @@ class MemberDetail {
   final String status;
   final bool kycVerified;
   final String? photoUrl;
+  final String? citizenshipDocUrl;
+  final String? signatureUrl;
   final List<SavingAccountSummary> savingAccounts;
   final List<LoanSummary> loans;
   final List<MemberNomineeSummary> nominees;
@@ -38,6 +42,7 @@ class MemberDetail {
     required this.phoneNumber,
     this.email,
     required this.status, required this.kycVerified, this.photoUrl,
+    this.citizenshipDocUrl, this.signatureUrl,
     required this.savingAccounts, required this.loans, required this.nominees,
   }) : fullName = [firstName, if (middleName != null && middleName.isNotEmpty) middleName, lastName].join(' ');
 
@@ -62,6 +67,8 @@ class MemberDetail {
     status: j['status'] as String? ?? 'Pending',
     kycVerified: j['kycVerified'] as bool? ?? false,
     photoUrl: j['photoUrl'] as String?,
+    citizenshipDocUrl: j['citizenshipDocUrl'] as String?,
+    signatureUrl: j['signatureUrl'] as String?,
     savingAccounts: (j['savingAccounts'] as List<dynamic>? ?? [])
         .map((e) => SavingAccountSummary.fromJson(e as Map<String, dynamic>))
         .toList(),
@@ -832,6 +839,10 @@ class _ProfileTab extends StatelessWidget {
           ]),
         ],
 
+        // ── Uploaded Documents ────────────────────────────────────────────
+        const SizedBox(height: AppDimensions.md),
+        _MemberDocumentsSection(member: member),
+
         // ── Membership Details ────────────────────────────────────────────
         const SizedBox(height: AppDimensions.md),
         _InfoSection(title: 'Membership Details', rows: [
@@ -1145,4 +1156,215 @@ class _TabBarDelegate extends SliverPersistentHeaderDelegate {
 
   @override
   bool shouldRebuild(covariant _TabBarDelegate oldDelegate) => false;
+}
+
+// ── Member Documents Section ─────────────────────────────────────────────────
+
+class _MemberDocumentsSection extends ConsumerStatefulWidget {
+  final MemberDetail member;
+  const _MemberDocumentsSection({required this.member});
+
+  @override
+  ConsumerState<_MemberDocumentsSection> createState() =>
+      _MemberDocumentsSectionState();
+}
+
+class _MemberDocumentsSectionState
+    extends ConsumerState<_MemberDocumentsSection> {
+  // Track uploading state per docType
+  final _uploading = <String, bool>{};
+  // Local override URLs after upload
+  String? _localPhotoUrl;
+  String? _localCitizenshipUrl;
+  String? _localSignatureUrl;
+
+  String? _effectiveUrl(String docType) {
+    switch (docType) {
+      case 'photo':       return _localPhotoUrl       ?? widget.member.photoUrl;
+      case 'citizenship': return _localCitizenshipUrl  ?? widget.member.citizenshipDocUrl;
+      case 'signature':   return _localSignatureUrl    ?? widget.member.signatureUrl;
+    }
+    return null;
+  }
+
+  Future<void> _upload(String docType) async {
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: ['jpg', 'jpeg', 'png', 'pdf', 'webp'],
+      withData: false,
+    );
+    if (result == null || result.files.isEmpty || result.files.first.path == null) return;
+    final file = result.files.first;
+
+    setState(() => _uploading[docType] = true);
+    try {
+      final dio = ref.read(dioProvider);
+      final formData = FormData.fromMap({
+        'docType': docType,
+        'file': await MultipartFile.fromFile(file.path!, filename: file.name),
+      });
+      final res = await dio.post(
+          '/api/v1/members/${widget.member.id}/upload-document',
+          data: formData);
+      final url = (res.data as Map<String, dynamic>?)?['data']?['url'] as String?;
+      if (url != null && mounted) {
+        setState(() {
+          switch (docType) {
+            case 'photo':       _localPhotoUrl       = url; break;
+            case 'citizenship': _localCitizenshipUrl  = url; break;
+            case 'signature':   _localSignatureUrl    = url; break;
+          }
+        });
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: const Text('Document uploaded successfully!'),
+            backgroundColor: AppColors.secondary,
+            behavior: SnackBarBehavior.floating,
+          ));
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('Upload failed: $e'),
+          backgroundColor: AppColors.error,
+          behavior: SnackBarBehavior.floating,
+        ));
+      }
+    } finally {
+      if (mounted) setState(() => _uploading.remove(docType));
+    }
+  }
+
+  Future<void> _view(String docType) async {
+    const baseUrl = 'http://localhost:5111';
+    final url = _effectiveUrl(docType);
+    if (url == null) return;
+    final uri = Uri.parse('$baseUrl$url');
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } else if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('Cannot open file. Try downloading it.'),
+        behavior: SnackBarBehavior.floating,
+      ));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final docs = [
+      _DocEntry('Citizenship Certificate', 'citizenship', Icons.badge_outlined, AppColors.primary),
+      _DocEntry('Passport-size Photo', 'photo', Icons.photo_camera_outlined, AppColors.secondary),
+      _DocEntry('Digital Signature', 'signature', Icons.draw_outlined, const Color(0xFF7C3AED)),
+    ];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(children: [
+          const Icon(Icons.folder_open_rounded, size: 18, color: AppColors.primary),
+          const SizedBox(width: 6),
+          Text('Uploaded Documents',
+              style: AppTextStyles.titleSmall.copyWith(color: AppColors.primary)),
+        ]),
+        const SizedBox(height: AppDimensions.sm),
+        Container(
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(AppDimensions.radiusLg),
+            border: Border.all(color: const Color(0xFFE8EDF3)),
+          ),
+          child: Column(
+            children: List.generate(docs.length, (i) {
+              final doc = docs[i];
+              final url = _effectiveUrl(doc.type);
+              final hasFile = url != null;
+              final isUploading = _uploading[doc.type] == true;
+              return Column(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.all(AppDimensions.md),
+                    child: Row(children: [
+                      Container(
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          color: hasFile
+                              ? doc.color.withValues(alpha: 0.12)
+                              : AppColors.surfaceVariant,
+                          borderRadius: BorderRadius.circular(AppDimensions.radiusMd),
+                        ),
+                        child: Icon(
+                          hasFile ? Icons.check_circle_rounded : doc.icon,
+                          color: hasFile ? doc.color : AppColors.textSecondary,
+                          size: 20,
+                        ),
+                      ),
+                      const SizedBox(width: AppDimensions.sm),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(doc.label, style: AppTextStyles.bodyMedium),
+                            Text(
+                              hasFile ? 'Uploaded' : 'Not uploaded',
+                              style: AppTextStyles.bodySmall.copyWith(
+                                  color: hasFile
+                                      ? AppColors.secondary
+                                      : AppColors.textSecondary),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      if (isUploading)
+                        const SizedBox(
+                            width: 22,
+                            height: 22,
+                            child: CircularProgressIndicator(
+                                strokeWidth: 2, color: AppColors.primary))
+                      else ...
+                        [
+                          if (hasFile)
+                            IconButton(
+                              icon: const Icon(Icons.visibility_rounded,
+                                  size: 20, color: AppColors.primary),
+                              tooltip: 'View',
+                              onPressed: () => _view(doc.type),
+                              visualDensity: VisualDensity.compact,
+                            ),
+                          IconButton(
+                            icon: Icon(
+                              hasFile
+                                  ? Icons.upload_rounded
+                                  : Icons.cloud_upload_outlined,
+                              size: 20,
+                              color:
+                                  hasFile ? AppColors.accent : AppColors.primary,
+                            ),
+                            tooltip: hasFile ? 'Replace' : 'Upload',
+                            onPressed: () => _upload(doc.type),
+                            visualDensity: VisualDensity.compact,
+                          ),
+                        ],
+                    ]),
+                  ),
+                  if (i < docs.length - 1)
+                    const Divider(height: 1, indent: AppDimensions.md),
+                ],
+              );
+            }),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _DocEntry {
+  final String label, type;
+  final IconData icon;
+  final Color color;
+  const _DocEntry(this.label, this.type, this.icon, this.color);
 }

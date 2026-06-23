@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:dio/dio.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/theme/app_dimensions.dart';
@@ -11,6 +13,7 @@ import '../providers/member_provider.dart';
 import '../../../../core/api/repositories/member_repository.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../../dashboard/presentation/providers/dashboard_provider.dart';
+import '../../../../core/api/api_client.dart';
 
 class MemberRegistrationPage extends ConsumerStatefulWidget {
   const MemberRegistrationPage({super.key});
@@ -46,6 +49,11 @@ class _MemberRegistrationPageState
   String _selectedGender = 'Male';
   String _selectedOccupation = 'Business';
   String _selectedEducation = 'Bachelor\'s Degree';
+
+  // Document file selections (picked locally before upload)
+  PlatformFile? _citizenshipFile;
+  PlatformFile? _photoFile;
+  PlatformFile? _signatureFile;
 
   final _genders = ['Male', 'Female', 'Other'];
   final _occupations = ['Business', 'Agriculture', 'Service', 'Teacher', 'Doctor', 'Other'];
@@ -121,14 +129,41 @@ class _MemberRegistrationPageState
       setState(() {});
       if (success) {
         final memberId = ref.read(registerMemberProvider).newMemberId ?? '';
+        // Upload any selected documents in background
+        if (memberId.isNotEmpty) {
+          _uploadDocuments(memberId);
+        }
         _showSuccessDialog(memberId);
         ref.invalidate(memberListProvider);
-        ref.invalidate(dashboardSummaryProvider); // refresh dashboard KPIs
+        ref.invalidate(dashboardSummaryProvider);
       } else {
         final error = ref.read(registerMemberProvider).error ?? 'Registration failed';
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(error), backgroundColor: AppColors.error),
         );
+      }
+    }
+  }
+
+  Future<void> _uploadDocuments(String memberId) async {
+    final dio = ref.read(dioProvider);
+    final docs = [
+      if (_citizenshipFile != null) ('citizenship', _citizenshipFile!),
+      if (_photoFile != null) ('photo', _photoFile!),
+      if (_signatureFile != null) ('signature', _signatureFile!),
+    ];
+    for (final (docType, file) in docs) {
+      try {
+        final formData = FormData.fromMap({
+          'docType': docType,
+          'file': await MultipartFile.fromFile(
+            file.path!,
+            filename: file.name,
+          ),
+        });
+        await dio.post('/api/v1/members/$memberId/upload-document', data: formData);
+      } catch (_) {
+        // silent — documents can be uploaded later from member detail
       }
     }
   }
@@ -509,11 +544,26 @@ class _MemberRegistrationPageState
         const SizedBox(height: AppDimensions.lg),
         const Text('Upload Documents', style: AppTextStyles.titleMedium),
         const SizedBox(height: AppDimensions.md),
-        const _DocumentUploadCard(label: 'Citizenship Certificate', icon: Icons.badge_outlined),
+        _DocumentUploadCard(
+          label: 'Citizenship Certificate',
+          icon: Icons.badge_outlined,
+          selectedFile: _citizenshipFile,
+          onPicked: (f) => setState(() => _citizenshipFile = f),
+        ),
         const SizedBox(height: AppDimensions.sm),
-        const _DocumentUploadCard(label: 'Passport-size Photo', icon: Icons.photo_camera_outlined),
+        _DocumentUploadCard(
+          label: 'Passport-size Photo',
+          icon: Icons.photo_camera_outlined,
+          selectedFile: _photoFile,
+          onPicked: (f) => setState(() => _photoFile = f),
+        ),
         const SizedBox(height: AppDimensions.sm),
-        const _DocumentUploadCard(label: 'Digital Signature', icon: Icons.draw_outlined),
+        _DocumentUploadCard(
+          label: 'Digital Signature',
+          icon: Icons.draw_outlined,
+          selectedFile: _signatureFile,
+          onPicked: (f) => setState(() => _signatureFile = f),
+        ),
       ],
     );
   }
@@ -679,31 +729,56 @@ class _DropdownField extends StatelessWidget {
   }
 }
 
-class _DocumentUploadCard extends StatefulWidget {
+class _DocumentUploadCard extends StatelessWidget {
   final String label;
   final IconData icon;
-  const _DocumentUploadCard({required this.label, required this.icon});
+  final PlatformFile? selectedFile;
+  final ValueChanged<PlatformFile?> onPicked;
 
-  @override
-  State<_DocumentUploadCard> createState() => _DocumentUploadCardState();
-}
+  const _DocumentUploadCard({
+    required this.label,
+    required this.icon,
+    required this.selectedFile,
+    required this.onPicked,
+  });
 
-class _DocumentUploadCardState extends State<_DocumentUploadCard> {
-  bool _uploaded = false;
+  Future<void> _pick(BuildContext context) async {
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['jpg', 'jpeg', 'png', 'pdf', 'webp'],
+        withData: false,
+        withReadStream: false,
+      );
+      if (result != null && result.files.isNotEmpty) {
+        onPicked(result.files.first);
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not open file picker: $e'),
+              backgroundColor: AppColors.error,
+              behavior: SnackBarBehavior.floating),
+        );
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    final picked = selectedFile != null;
     return GestureDetector(
-      onTap: () => setState(() => _uploaded = !_uploaded),
-      child: Container(
+      onTap: () => _pick(context),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.all(AppDimensions.md),
         decoration: BoxDecoration(
-          color: _uploaded
+          color: picked
               ? AppColors.secondary.withValues(alpha: 0.05)
               : AppColors.surfaceVariant,
           borderRadius: BorderRadius.circular(AppDimensions.radiusLg),
           border: Border.all(
-            color: _uploaded
+            color: picked
                 ? AppColors.secondary.withValues(alpha: 0.4)
                 : const Color(0xFFE0E7EF),
           ),
@@ -714,14 +789,14 @@ class _DocumentUploadCardState extends State<_DocumentUploadCard> {
               width: 44,
               height: 44,
               decoration: BoxDecoration(
-                color: _uploaded
+                color: picked
                     ? AppColors.secondary.withValues(alpha: 0.1)
                     : AppColors.surfaceVariant,
                 borderRadius: BorderRadius.circular(AppDimensions.radiusMd),
               ),
               child: Icon(
-                _uploaded ? Icons.check_circle_rounded : widget.icon,
-                color: _uploaded ? AppColors.secondary : AppColors.textSecondary,
+                picked ? Icons.check_circle_rounded : icon,
+                color: picked ? AppColors.secondary : AppColors.textSecondary,
                 size: 22,
               ),
             ),
@@ -730,20 +805,30 @@ class _DocumentUploadCardState extends State<_DocumentUploadCard> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(widget.label, style: AppTextStyles.bodyMedium),
+                  Text(label, style: AppTextStyles.bodyMedium),
                   Text(
-                    _uploaded ? 'Uploaded âœ“' : 'Tap to upload',
+                    picked
+                        ? selectedFile!.name
+                        : 'Tap to select file (JPG, PNG, PDF)',
                     style: AppTextStyles.bodySmall.copyWith(
-                      color: _uploaded ? AppColors.secondary : AppColors.textSecondary,
+                      color: picked ? AppColors.secondary : AppColors.textSecondary,
                     ),
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ],
               ),
             ),
-            Icon(
-              Icons.upload_rounded,
-              color: _uploaded ? AppColors.secondary : AppColors.textSecondary,
-            ),
+            if (picked)
+              GestureDetector(
+                onTap: () => onPicked(null),
+                child: const Padding(
+                  padding: EdgeInsets.only(left: 8),
+                  child: Icon(Icons.close_rounded,
+                      color: AppColors.error, size: 18),
+                ),
+              )
+            else
+              const Icon(Icons.upload_rounded, color: AppColors.textSecondary),
           ],
         ),
       ),

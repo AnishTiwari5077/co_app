@@ -9,7 +9,8 @@ final dioProvider = Provider<Dio>((ref) {
     connectTimeout: AppConstants.connectTimeout,
     receiveTimeout: AppConstants.receiveTimeout,
     headers: {
-      'Content-Type': 'application/json',
+      // NOTE: Do NOT set Content-Type here — Dio sets it per-request.
+      // Setting it globally breaks multipart/form-data uploads.
       'Accept': 'application/json',
       'X-App-Version': AppConstants.appVersion,
     },

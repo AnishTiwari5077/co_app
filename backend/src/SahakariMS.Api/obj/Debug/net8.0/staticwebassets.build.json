@@ -1,11 +1,19 @@
 {
   "Version": 1,
-  "Hash": "0eVZ1MdsqHvGeUm4B1iEk+yrrXb5Sknhb/rx+ZOB25M=",
+  "Hash": "JBetGRucLeqMIR47Ost0up2Ge+dt1FBptSFgL/3ZDGo=",
   "Source": "SahakariMS.Api",
   "BasePath": "_content/SahakariMS.Api",
   "Mode": "Default",
   "ManifestType": "Build",
   "ReferencedProjectsConfiguration": [],
-  "DiscoveryPatterns": [],
+  "DiscoveryPatterns": [
+    {
+      "Name": "SahakariMS.Api\\wwwroot",
+      "Source": "SahakariMS.Api",
+      "ContentRoot": "F:\\c_app\\backend\\src\\SahakariMS.Api\\wwwroot\\",
+      "BasePath": "_content/SahakariMS.Api",
+      "Pattern": "**"
+    }
+  ],
   "Assets": []
 }

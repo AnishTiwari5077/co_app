@@ -115,6 +115,27 @@ public class MembersController(IMediator mediator) : ControllerBase
         return Ok(ApiResponse<object>.Ok(new { message = "Member deleted successfully." }));
     }
 
+    /// <summary>POST /members/{id}/upload-document — Upload citizenship, photo, or signature document.</summary>
+    [HttpPost("{id:guid}/upload-document")]
+    [Authorize(Roles = "ADMIN,MANAGER,CASHIER")]
+    [RequestSizeLimit(10 * 1024 * 1024)] // 10 MB
+    public async Task<IActionResult> UploadDocument(
+        Guid id,
+        [FromForm] string docType,
+        IFormFile file,
+        [FromServices] Microsoft.AspNetCore.Hosting.IWebHostEnvironment env,
+        CancellationToken ct)
+    {
+        if (file is null || file.Length == 0)
+            return BadRequest(ApiResponse<object>.Fail("NO_FILE", "No file provided."));
+
+        await using var stream = file.OpenReadStream();
+        var result = await mediator.Send(new Application.Members.UploadMemberDocumentCommand(
+            id, docType, stream, file.FileName, env.WebRootPath ?? env.ContentRootPath, GetCurrentUserId()), ct);
+        if (!result.IsSuccess) return BadRequest(ApiResponse<object>.Fail(result.ErrorCode!, result.ErrorMessage!));
+        return Ok(ApiResponse<object>.Ok(new { url = result.Value }));
+    }
+
 
     /// <summary>GET /accounting/chart-of-accounts/manage - all accounts for management (includes inactive).</summary>
     [HttpGet("chart-of-accounts/manage")]

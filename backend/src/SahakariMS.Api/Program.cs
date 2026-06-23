@@ -108,6 +108,11 @@ using (var scope = app.Services.CreateScope())
     await db.Database.MigrateAsync();
 }
 
+// Ensure uploads directory exists
+var uploadsPath = Path.Combine(app.Environment.ContentRootPath, "wwwroot", "uploads", "members");
+Directory.CreateDirectory(uploadsPath);
+app.UseStaticFiles();
+
 app.UseMiddleware<CorrelationIdMiddleware>();
 app.UseMiddleware<ExceptionMiddleware>();
 

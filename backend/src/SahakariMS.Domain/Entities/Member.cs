@@ -30,6 +30,8 @@ public class Member : BaseEntity
     public string? EmployerName { get; set; }
     public decimal? MonthlyIncome { get; set; }
     public string? PhotoUrl { get; set; }
+    public string? CitizenshipDocUrl { get; set; }
+    public string? SignatureUrl { get; set; }
     public string Status { get; set; } = "Pending";            // Pending|Active|Suspended|Closed
     public bool KycVerified { get; set; } = false;
     public DateTime? KycVerifiedAt { get; set; }

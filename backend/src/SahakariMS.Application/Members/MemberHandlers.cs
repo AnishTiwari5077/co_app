@@ -17,6 +17,7 @@ public record MemberDetailDto(Guid Id, string MemberCode, string FirstName, stri
     string? AddressDistrict, string? AddressMunicipality, string? AddressWard, string? AddressTole,
     DateOnly? MembershipDate,
     string Status, bool KycVerified, string? PhotoUrl,
+    string? CitizenshipDocUrl, string? SignatureUrl,
     List<SavingAccountSummaryDto> SavingAccounts, List<LoanSummaryDto> Loans,
     List<NomineeSummaryDto> Nominees);
 
@@ -97,6 +98,7 @@ public class GetMemberByIdQueryHandler(IAppDbContext db)
             m.AddressDistrict, m.AddressMunicipality, m.AddressWard, m.AddressTole,
             m.MembershipDate,
             m.Status, m.KycVerified, m.PhotoUrl,
+            m.CitizenshipDocUrl, m.SignatureUrl,
             m.SavingAccounts.Select(s => new SavingAccountSummaryDto(s.Id, s.AccountNumber, s.CurrentBalance, s.Status)).ToList(),
             m.Loans.Select(l => new LoanSummaryDto(l.Id, l.LoanNumber, l.OutstandingBalance, l.Status)).ToList(),
             m.Nominees.Select(n => new NomineeSummaryDto(n.FullName, n.Relationship, n.PhoneNumber)).ToList()));
@@ -258,5 +260,56 @@ public class DeleteMemberCommandHandler(IAppDbContext db, IUnitOfWork uow, ICach
         await uow.SaveChangesAsync(ct);
         try { await cache.RemoveByPrefixAsync("dashboard:", ct); } catch { /* ignore */ }
         return Result.Success();
+    }
+}
+
+// ── Upload Member Document Command ────────────────────────────────────────────
+
+public record UploadMemberDocumentCommand(
+    Guid MemberId,
+    string DocType,          // "photo" | "citizenship" | "signature"
+    Stream FileStream,
+    string FileName,
+    string WebRootPath,
+    Guid ActorId) : IRequest<Result<string>>;
+
+public class UploadMemberDocumentCommandHandler(IAppDbContext db, IUnitOfWork uow)
+    : IRequestHandler<UploadMemberDocumentCommand, Result<string>>
+{
+    public async Task<Result<string>> Handle(UploadMemberDocumentCommand cmd, CancellationToken ct)
+    {
+        var member = await db.Members.FindAsync([cmd.MemberId], ct);
+        if (member is null) return Result<string>.Failure("MEMBER_NOT_FOUND", "Member not found.");
+
+        // Validate doc type
+        if (cmd.DocType is not ("photo" or "citizenship" or "signature"))
+            return Result<string>.Failure("INVALID_DOC_TYPE", "DocType must be photo, citizenship, or signature.");
+
+        // Build safe filename and save
+        var ext = Path.GetExtension(cmd.FileName).ToLowerInvariant();
+        var allowedExts = new[] { ".jpg", ".jpeg", ".png", ".pdf", ".webp" };
+        if (!allowedExts.Contains(ext))
+            return Result<string>.Failure("INVALID_FILE_TYPE", "Only JPG, PNG, PDF, WEBP files are allowed.");
+
+        var memberDir = Path.Combine(cmd.WebRootPath, "uploads", "members", cmd.MemberId.ToString());
+        Directory.CreateDirectory(memberDir);
+
+        var savedName = $"{cmd.DocType}_{DateTime.UtcNow:yyyyMMddHHmmss}{ext}";
+        var filePath = Path.Combine(memberDir, savedName);
+
+        await using (var fs = File.Create(filePath))
+            await cmd.FileStream.CopyToAsync(fs, ct);
+
+        var relativeUrl = $"/uploads/members/{cmd.MemberId}/{savedName}";
+
+        switch (cmd.DocType)
+        {
+            case "photo":       member.PhotoUrl          = relativeUrl; break;
+            case "citizenship": member.CitizenshipDocUrl  = relativeUrl; break;
+            case "signature":   member.SignatureUrl       = relativeUrl; break;
+        }
+        member.UpdatedBy = cmd.ActorId;
+        await uow.SaveChangesAsync(ct);
+        return Result<string>.Success(relativeUrl);
     }
 }
