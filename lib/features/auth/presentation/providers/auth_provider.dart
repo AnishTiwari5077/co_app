@@ -114,11 +114,38 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
   Future<void> logout() async {
     try {
-      await _dio.post(ApiEndpoints.logout);
+      final prefs = await SharedPreferences.getInstance();
+      final refreshToken = prefs.getString(AppConstants.refreshTokenKey) ?? '';
+      await _dio.post(
+        ApiEndpoints.logout,
+        data: {'refreshToken': refreshToken},
+      );
     } catch (_) {}
     final prefs = await SharedPreferences.getInstance();
     await prefs.clear();
     state = state.unauthenticated();
+  }
+
+  /// Re-reads the stored user fields from SharedPreferences and updates
+  /// the in-memory auth state — used after a profile update.
+  Future<void> reloadFromPrefs() async {
+    final prefs  = await SharedPreferences.getInstance();
+    final userId = prefs.getString(AppConstants.userIdKey);
+    if (userId == null) return;
+    state = state.authenticated(UserEntity(
+      id:          userId,
+      username:    prefs.getString('user_username')    ?? '',
+      fullName:    prefs.getString('user_full_name')   ?? '',
+      email:       prefs.getString('user_email')       ?? '',
+      branchId:    prefs.getString(AppConstants.branchIdKey) ?? '',
+      branchCode:  prefs.getString('user_branch_code') ?? 'HO',
+      branchName:  prefs.getString('user_branch_name') ?? 'Head Office',
+      roles:       List<String>.from(
+                     prefs.getStringList('user_roles') ?? <String>[]),
+      permissions: List<String>.from(
+                     prefs.getStringList('user_permissions') ?? <String>[]),
+      isHeadOffice: prefs.getBool('user_is_head_office') ?? true,
+    ));
   }
 
   void setUser(UserEntity user) => state = state.authenticated(user);

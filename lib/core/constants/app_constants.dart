@@ -12,6 +12,7 @@ class ApiEndpoints {
   static const String verifyOtp     = '/api/v1/auth/verify-otp';
   static const String changePassword = '/api/v1/auth/change-password';
   static const String me            = '/api/v1/auth/me';
+  static const String updateProfile  = '/api/v1/auth/me';
 
   // ── Dashboard ─────────────────────────────────────────────────────────────
   static const String dashboard     = '/api/v1/dashboard/summary';
