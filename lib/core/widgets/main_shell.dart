@@ -38,6 +38,8 @@ const _allDestinations = [
   _NavItem(AppRoutes.accounting, Icons.receipt_long_outlined,
       Icons.receipt_long, 'Accounting',
       allowedRoles: ['ADMIN', 'MANAGER', 'ACCOUNTANT']),
+  _NavItem(AppRoutes.settings, Icons.settings_outlined, Icons.settings,
+      'Settings'), // visible to all roles
 ];
 
 /// Returns filtered tabs for a user, guaranteed >= 2 items.
