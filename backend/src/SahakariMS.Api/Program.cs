@@ -114,6 +114,27 @@ using (var scope = app.Services.CreateScope())
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     await db.Database.MigrateAsync();
 
+    // ── Ensure PostgreSQL extensions exist ────────────────────────────────────
+    await db.Database.ExecuteSqlRawAsync("CREATE EXTENSION IF NOT EXISTS \"pgcrypto\";");
+    await db.Database.ExecuteSqlRawAsync("CREATE EXTENSION IF NOT EXISTS \"pg_trgm\";");
+
+    // ── Ensure sequences exist (for member codes, loan numbers, etc.) ─────────
+    await db.Database.ExecuteSqlRawAsync("CREATE SEQUENCE IF NOT EXISTS member_code_seq    START 1 INCREMENT 1;");
+    await db.Database.ExecuteSqlRawAsync("CREATE SEQUENCE IF NOT EXISTS loan_number_seq    START 1 INCREMENT 1;");
+    await db.Database.ExecuteSqlRawAsync("CREATE SEQUENCE IF NOT EXISTS account_number_seq START 1 INCREMENT 1;");
+    await db.Database.ExecuteSqlRawAsync("CREATE SEQUENCE IF NOT EXISTS voucher_number_seq START 1 INCREMENT 1;");
+    await db.Database.ExecuteSqlRawAsync("CREATE SEQUENCE IF NOT EXISTS receipt_number_seq START 1 INCREMENT 1;");
+
+    // ── Ensure admin has Head Office BranchId assigned ────────────────────────
+    var headOfficeBranchId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+    var adminUser = db.Users.FirstOrDefault(u => u.Username == "admin");
+    if (adminUser != null && adminUser.BranchId == null)
+    {
+        adminUser.BranchId = headOfficeBranchId;
+        adminUser.UpdatedAt = DateTime.UtcNow;
+        await db.SaveChangesAsync();
+    }
+
     // Seed default admin user if no users exist
     if (!db.Users.Any())
     {
@@ -123,6 +144,7 @@ using (var scope = app.Services.CreateScope())
         db.Users.Add(new SahakariMS.Domain.Entities.User
         {
             Id = adminId,
+            BranchId = headOfficeBranchId,   // Always assign Head Office branch
             EmployeeCode = "EMP-001",
             FullName = "System Administrator",
             Email = "admin@sahakarims.np",
