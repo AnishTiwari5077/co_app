@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("SahakariMS.Infrastructure")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+8ad7d2205ae8cdb89501242a519e527f0a4b491d")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+e5eab3403e30f29d292d8abbc592e6a1898c8ae4")]
 [assembly: System.Reflection.AssemblyProductAttribute("SahakariMS.Infrastructure")]
 [assembly: System.Reflection.AssemblyTitleAttribute("SahakariMS.Infrastructure")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
