@@ -635,17 +635,6 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     );
   }
 
-  void _triggerSync() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Syncing data…',
-            style: AppTextStyles.bodyMedium.copyWith(color: Colors.white)),
-        backgroundColor: AppColors.primary,
-        duration: const Duration(seconds: 2),
-      ),
-    );
-  }
-
   void _showHelpSupportDialog() {
     const email = 'anishtiwari5077@gmail.com';
     const phone = '9861982615';
