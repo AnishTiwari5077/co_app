@@ -1,3 +1,0 @@
-﻿<Project>
-  <Import Project="..\build\SahakariMS.Api.props" />
-</Project>
