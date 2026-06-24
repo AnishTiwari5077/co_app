@@ -118,6 +118,11 @@ using (var scope = app.Services.CreateScope())
     await db.Database.ExecuteSqlRawAsync("CREATE EXTENSION IF NOT EXISTS \"pgcrypto\";");
     await db.Database.ExecuteSqlRawAsync("CREATE EXTENSION IF NOT EXISTS \"pg_trgm\";");
 
+    // ── Ensure custom schemas exist ───────────────────────────────────────────
+    await db.Database.ExecuteSqlRawAsync("CREATE SCHEMA IF NOT EXISTS accounting;");
+    await db.Database.ExecuteSqlRawAsync("CREATE SCHEMA IF NOT EXISTS audit;");
+    await db.Database.ExecuteSqlRawAsync("CREATE SCHEMA IF NOT EXISTS hr;");
+
     // ── Ensure sequences exist (for member codes, loan numbers, etc.) ─────────
     await db.Database.ExecuteSqlRawAsync("CREATE SEQUENCE IF NOT EXISTS member_code_seq    START 1 INCREMENT 1;");
     await db.Database.ExecuteSqlRawAsync("CREATE SEQUENCE IF NOT EXISTS loan_number_seq    START 1 INCREMENT 1;");
@@ -132,6 +137,34 @@ using (var scope = app.Services.CreateScope())
     {
         adminUser.BranchId = headOfficeBranchId;
         adminUser.UpdatedAt = DateTime.UtcNow;
+        await db.SaveChangesAsync();
+    }
+
+    // ── Seed Saving Schemes if none exist ─────────────────────────────────────
+    if (!db.SavingSchemes.Any())
+    {
+        db.SavingSchemes.AddRange(
+            new SahakariMS.Domain.Entities.SavingScheme { SchemeCode = "REG-001", SchemeName = "साधारण बचत (Regular Savings)",           SchemeType = "Regular",          InterestRate = 6.00m,  InterestCalculation = "Daily", InterestPosting = "Quarterly", MinimumBalance = 500,  MinimumDeposit = 100,   WithdrawalAllowed = true,  WithdrawalNoticeDays = 0,  IsActive = true, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
+            new SahakariMS.Domain.Entities.SavingScheme { SchemeCode = "JNR-001", SchemeName = "बाल बचत (Junior Savings)",               SchemeType = "Regular",          InterestRate = 7.00m,  InterestCalculation = "Daily", InterestPosting = "Quarterly", MinimumBalance = 200,  MinimumDeposit = 50,    WithdrawalAllowed = true,  WithdrawalNoticeDays = 0,  IsActive = true, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
+            new SahakariMS.Domain.Entities.SavingScheme { SchemeCode = "FD-006",  SchemeName = "६ महिने मुद्दती (FD 6 Months)",         SchemeType = "FixedDeposit",     InterestRate = 9.50m,  InterestCalculation = "Daily", InterestPosting = "Monthly",   MinimumBalance = 0,    MinimumDeposit = 5000,  WithdrawalAllowed = false, WithdrawalNoticeDays = 7,  MinTenureMonths = 6,  MaxTenureMonths = 6,  IsActive = true, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
+            new SahakariMS.Domain.Entities.SavingScheme { SchemeCode = "FD-012",  SchemeName = "१ वर्षे मुद्दती (FD 1 Year)",           SchemeType = "FixedDeposit",     InterestRate = 11.00m, InterestCalculation = "Daily", InterestPosting = "Monthly",   MinimumBalance = 0,    MinimumDeposit = 5000,  WithdrawalAllowed = false, WithdrawalNoticeDays = 15, MinTenureMonths = 12, MaxTenureMonths = 12, IsActive = true, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
+            new SahakariMS.Domain.Entities.SavingScheme { SchemeCode = "FD-024",  SchemeName = "२ वर्षे मुद्दती (FD 2 Years)",          SchemeType = "FixedDeposit",     InterestRate = 12.00m, InterestCalculation = "Daily", InterestPosting = "Monthly",   MinimumBalance = 0,    MinimumDeposit = 10000, WithdrawalAllowed = false, WithdrawalNoticeDays = 30, MinTenureMonths = 24, MaxTenureMonths = 24, IsActive = true, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
+            new SahakariMS.Domain.Entities.SavingScheme { SchemeCode = "RD-001",  SchemeName = "मासिक आवर्ती बचत (Monthly Recurring)", SchemeType = "RecurringDeposit", InterestRate = 8.50m,  InterestCalculation = "Daily", InterestPosting = "Yearly",    MinimumBalance = 0,    MinimumDeposit = 500,   WithdrawalAllowed = false, WithdrawalNoticeDays = 30, MinTenureMonths = 12, MaxTenureMonths = 60, IsActive = true, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
+            new SahakariMS.Domain.Entities.SavingScheme { SchemeCode = "SR-001",  SchemeName = "जेष्ठ नागरिक बचत (Senior Citizen)",     SchemeType = "Regular",          InterestRate = 8.00m,  InterestCalculation = "Daily", InterestPosting = "Quarterly", MinimumBalance = 500,  MinimumDeposit = 500,   WithdrawalAllowed = true,  WithdrawalNoticeDays = 0,  IsActive = true, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow }
+        );
+        await db.SaveChangesAsync();
+    }
+
+    // ── Seed Loan Products if none exist ──────────────────────────────────────
+    if (!db.LoanProducts.Any())
+    {
+        db.LoanProducts.AddRange(
+            new SahakariMS.Domain.Entities.LoanProduct { ProductCode = "PL-001", ProductName = "Personal Loan",     LoanType = "Personal",    InterestRate = 14.0m, InterestType = "Diminishing", PenaltyRate = 2, MinAmount = 10000,   MaxAmount = 500000,   MinTenureMonths = 3,  MaxTenureMonths = 60,  ProcessingFeePercent = 1.5m, CollateralRequired = false, GuarantorRequired = true,  IsActive = true, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
+            new SahakariMS.Domain.Entities.LoanProduct { ProductCode = "BL-001", ProductName = "Business Loan",     LoanType = "Business",    InterestRate = 13.0m, InterestType = "Diminishing", PenaltyRate = 2, MinAmount = 50000,   MaxAmount = 5000000,  MinTenureMonths = 6,  MaxTenureMonths = 84,  ProcessingFeePercent = 1.0m, CollateralRequired = true,  GuarantorRequired = true,  IsActive = true, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
+            new SahakariMS.Domain.Entities.LoanProduct { ProductCode = "AG-001", ProductName = "Agriculture Loan",  LoanType = "Agriculture", InterestRate = 11.0m, InterestType = "Diminishing", PenaltyRate = 2, MinAmount = 10000,   MaxAmount = 1000000,  MinTenureMonths = 3,  MaxTenureMonths = 60,  ProcessingFeePercent = 1.0m, CollateralRequired = true,  GuarantorRequired = false, IsActive = true, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
+            new SahakariMS.Domain.Entities.LoanProduct { ProductCode = "HL-001", ProductName = "Home Loan",         LoanType = "Housing",     InterestRate = 12.0m, InterestType = "Diminishing", PenaltyRate = 2, MinAmount = 100000,  MaxAmount = 10000000, MinTenureMonths = 12, MaxTenureMonths = 240, ProcessingFeePercent = 0.5m, CollateralRequired = true,  GuarantorRequired = true,  IsActive = true, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
+            new SahakariMS.Domain.Entities.LoanProduct { ProductCode = "MF-001", ProductName = "Microfinance Loan", LoanType = "Personal",    InterestRate = 15.0m, InterestType = "Flat",        PenaltyRate = 3, MinAmount = 5000,    MaxAmount = 200000,   MinTenureMonths = 3,  MaxTenureMonths = 24,  ProcessingFeePercent = 2.0m, CollateralRequired = false, GuarantorRequired = true,  IsActive = true, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow }
+        );
         await db.SaveChangesAsync();
     }
 
