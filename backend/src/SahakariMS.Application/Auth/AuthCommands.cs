@@ -139,3 +139,39 @@ public class LogoutCommandHandler(IAppDbContext db, IUnitOfWork uow) : IRequestH
         return Result.Success();
     }
 }
+
+// ── Change Password Command ───────────────────────────────────────────────────
+
+public record ChangePasswordRequest(string CurrentPassword, string NewPassword);
+public record ChangePasswordCommand(Guid UserId, string CurrentPassword, string NewPassword)
+    : IRequest<Result>;
+
+public class ChangePasswordCommandHandler(IAppDbContext db, IUnitOfWork uow)
+    : IRequestHandler<ChangePasswordCommand, Result>
+{
+    public async Task<Result> Handle(ChangePasswordCommand cmd, CancellationToken ct)
+    {
+        var user = await db.Users.FirstOrDefaultAsync(u => u.Id == cmd.UserId && !u.IsDeleted, ct);
+        if (user is null)
+            return Result.Failure("USER_NOT_FOUND", "User not found.");
+
+        if (!BCrypt.Net.BCrypt.Verify(cmd.CurrentPassword, user.PasswordHash))
+            return Result.Failure("INVALID_PASSWORD", "Current password is incorrect.");
+
+        if (cmd.NewPassword.Length < 8)
+            return Result.Failure("WEAK_PASSWORD", "New password must be at least 8 characters.");
+
+        user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(cmd.NewPassword, workFactor: 11);
+        user.MustChangePassword = false;
+        user.UpdatedAt = DateTime.UtcNow;
+
+        // Revoke all existing refresh tokens to force re-login on other devices
+        var tokens = await db.RefreshTokens
+            .Where(rt => rt.UserId == cmd.UserId && !rt.IsRevoked)
+            .ToListAsync(ct);
+        foreach (var t in tokens) { t.IsRevoked = true; t.RevokedAt = DateTime.UtcNow; }
+
+        await uow.SaveChangesAsync(ct);
+        return Result.Success();
+    }
+}

@@ -42,6 +42,19 @@ public class AuthController(IMediator mediator) : ControllerBase
         await mediator.Send(new LogoutCommand(request.RefreshToken), ct);
         return NoContent();
     }
+
+    /// <summary>POST /auth/change-password — authenticated user changes their own password.</summary>
+    [HttpPost("change-password")]
+    [Authorize]
+    public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordRequest request, CancellationToken ct)
+    {
+        var userId = Guid.Parse(User.FindFirst("sub")?.Value
+                     ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
+                     ?? throw new UnauthorizedAccessException());
+        var result = await mediator.Send(new ChangePasswordCommand(userId, request.CurrentPassword, request.NewPassword), ct);
+        if (!result.IsSuccess) return BadRequest(ApiResponse<object>.Fail(result.ErrorCode!, result.ErrorMessage!));
+        return Ok(ApiResponse<object>.Ok(new { message = "Password changed successfully." }));
+    }
 }
 
 // ── Members Controller ────────────────────────────────────────────────────────
