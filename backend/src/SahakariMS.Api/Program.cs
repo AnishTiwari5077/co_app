@@ -101,7 +101,7 @@ var allowedOrigins = builder.Configuration
 
 builder.Services.AddCors(opts =>
     opts.AddDefaultPolicy(p => p
-        .WithOrigins(allowedOrigins)
+        .AllowAnyOrigin()
         .AllowAnyHeader()
         .AllowAnyMethod()));
 
