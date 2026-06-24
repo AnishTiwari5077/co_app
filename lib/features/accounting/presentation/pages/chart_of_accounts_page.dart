@@ -145,7 +145,7 @@ class _ChartOfAccountsPageState extends ConsumerState<ChartOfAccountsPage> {
                   ),
                   const SizedBox(height: AppDimensions.sm),
                   DropdownButtonFormField<String>(
-                    value: selectedType,
+                    initialValue: selectedType,
                     decoration: const InputDecoration(
                       labelText: 'Account Type *',
                       border: OutlineInputBorder(),
@@ -526,11 +526,11 @@ class _AccountCard extends StatelessWidget {
                 ]),
               ),
               const PopupMenuDivider(),
-              PopupMenuItem(
+              const PopupMenuItem(
                 value: 'delete',
                 child: Row(children: [
-                  const Icon(Icons.delete_outline_rounded, size: 18, color: AppColors.error),
-                  const SizedBox(width: 8),
+                  Icon(Icons.delete_outline_rounded, size: 18, color: AppColors.error),
+                  SizedBox(width: 8),
                   Text('Delete', style: TextStyle(color: AppColors.error)),
                 ]),
               ),

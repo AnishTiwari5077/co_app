@@ -73,22 +73,22 @@ class VoucherPdfGenerator {
                     crossAxisAlignment: pw.CrossAxisAlignment.start,
                     children: [
                       pw.Text(_orgName,
-                          style: pw.TextStyle(
+                          style: const pw.TextStyle(
                             color: PdfColors.white,
                             fontSize: 16,
                             fontWeight: pw.FontWeight.bold,
                           )),
                       pw.SizedBox(height: 2),
                       pw.Text(_orgSubtitle,
-                          style: pw.TextStyle(
-                              color: const PdfColor(1, 1, 1, 0.7), fontSize: 9)),
+                          style: const pw.TextStyle(
+                              color: PdfColor(1, 1, 1, 0.7), fontSize: 9)),
                     ],
                   ),
                   pw.Column(
                     crossAxisAlignment: pw.CrossAxisAlignment.end,
                     children: [
-                      pw.Text(voucherType.toUpperCase() + ' VOUCHER',
-                          style: pw.TextStyle(
+                      pw.Text('${voucherType.toUpperCase()} VOUCHER',
+                          style: const pw.TextStyle(
                             color: PdfColors.white,
                             fontSize: 13,
                             fontWeight: pw.FontWeight.bold,
@@ -105,7 +105,7 @@ class VoucherPdfGenerator {
                           borderRadius: pw.BorderRadius.circular(20),
                         ),
                         child: pw.Text(status.toUpperCase(),
-                            style: pw.TextStyle(
+                            style: const pw.TextStyle(
                               color: PdfColors.white,
                               fontSize: 8,
                               fontWeight: pw.FontWeight.bold,
@@ -235,10 +235,10 @@ class VoucherPdfGenerator {
                                 pw.MainAxisAlignment.spaceBetween,
                             children: [
                               pw.Text('✓ Balanced',
-                                  style: pw.TextStyle(
+                                  style: const pw.TextStyle(
                                     fontSize: 9,
                                     color:
-                                        const PdfColor.fromInt(0xFF2E7D32),
+                                        PdfColor.fromInt(0xFF2E7D32),
                                     fontWeight: pw.FontWeight.bold,
                                   )),
                             ],
@@ -276,13 +276,13 @@ class VoucherPdfGenerator {
         crossAxisAlignment: pw.CrossAxisAlignment.start,
         children: [
           pw.Text(label,
-              style: pw.TextStyle(
+              style: const pw.TextStyle(
                   fontSize: 7,
-                  color: const PdfColor.fromInt(0xFF9E9E9E),
+                  color: PdfColor.fromInt(0xFF9E9E9E),
                   fontWeight: pw.FontWeight.bold)),
           pw.SizedBox(height: 2),
           pw.Text(value,
-              style: pw.TextStyle(
+              style: const pw.TextStyle(
                   fontSize: 10, fontWeight: pw.FontWeight.bold)),
         ],
       );
@@ -292,7 +292,7 @@ class VoucherPdfGenerator {
         padding: const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 6),
         child: pw.Text(text,
             textAlign: right ? pw.TextAlign.right : pw.TextAlign.left,
-            style: pw.TextStyle(
+            style: const pw.TextStyle(
               color: PdfColors.white,
               fontSize: 9,
               fontWeight: pw.FontWeight.bold,
@@ -341,9 +341,9 @@ class VoucherPdfGenerator {
           mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
           children: [
             pw.Text(label,
-                style: pw.TextStyle(
+                style: const pw.TextStyle(
                     fontSize: 9,
-                    color: const PdfColor.fromInt(0xFF757575))),
+                    color: PdfColor.fromInt(0xFF757575))),
             pw.Text(value,
                 style: pw.TextStyle(
                     fontSize: 10,

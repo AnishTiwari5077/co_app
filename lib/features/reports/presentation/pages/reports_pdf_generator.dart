@@ -491,30 +491,30 @@ class ReportsPdfGenerator {
                     crossAxisAlignment: pw.CrossAxisAlignment.start,
                     children: [
                       pw.Text(_org,
-                          style: pw.TextStyle(
+                          style: const pw.TextStyle(
                               color: PdfColors.white,
                               fontSize: 14,
                               fontWeight: pw.FontWeight.bold)),
                       pw.SizedBox(height: 2),
                       pw.Text(_orgSub,
-                          style: pw.TextStyle(
-                              color: const PdfColor(1, 1, 1, 0.7), fontSize: 8)),
+                          style: const pw.TextStyle(
+                              color: PdfColor(1, 1, 1, 0.7), fontSize: 8)),
                     ]),
                 pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.end, children: [
                   pw.Text(title,
-                      style: pw.TextStyle(
+                      style: const pw.TextStyle(
                           color: PdfColors.white,
                           fontSize: 12,
                           fontWeight: pw.FontWeight.bold,
                           letterSpacing: 0.5)),
                   pw.SizedBox(height: 3),
                   pw.Text(subtitle,
-                      style: pw.TextStyle(
-                          color: const PdfColor(1, 1, 1, 0.8), fontSize: 8)),
+                      style: const pw.TextStyle(
+                          color: PdfColor(1, 1, 1, 0.8), fontSize: 8)),
                   pw.SizedBox(height: 3),
                   pw.Text('Printed: $printed',
-                      style: pw.TextStyle(
-                          color: const PdfColor(1, 1, 1, 0.7), fontSize: 7)),
+                      style: const pw.TextStyle(
+                          color: PdfColor(1, 1, 1, 0.7), fontSize: 7)),
                 ]),
               ]),
         ),
@@ -560,7 +560,7 @@ class ReportsPdfGenerator {
             .map((c) => pw.Container(
                   padding: const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 5),
                   child: pw.Text(c,
-                      style: pw.TextStyle(
+                      style: const pw.TextStyle(
                           color: PdfColors.white,
                           fontSize: 7.5,
                           fontWeight: pw.FontWeight.bold)),
