@@ -352,7 +352,7 @@ class EmiSchedulePage extends ConsumerWidget {
                     crossAxisAlignment: pw.CrossAxisAlignment.start,
                     children: [
                       pw.Text('SahakariMS Cooperative',
-                          style: pw.TextStyle(
+                          style: const pw.TextStyle(
                               color: PdfColors.white,
                               fontSize: 14,
                               fontWeight: pw.FontWeight.bold)),
@@ -365,7 +365,7 @@ class EmiSchedulePage extends ConsumerWidget {
                     crossAxisAlignment: pw.CrossAxisAlignment.end,
                     children: [
                       pw.Text('EMI Repayment Schedule',
-                          style: pw.TextStyle(
+                          style: const pw.TextStyle(
                               color: PdfColors.white,
                               fontSize: 11,
                               fontWeight: pw.FontWeight.bold)),
@@ -412,14 +412,14 @@ class EmiSchedulePage extends ConsumerWidget {
                 pw.RichText(
                   text: pw.TextSpan(
                     children: [
-                      pw.TextSpan(
+                      const pw.TextSpan(
                           text: 'Outstanding Balance: ',
-                          style: const pw.TextStyle(
+                          style: pw.TextStyle(
                               color: PdfColors.grey, fontSize: 8)),
                       pw.TextSpan(
                           text:
                               'NPR ${fmt.format(meta.outstandingBalance)}',
-                          style: pw.TextStyle(
+                          style: const pw.TextStyle(
                               color: errorColor,
                               fontSize: 9,
                               fontWeight: pw.FontWeight.bold)),
@@ -429,14 +429,14 @@ class EmiSchedulePage extends ConsumerWidget {
                 pw.RichText(
                   text: pw.TextSpan(
                     children: [
-                      pw.TextSpan(
+                      const pw.TextSpan(
                           text: 'Paid: ',
-                          style: const pw.TextStyle(
+                          style: pw.TextStyle(
                               color: PdfColors.grey, fontSize: 8)),
                       pw.TextSpan(
                           text:
                               '${meta.installmentsPaid} / ${meta.tenureMonths} installments',
-                          style: pw.TextStyle(
+                          style: const pw.TextStyle(
                               color: secondaryColor,
                               fontSize: 9,
                               fontWeight: pw.FontWeight.bold)),
@@ -454,7 +454,7 @@ class EmiSchedulePage extends ConsumerWidget {
             border: pw.TableBorder.all(color: borderColor, width: 0.5),
             headerDecoration:
                 const pw.BoxDecoration(color: primaryColor),
-            headerStyle: pw.TextStyle(
+            headerStyle: const pw.TextStyle(
                 color: PdfColors.white,
                 fontSize: 8,
                 fontWeight: pw.FontWeight.bold),
@@ -502,22 +502,22 @@ class EmiSchedulePage extends ConsumerWidget {
               mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
               children: [
                 pw.Text('TOTALS',
-                    style: pw.TextStyle(
+                    style: const pw.TextStyle(
                         fontWeight: pw.FontWeight.bold, fontSize: 8)),
                 pw.Text(
                     'Principal: NPR ${fmt.format(totalPrincipal)}',
-                    style: pw.TextStyle(
+                    style: const pw.TextStyle(
                         fontWeight: pw.FontWeight.bold,
                         fontSize: 8,
                         color: primaryColor)),
                 pw.Text(
                     'Interest: NPR ${fmt.format(totalInterest)}',
-                    style: pw.TextStyle(
+                    style: const pw.TextStyle(
                         fontWeight: pw.FontWeight.bold,
                         fontSize: 8,
                         color: greyText)),
                 pw.Text('Total EMI: NPR ${fmt.format(totalEmi)}',
-                    style: pw.TextStyle(
+                    style: const pw.TextStyle(
                         fontWeight: pw.FontWeight.bold,
                         fontSize: 8,
                         color: secondaryColor)),
@@ -560,7 +560,7 @@ class EmiSchedulePage extends ConsumerWidget {
                 style:
                     const pw.TextStyle(fontSize: 7, color: PdfColors.grey)),
             pw.Text(value,
-                style: pw.TextStyle(
+                style: const pw.TextStyle(
                     fontSize: 8,
                     fontWeight: pw.FontWeight.bold,
                     color: PdfColors.black),
@@ -642,18 +642,6 @@ class _EmiRowWidget extends StatelessWidget {
     return Colors.transparent;
   }
 
-  Color get _statusColor {
-    switch (row.status) {
-      case 'Paid':
-        return AppColors.secondary;
-      case 'Overdue':
-        return AppColors.error;
-      case 'PartPaid':
-        return AppColors.warning;
-      default:
-        return AppColors.textSecondary;
-    }
-  }
 
   @override
   Widget build(BuildContext context) {

@@ -342,7 +342,9 @@ class _JournalEntryPageState extends ConsumerState<JournalEntryPage>
         setState(() {
           _isPosting = false;
           _narrationCtrl.clear();
-          for (final e in _entries) e.dispose();
+          for (final e in _entries) {
+            e.dispose();
+          }
           _entries.clear();
           _entries.addAll([_JournalLine(isDebit: true), _JournalLine(isDebit: false)]);
           _vouchers = [];

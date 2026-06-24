@@ -111,34 +111,27 @@ class _MemberEditPageState extends ConsumerState<MemberEditPage> {
             : _middleNameCtrl.text.trim(),
         'lastName': _lastNameCtrl.text.trim(),
         'gender': _gender,
-        'dateOfBirthAd': _dobCtrl.text.trim().isEmpty
-            ? null
-            : _dobCtrl.text.trim(),
+        'dateOfBirthAd':
+            _dobCtrl.text.trim().isEmpty ? null : _dobCtrl.text.trim(),
         'occupation': _occupationCtrl.text.trim().isEmpty
             ? null
             : _occupationCtrl.text.trim(),
         'phoneNumber': _phoneCtrl.text.trim(),
-        'email': _emailCtrl.text.trim().isEmpty
-            ? null
-            : _emailCtrl.text.trim(),
+        'email': _emailCtrl.text.trim().isEmpty ? null : _emailCtrl.text.trim(),
         'addressDistrict': _districtCtrl.text.trim().isEmpty
             ? null
             : _districtCtrl.text.trim(),
         'addressMunicipality': _municipalityCtrl.text.trim().isEmpty
             ? null
             : _municipalityCtrl.text.trim(),
-        'addressWard': _wardCtrl.text.trim().isEmpty
-            ? null
-            : _wardCtrl.text.trim(),
-        'addressTole': _toleCtrl.text.trim().isEmpty
-            ? null
-            : _toleCtrl.text.trim(),
+        'addressWard':
+            _wardCtrl.text.trim().isEmpty ? null : _wardCtrl.text.trim(),
+        'addressTole':
+            _toleCtrl.text.trim().isEmpty ? null : _toleCtrl.text.trim(),
         'citizenshipNumber': _citizenshipCtrl.text.trim().isEmpty
             ? null
             : _citizenshipCtrl.text.trim(),
-        'panNumber': _panCtrl.text.trim().isEmpty
-            ? null
-            : _panCtrl.text.trim(),
+        'panNumber': _panCtrl.text.trim().isEmpty ? null : _panCtrl.text.trim(),
       });
       // Invalidate provider so detail page refreshes
       ref.invalidate(memberDetailProvider(widget.memberId));
@@ -210,8 +203,7 @@ class _MemberEditPageState extends ConsumerState<MemberEditPage> {
               onPressed: _save,
               icon: const Icon(Icons.save_rounded, size: 18),
               label: const Text('Save'),
-              style: TextButton.styleFrom(
-                  foregroundColor: AppColors.secondary),
+              style: TextButton.styleFrom(foregroundColor: AppColors.secondary),
             ),
         ],
       ),
@@ -224,8 +216,7 @@ class _MemberEditPageState extends ConsumerState<MemberEditPage> {
                 children: [
                   _Section(title: 'Personal Information', children: [
                     _row([
-                      _field('First Name *', _firstNameCtrl,
-                          required: true),
+                      _field('First Name *', _firstNameCtrl, required: true),
                       _field('Middle Name', _middleNameCtrl),
                     ]),
                     const SizedBox(height: AppDimensions.sm),
@@ -242,8 +233,7 @@ class _MemberEditPageState extends ConsumerState<MemberEditPage> {
                   const SizedBox(height: AppDimensions.md),
                   _Section(title: 'Contact Information', children: [
                     _field('Phone Number *', _phoneCtrl,
-                        required: true,
-                        keyboard: TextInputType.phone),
+                        required: true, keyboard: TextInputType.phone),
                     const SizedBox(height: AppDimensions.sm),
                     _field('Email', _emailCtrl,
                         keyboard: TextInputType.emailAddress),
@@ -286,7 +276,7 @@ class _MemberEditPageState extends ConsumerState<MemberEditPage> {
       );
 
   Widget _genderDropdown() => DropdownButtonFormField<String>(
-        value: _gender,
+        initialValue: _gender,
         decoration: _inputDec('Gender'),
         items: [
           const DropdownMenuItem(value: null, child: Text('— Select —')),
@@ -353,8 +343,8 @@ class _Section extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(title,
-              style: AppTextStyles.titleSmall
-                  .copyWith(color: AppColors.primary)),
+              style:
+                  AppTextStyles.titleSmall.copyWith(color: AppColors.primary)),
           const Divider(height: AppDimensions.lg),
           ...children,
         ],

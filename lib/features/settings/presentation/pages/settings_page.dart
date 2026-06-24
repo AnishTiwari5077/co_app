@@ -345,6 +345,9 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                     onPressed: loading ? null : () async {
                       if (!formKey.currentState!.validate()) return;
                       setModalState(() => loading = true);
+                      // Capture messenger before async gap
+                      final messenger = ScaffoldMessenger.of(context);
+                      final router = GoRouter.of(context);
                       try {
                         final dio = ref.read(dioProvider);
                         await dio.post(
@@ -354,18 +357,16 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                             'newPassword': newCtrl.text,
                           },
                         );
-                        if (ctx.mounted) {
-                          Navigator.pop(ctx);
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Password changed successfully! Please login again.'),
-                              backgroundColor: Colors.green,
-                            ),
-                          );
-                          // Force logout — tokens revoked on server
-                          await ref.read(authStateProvider.notifier).logout();
-                          if (context.mounted) context.go(AppRoutes.login);
-                        }
+                        if (ctx.mounted) Navigator.pop(ctx);
+                        messenger.showSnackBar(
+                          const SnackBar(
+                            content: Text('Password changed successfully! Please login again.'),
+                            backgroundColor: Colors.green,
+                          ),
+                        );
+                        // Force logout — tokens revoked on server
+                        await ref.read(authStateProvider.notifier).logout();
+                        router.go(AppRoutes.login);
                       } catch (e) {
                         setModalState(() => loading = false);
                         String msg = 'Failed to change password.';

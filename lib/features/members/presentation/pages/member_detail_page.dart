@@ -375,11 +375,11 @@ class _MemberDetailPageState extends ConsumerState<MemberDetailPage>
         builder: (ctx, setLocal) => AlertDialog(
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: Row(children: [
-            const Icon(Icons.delete_forever_rounded,
+          title: const Row(children: [
+            Icon(Icons.delete_forever_rounded,
                 color: AppColors.error, size: 24),
-            const SizedBox(width: 8),
-            const Text('Delete Member',
+            SizedBox(width: 8),
+            Text('Delete Member',
                 style: TextStyle(color: AppColors.error)),
           ]),
           content: Column(
@@ -1236,8 +1236,8 @@ class _MemberDocumentsSectionState
           }
         });
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: const Text('Document uploaded successfully!'),
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('Document uploaded successfully!'),
             backgroundColor: AppColors.secondary,
             behavior: SnackBarBehavior.floating,
           ));
@@ -1257,7 +1257,7 @@ class _MemberDocumentsSectionState
   }
 
   Future<void> _view(String docType) async {
-    final baseUrl = AppConfig.baseUrl;
+    const baseUrl = AppConfig.baseUrl;
     final url = _effectiveUrl(docType);
     if (url == null) return;
     final fullUrl = '$baseUrl$url';
@@ -1280,9 +1280,9 @@ class _MemberDocumentsSectionState
 
     // For images, show in-app dialog
     final docs = [
-      _DocEntry('Citizenship Certificate', 'citizenship', Icons.badge_outlined, AppColors.primary),
-      _DocEntry('Passport-size Photo', 'photo', Icons.photo_camera_outlined, AppColors.secondary),
-      _DocEntry('Digital Signature', 'signature', Icons.draw_outlined, const Color(0xFF7C3AED)),
+      const _DocEntry('Citizenship Certificate', 'citizenship', Icons.badge_outlined, AppColors.primary),
+      const _DocEntry('Passport-size Photo', 'photo', Icons.photo_camera_outlined, AppColors.secondary),
+      const _DocEntry('Digital Signature', 'signature', Icons.draw_outlined, Color(0xFF7C3AED)),
     ];
     final label = docs.firstWhere((d) => d.type == docType,
         orElse: () => _DocEntry(docType, docType, Icons.image_outlined, AppColors.primary)).label;
@@ -1377,9 +1377,9 @@ class _MemberDocumentsSectionState
   @override
   Widget build(BuildContext context) {
     final docs = [
-      _DocEntry('Citizenship Certificate', 'citizenship', Icons.badge_outlined, AppColors.primary),
-      _DocEntry('Passport-size Photo', 'photo', Icons.photo_camera_outlined, AppColors.secondary),
-      _DocEntry('Digital Signature', 'signature', Icons.draw_outlined, const Color(0xFF7C3AED)),
+      const _DocEntry('Citizenship Certificate', 'citizenship', Icons.badge_outlined, AppColors.primary),
+      const _DocEntry('Passport-size Photo', 'photo', Icons.photo_camera_outlined, AppColors.secondary),
+      const _DocEntry('Digital Signature', 'signature', Icons.draw_outlined, Color(0xFF7C3AED)),
     ];
 
     return Column(

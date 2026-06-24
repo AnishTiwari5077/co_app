@@ -214,22 +214,22 @@ class SavingsPdfGenerator {
                   crossAxisAlignment: pw.CrossAxisAlignment.start,
                   children: [
                     pw.Text(_orgName,
-                        style: pw.TextStyle(
+                        style: const pw.TextStyle(
                           color: PdfColors.white,
                           fontSize: 15,
                           fontWeight: pw.FontWeight.bold,
                         )),
                     pw.SizedBox(height: 2),
                     pw.Text(_orgSubtitle,
-                        style: pw.TextStyle(
-                            color: const PdfColor(1, 1, 1, 0.7), fontSize: 9)),
+                        style: const pw.TextStyle(
+                            color: PdfColor(1, 1, 1, 0.7), fontSize: 9)),
                   ],
                 ),
                 pw.Column(
                   crossAxisAlignment: pw.CrossAxisAlignment.end,
                   children: [
                     pw.Text('SAVINGS ACCOUNT STATEMENT',
-                        style: pw.TextStyle(
+                        style: const pw.TextStyle(
                           color: PdfColors.white,
                           fontSize: 11,
                           fontWeight: pw.FontWeight.bold,
@@ -245,7 +245,7 @@ class SavingsPdfGenerator {
                         borderRadius: pw.BorderRadius.circular(20),
                       ),
                       child: pw.Text(status.toUpperCase(),
-                          style: pw.TextStyle(
+                          style: const pw.TextStyle(
                             color: PdfColors.white,
                             fontSize: 8,
                             fontWeight: pw.FontWeight.bold,
@@ -288,7 +288,7 @@ class SavingsPdfGenerator {
                   fontWeight: pw.FontWeight.bold)),
           pw.SizedBox(height: 2),
           pw.Text(value,
-              style: pw.TextStyle(
+              style: const pw.TextStyle(
                   fontSize: 9, fontWeight: pw.FontWeight.bold)),
         ],
       );
@@ -336,7 +336,7 @@ class SavingsPdfGenerator {
         padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 5),
         child: pw.Text(text,
             textAlign: right ? pw.TextAlign.right : pw.TextAlign.left,
-            style: pw.TextStyle(
+            style: const pw.TextStyle(
                 color: PdfColors.white,
                 fontSize: 8,
                 fontWeight: pw.FontWeight.bold)),
