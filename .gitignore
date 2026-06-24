@@ -43,3 +43,17 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# ── .NET secrets & build artifacts ───────────────────────────────────────────
+# NEVER commit real .env files
+.env
+backend/.env
+**/appsettings.Production.json
+**/appsettings.Local.json
+
+# .NET build outputs (contain copied appsettings with secrets)
+**/bin/
+**/obj/
+
+# .NET User Secrets (local dev override)
+**/secrets.json

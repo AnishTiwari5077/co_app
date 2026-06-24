@@ -6,7 +6,7 @@ services:
     environment:
       POSTGRES_DB: sahakari_ms
       POSTGRES_USER: sahakari
-      POSTGRES_PASSWORD: sahakari_pass
+      POSTGRES_PASSWORD: "${DB_PASSWORD}"        # Set in .env file (never commit .env)
     ports:
       - "5432:5432"
     volumes:
@@ -43,9 +43,9 @@ services:
       - "5000:8080"
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
-      - ConnectionStrings__DefaultConnection=Host=db;Port=5432;Database=sahakari_ms;Username=sahakari;Password=sahakari_pass;
+      - ConnectionStrings__DefaultConnection=Host=db;Port=5432;Database=sahakari_ms;Username=sahakari;Password=${DB_PASSWORD}
       - ConnectionStrings__Redis=redis:6379
-      - JwtSettings__SecretKey=SahakariMS_SuperSecret_Key_Change_In_Production_Min32Chars!
+      - JwtSettings__SecretKey=${JWT_SECRET}    # Set in .env file (never commit .env)
     depends_on:
       db:
         condition: service_healthy
@@ -58,7 +58,7 @@ services:
     container_name: sahakari_pgadmin
     environment:
       PGADMIN_DEFAULT_EMAIL: admin@sahakarims.np
-      PGADMIN_DEFAULT_PASSWORD: admin123
+      PGADMIN_DEFAULT_PASSWORD: "${PGADMIN_PASSWORD}"   # Set in .env file
     ports:
       - "5050:80"
     depends_on:

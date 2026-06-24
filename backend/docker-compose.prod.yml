@@ -1,0 +1,128 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# SahakariMS — Production Docker Compose
+#
+# Usage:
+#   1. Create backend/.env  (see hosting_guide.md — never commit this file)
+#   2. Create backend/nginx.conf  (copy template from hosting_guide.md)
+#   3. Run: docker compose -f docker-compose.prod.yml up -d --build
+#
+# Required .env variables:
+#   DB_PASSWORD      — strong postgres password
+#   JWT_SECRET       — base64 key (openssl rand -base64 64)
+#   DOMAIN           — your API domain, e.g. api.your-coop.com
+#   FLUTTER_ORIGIN   — your Flutter app origin, e.g. https://your-app.com
+# ─────────────────────────────────────────────────────────────────────────────
+
+services:
+
+  # ── PostgreSQL 16 ────────────────────────────────────────────────────────────
+  db:
+    image: postgres:16-alpine
+    container_name: sahakari_db
+    environment:
+      POSTGRES_DB: sahakari_ms
+      POSTGRES_USER: sahakari
+      POSTGRES_PASSWORD: "${DB_PASSWORD}"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./scripts/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sahakari -d sahakari_ms"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+    # NOTE: No ports exposed — only accessible inside the Docker network
+
+  # ── Redis 7 ──────────────────────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: sahakari_redis
+    command: redis-server --appendonly yes --maxmemory 128mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+    restart: unless-stopped
+    # NOTE: No ports exposed — only accessible inside the Docker network
+
+  # ── ASP.NET Core 8 API ────────────────────────────────────────────────────────
+  api:
+    build:
+      context: .                                      # Run from backend/ directory
+      dockerfile: src/SahakariMS.Api/Dockerfile       # Multi-stage build
+    container_name: sahakari_api
+    environment:
+      # Runtime
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_URLS: http://+:8080
+
+      # Database — connects to the 'db' service above via Docker internal DNS
+      ConnectionStrings__DefaultConnection: "Host=db;Port=5432;Database=sahakari_ms;Username=sahakari;Password=${DB_PASSWORD}"
+
+      # Redis — StackExchange.Redis format (host:port), NOT redis:// URL
+      ConnectionStrings__Redis: "redis:6379,abortConnect=false"
+
+      # JWT — all four fields are required by JwtSettings in appsettings.json
+      JwtSettings__SecretKey: "${JWT_SECRET}"
+      JwtSettings__Issuer: "SahakariMS"
+      JwtSettings__Audience: "SahakariMS"
+      JwtSettings__AccessTokenExpiryMinutes: "15"
+      JwtSettings__RefreshTokenExpiryDays: "7"
+
+      # CORS — must match your Flutter app's origin exactly
+      AllowedOrigins__0: "${FLUTTER_ORIGIN}"
+
+      # Hangfire
+      Hangfire__DashboardPath: "/hangfire"
+
+    volumes:
+      - uploads:/app/wwwroot/uploads   # Persist member photos & documents
+      - logs:/app/logs                 # Persist Serilog daily log files
+
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s   # Give time for auto-migration to complete
+
+    restart: unless-stopped
+    # NOTE: No ports exposed to host — nginx proxies to this service
+
+  # ── nginx (reverse proxy + TLS) ───────────────────────────────────────────────
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: sahakari_nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - /etc/letsencrypt:/etc/letsencrypt:ro   # SSL certs from certbot
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+
+# ── Named Volumes ─────────────────────────────────────────────────────────────
+volumes:
+  pgdata:
+    name: sahakari_pgdata
+  redis_data:
+    name: sahakari_redis_data
+  uploads:
+    name: sahakari_uploads
+  logs:
+    name: sahakari_logs
