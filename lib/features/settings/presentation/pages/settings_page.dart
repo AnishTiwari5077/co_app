@@ -1,6 +1,9 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../../core/api/api_client.dart';
+import '../../../../core/constants/app_constants.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/theme/app_dimensions.dart';
@@ -277,54 +280,114 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   }
 
   void _showChangePasswordSheet() {
+    final currentCtrl  = TextEditingController();
+    final newCtrl      = TextEditingController();
+    final confirmCtrl  = TextEditingController();
+    final formKey      = GlobalKey<FormState>();
+    bool loading       = false;
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(
               top: Radius.circular(AppDimensions.radiusXl))),
-      builder: (ctx) => Padding(
-        padding: EdgeInsets.fromLTRB(
-            AppDimensions.lg,
-            AppDimensions.lg,
-            AppDimensions.lg,
-            MediaQuery.of(ctx).viewInsets.bottom + AppDimensions.lg),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text('Change Password', style: AppTextStyles.titleLarge),
-            const SizedBox(height: AppDimensions.md),
-            TextFormField(
-              decoration: const InputDecoration(
-                  labelText: 'Current Password',
-                  prefixIcon: Icon(Icons.lock_outline)),
-              obscureText: true,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setModalState) => Padding(
+          padding: EdgeInsets.fromLTRB(
+              AppDimensions.lg,
+              AppDimensions.lg,
+              AppDimensions.lg,
+              MediaQuery.of(ctx).viewInsets.bottom + AppDimensions.lg),
+          child: Form(
+            key: formKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Change Password', style: AppTextStyles.titleLarge),
+                const SizedBox(height: AppDimensions.md),
+                TextFormField(
+                  controller: currentCtrl,
+                  decoration: const InputDecoration(
+                      labelText: 'Current Password',
+                      prefixIcon: Icon(Icons.lock_outline)),
+                  obscureText: true,
+                  validator: (v) => (v == null || v.isEmpty) ? 'Required' : null,
+                ),
+                const SizedBox(height: AppDimensions.sm),
+                TextFormField(
+                  controller: newCtrl,
+                  decoration: const InputDecoration(
+                      labelText: 'New Password',
+                      prefixIcon: Icon(Icons.lock_reset_rounded)),
+                  obscureText: true,
+                  validator: (v) {
+                    if (v == null || v.isEmpty) return 'Required';
+                    if (v.length < 8) return 'Minimum 8 characters';
+                    return null;
+                  },
+                ),
+                const SizedBox(height: AppDimensions.sm),
+                TextFormField(
+                  controller: confirmCtrl,
+                  decoration: const InputDecoration(
+                      labelText: 'Confirm New Password',
+                      prefixIcon: Icon(Icons.verified_outlined)),
+                  obscureText: true,
+                  validator: (v) => v != newCtrl.text ? 'Passwords do not match' : null,
+                ),
+                const SizedBox(height: AppDimensions.lg),
+                SizedBox(
+                  width: double.infinity,
+                  height: AppDimensions.buttonHeight,
+                  child: ElevatedButton(
+                    onPressed: loading ? null : () async {
+                      if (!formKey.currentState!.validate()) return;
+                      setModalState(() => loading = true);
+                      try {
+                        final dio = ref.read(dioProvider);
+                        await dio.post(
+                          ApiEndpoints.changePassword,
+                          data: {
+                            'currentPassword': currentCtrl.text,
+                            'newPassword': newCtrl.text,
+                          },
+                        );
+                        if (ctx.mounted) {
+                          Navigator.pop(ctx);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Password changed successfully! Please login again.'),
+                              backgroundColor: Colors.green,
+                            ),
+                          );
+                          // Force logout — tokens revoked on server
+                          await ref.read(authStateProvider.notifier).logout();
+                          if (context.mounted) context.go(AppRoutes.login);
+                        }
+                      } catch (e) {
+                        setModalState(() => loading = false);
+                        String msg = 'Failed to change password.';
+                        if (e is DioException) {
+                          msg = e.response?.data?['error']?['message'] as String? ?? msg;
+                        }
+                        if (ctx.mounted) {
+                          ScaffoldMessenger.of(ctx).showSnackBar(
+                            SnackBar(content: Text(msg), backgroundColor: Colors.red),
+                          );
+                        }
+                      }
+                    },
+                    child: loading
+                        ? const SizedBox(width: 20, height: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                        : const Text('Update Password'),
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(height: AppDimensions.sm),
-            TextFormField(
-              decoration: const InputDecoration(
-                  labelText: 'New Password',
-                  prefixIcon: Icon(Icons.lock_reset_rounded)),
-              obscureText: true,
-            ),
-            const SizedBox(height: AppDimensions.sm),
-            TextFormField(
-              decoration: const InputDecoration(
-                  labelText: 'Confirm New Password',
-                  prefixIcon: Icon(Icons.verified_outlined)),
-              obscureText: true,
-            ),
-            const SizedBox(height: AppDimensions.lg),
-            SizedBox(
-              width: double.infinity,
-              height: AppDimensions.buttonHeight,
-              child: ElevatedButton(
-                onPressed: () => Navigator.pop(ctx),
-                child: const Text('Update Password'),
-              ),
-            ),
-          ],
+          ),
         ),
       ),
     );
