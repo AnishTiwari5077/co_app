@@ -163,7 +163,7 @@ class _LoginPageState extends ConsumerState<LoginPage>
                                   Align(
                                     alignment: Alignment.centerRight,
                                     child: TextButton(
-                                      onPressed: () {},
+                                      onPressed: () => _showForgotPasswordDialog(),
                                       child: const Text('Forgot password?'),
                                     ),
                                   ),
@@ -214,6 +214,78 @@ class _LoginPageState extends ConsumerState<LoginPage>
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  void _showForgotPasswordDialog() {
+    showDialog(
+      context: context,
+      builder: (ctx) => Dialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppDimensions.radiusXl),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(AppDimensions.lg),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 64,
+                height: 64,
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withValues(alpha: 0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.lock_reset_rounded,
+                    color: AppColors.primary, size: 32),
+              ),
+              const SizedBox(height: AppDimensions.md),
+              const Text('Forgot Password?',
+                  style: AppTextStyles.titleLarge),
+              const SizedBox(height: AppDimensions.sm),
+              Text(
+                'Password reset is managed by your system administrator.\n\nPlease contact your branch admin or head office to reset your password.',
+                textAlign: TextAlign.center,
+                style: AppTextStyles.bodyMedium
+                    .copyWith(color: AppColors.textSecondary),
+              ),
+              const SizedBox(height: AppDimensions.lg),
+              Container(
+                padding: const EdgeInsets.all(AppDimensions.md),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withValues(alpha: 0.05),
+                  borderRadius:
+                      BorderRadius.circular(AppDimensions.radiusMd),
+                  border: Border.all(
+                      color: AppColors.primary.withValues(alpha: 0.2)),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.info_outline,
+                        color: AppColors.primary, size: 18),
+                    const SizedBox(width: AppDimensions.sm),
+                    Expanded(
+                      child: Text(
+                        'Admin can reset passwords from:\nSettings → User Management',
+                        style: AppTextStyles.bodySmall
+                            .copyWith(color: AppColors.primary),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: AppDimensions.lg),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  child: const Text('OK, Got It'),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
