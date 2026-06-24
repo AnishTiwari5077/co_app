@@ -113,6 +113,39 @@ using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     await db.Database.MigrateAsync();
+
+    // Seed default admin user if no users exist
+    if (!db.Users.Any())
+    {
+        var adminId = Guid.NewGuid();
+        var adminRoleId = Guid.Parse("11111111-1111-1111-1111-111111111111");
+
+        db.Users.Add(new SahakariMS.Domain.Entities.User
+        {
+            Id = adminId,
+            EmployeeCode = "EMP-001",
+            FullName = "System Administrator",
+            Email = "admin@sahakarims.np",
+            Username = "admin",
+            PasswordHash = BCrypt.Net.BCrypt.HashPassword("Admin@1234", workFactor: 11),
+            Phone = "9800000000",
+            Status = "Active",
+            IsTwoFactorEnabled = false,
+            FailedLoginCount = 0,
+            MustChangePassword = false,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow,
+            IsDeleted = false,
+        });
+
+        db.Set<SahakariMS.Domain.Entities.UserRole>().Add(new SahakariMS.Domain.Entities.UserRole
+        {
+            UserId = adminId,
+            RoleId = adminRoleId,
+        });
+
+        await db.SaveChangesAsync();
+    }
 }
 
 // Ensure uploads directory exists
