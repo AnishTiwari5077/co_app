@@ -63,7 +63,9 @@ public class GetMembersQueryHandler(IAppDbContext db)
         var items = await query.OrderByDescending(m => m.CreatedAt)
             .Skip((q.Page - 1) * q.PageSize).Take(Math.Min(q.PageSize, 100))
             .Select(m => new MemberListDto(
-                m.Id, m.MemberCode, m.FullName, m.PhoneNumber, m.Status,
+                m.Id, m.MemberCode,
+                m.FirstName + (m.MiddleName != null ? " " + m.MiddleName : "") + " " + m.LastName,
+                m.PhoneNumber, m.Status,
                 m.SavingAccounts.Sum(s => s.CurrentBalance),
                 m.Loans.Where(l => l.Status == "Active").Sum(l => l.OutstandingBalance),
                 m.MembershipDate, m.PhotoUrl))
