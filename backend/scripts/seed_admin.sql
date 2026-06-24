@@ -33,5 +33,16 @@ WHERE u."Username" = 'admin'
       AND ur."RoleId" = '11111111-1111-1111-1111-111111111111'::uuid
   );
 
+-- Ensure admin always has the Head Office branch (fixes NULL BranchId if user pre-existed)
+UPDATE "Users"
+SET
+  "BranchId" = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'::uuid,
+  "UpdatedAt" = now()
+WHERE "Username" = 'admin'
+  AND ("BranchId" IS NULL OR "BranchId" != 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'::uuid);
+
 -- Verify
-SELECT "Username", "FullName", "Status", "CreatedAt" FROM "Users";
+SELECT u."Username", u."FullName", u."Status", u."BranchId", b."BranchName"
+FROM "Users" u
+LEFT JOIN "Branches" b ON b."Id" = u."BranchId"
+WHERE u."Username" = 'admin';
