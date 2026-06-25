@@ -424,6 +424,15 @@ public class AccountingController(IMediator mediator) : ControllerBase
         return Created($"/api/v1/accounting/vouchers/{result.Value}", new { id = result.Value });
     }
 
+    /// <summary>DELETE /accounting/vouchers/{id} — Delete a voucher and reverse its accounting entries if posted.</summary>
+    [HttpDelete("vouchers/{id:guid}")]
+    public async Task<IActionResult> DeleteVoucher(Guid id, CancellationToken ct)
+    {
+        var result = await mediator.Send(new Application.Accounting.DeleteVoucherCommand(id, GetCurrentUserId()), ct);
+        if (!result.IsSuccess) return BadRequest(ApiResponse<object>.Fail(result.ErrorCode!, result.ErrorMessage!));
+        return Ok(ApiResponse<bool>.Ok(true));
+    }
+
 
     /// <summary>GET /accounting/vouchers — paginated voucher list with entries.</summary>
     [HttpGet("vouchers")]

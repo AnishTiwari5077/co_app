@@ -74,7 +74,44 @@ public class CreateVoucherCommandHandler(IAppDbContext db, IUnitOfWork uow, ISeq
     }
 }
 
+// ── Delete Voucher ────────────────────────────────────────────────────────────
 
+public record DeleteVoucherCommand(Guid VoucherId, Guid ActorId) : IRequest<Result<bool>>;
+
+public class DeleteVoucherCommandHandler(IAppDbContext db, IUnitOfWork uow)
+    : IRequestHandler<DeleteVoucherCommand, Result<bool>>
+{
+    public async Task<Result<bool>> Handle(DeleteVoucherCommand cmd, CancellationToken ct)
+    {
+        var voucher = await db.Vouchers
+            .Include(v => v.Entries)
+            .FirstOrDefaultAsync(v => v.Id == cmd.VoucherId && !v.IsDeleted, ct);
+
+        if (voucher is null)
+            return Result<bool>.Failure("NOT_FOUND", "Voucher not found.");
+
+        // If posted, reverse balances
+        if (voucher.Status == "Posted")
+        {
+            foreach (var e in voucher.Entries)
+            {
+                var account = await db.ChartOfAccounts.FindAsync([e.AccountId], ct);
+                if (account != null)
+                {
+                    // Reverse the original effect: Debit -> subtract, Credit -> add
+                    account.CurrentBalance += e.EntryType == "Debit" ? -e.Amount : e.Amount;
+                }
+            }
+        }
+
+        // Soft delete
+        voucher.IsDeleted = true;
+        foreach (var e in voucher.Entries) e.IsDeleted = true;
+
+        await uow.SaveChangesAsync(ct);
+        return Result<bool>.Success(true);
+    }
+}
 
 // ── Dashboard Summary ─────────────────────────────────────────────────────────
 

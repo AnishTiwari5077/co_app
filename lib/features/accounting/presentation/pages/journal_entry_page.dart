@@ -366,6 +366,49 @@ class _JournalEntryPageState extends ConsumerState<JournalEntryPage>
     }
   }
 
+  // ── Delete Voucher ──────────────────────────────────────────────────────────
+
+  Future<void> _deleteVoucher(String id) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete Voucher', style: AppTextStyles.titleMedium),
+        content: const Text('Are you sure you want to delete this voucher? This will reverse any posted entries.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.error, foregroundColor: Colors.white),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+    if (confirm != true) return;
+
+    try {
+      final dio = ref.read(dioProvider);
+      await dio.delete('/api/v1/accounting/vouchers/$id');
+      if (mounted) {
+        Navigator.pop(context); // Close the detail sheet
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('Voucher deleted successfully.', style: AppTextStyles.bodyMedium.copyWith(color: Colors.white)),
+          backgroundColor: AppColors.secondary,
+        ));
+        _loadVouchers();
+      }
+    } on DioException catch (e) {
+      if (mounted) {
+        final data = e.response?.data as Map<String, dynamic>?;
+        final msg = (data?['error'] as Map<String, dynamic>?)?['message'] as String? ?? e.message ?? 'Failed to delete voucher';
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg), backgroundColor: AppColors.error));
+      }
+    }
+  }
+
   // ── Voucher Detail Sheet ──────────────────────────────────────────────────
 
   void _showVoucherDetail(Map<String, dynamic> v) {
@@ -437,6 +480,12 @@ class _JournalEntryPageState extends ConsumerState<JournalEntryPage>
                           style: AppTextStyles.labelSmall.copyWith(
                               color: isPosted ? AppColors.secondary : AppColors.warning,
                               fontWeight: FontWeight.bold)),
+                    ),
+                    const SizedBox(width: AppDimensions.sm),
+                    IconButton(
+                      icon: const Icon(Icons.delete_outline_rounded, color: AppColors.error),
+                      onPressed: () => _deleteVoucher(v['id'] as String),
+                      tooltip: 'Delete Voucher',
                     ),
                   ],
                 ),
