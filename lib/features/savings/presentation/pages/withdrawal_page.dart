@@ -245,7 +245,7 @@ class _WithdrawalPageState extends ConsumerState<WithdrawalPage> {
                 controller: _amountCtrl,
                 label: 'Withdrawal Amount (NPR) *',
                 hint: '0',
-                prefixIcon: Icons.currency_rupee_rounded,
+
                 keyboardType: TextInputType.number,
                 inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                 validator: (v) {

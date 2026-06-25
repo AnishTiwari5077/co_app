@@ -193,7 +193,7 @@ class _DepositPageState extends ConsumerState<DepositPage> {
               controller: _amountCtrl,
               label: 'Amount (NPR) *',
               hint: '0',
-              prefixIcon: Icons.currency_rupee_rounded,
+
               keyboardType: TextInputType.number,
               inputFormatters: [FilteringTextInputFormatter.digitsOnly],
               validator: (v) {
