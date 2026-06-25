@@ -316,15 +316,6 @@ public class GetLoansQueryHandler(IAppDbContext db)
 
         var today = DateOnly.FromDateTime(DateTime.UtcNow);
         var total = await query.CountAsync(ct);
-
-        var summary = new
-        {
-            totalPortfolio = await query.SumAsync(l => (decimal?)l.OutstandingBalance, ct) ?? 0,
-            activeCount = await query.CountAsync(l => l.Status == "Active", ct),
-            overdueCount = await query.CountAsync(l => l.Status == "Active" && l.NextEmiDate.HasValue && l.NextEmiDate.Value < today, ct),
-            npaCount = await query.CountAsync(l => l.Status == "NPA", ct)
-        };
-
         var items = await query
             .OrderByDescending(l => l.CreatedAt)
             .Skip((q.Page - 1) * q.PageSize).Take(Math.Min(q.PageSize, 2000))
@@ -339,7 +330,7 @@ public class GetLoansQueryHandler(IAppDbContext db)
             .ToListAsync(ct);
 
         return Result<PagedResult<LoanListDto>>.Success(
-            PagedResult<LoanListDto>.Create(items, q.Page, q.PageSize, total, summary));
+            PagedResult<LoanListDto>.Create(items, q.Page, q.PageSize, total));
     }
 }
 

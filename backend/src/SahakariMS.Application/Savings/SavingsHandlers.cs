@@ -193,14 +193,6 @@ public class GetSavingAccountsQueryHandler(IAppDbContext db)
             query = query.Where(a => a.BranchId == q.BranchId);
 
         var total = await query.CountAsync(ct);
-
-        var summary = new
-        {
-            totalSavings = await query.SumAsync(a => (decimal?)a.CurrentBalance, ct) ?? 0,
-            activeAccounts = await query.CountAsync(a => a.Status == "Active", ct),
-            fdPortfolio = await query.Where(a => a.Scheme!.SchemeType == "Fixed Deposit" && a.Status == "Active").SumAsync(a => (decimal?)a.CurrentBalance, ct) ?? 0
-        };
-
         var items = await query
             .OrderByDescending(a => a.UpdatedAt)
             .Skip((q.Page - 1) * q.PageSize).Take(Math.Min(q.PageSize, 2000))
@@ -216,7 +208,7 @@ public class GetSavingAccountsQueryHandler(IAppDbContext db)
             .ToListAsync(ct);
 
         return Result<PagedResult<SavingAccountListDto>>.Success(
-            PagedResult<SavingAccountListDto>.Create(items, q.Page, q.PageSize, total, summary));
+            PagedResult<SavingAccountListDto>.Create(items, q.Page, q.PageSize, total));
     }
 }
 // ── Get Saving Schemes Query ──────────────────────────────────────────────────
