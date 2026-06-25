@@ -195,7 +195,7 @@ public class GetSavingAccountsQueryHandler(IAppDbContext db)
         var total = await query.CountAsync(ct);
         var items = await query
             .OrderByDescending(a => a.UpdatedAt)
-            .Skip((q.Page - 1) * q.PageSize).Take(Math.Min(q.PageSize, 2000))
+            .Skip((q.Page - 1) * q.PageSize).Take(Math.Min(q.PageSize, 50000))
             .Select(a => new SavingAccountListDto(
                 a.Id, a.AccountNumber,
                 a.Member!.FirstName + (a.Member.MiddleName != null ? " " + a.Member.MiddleName : "") + " " + a.Member.LastName,
