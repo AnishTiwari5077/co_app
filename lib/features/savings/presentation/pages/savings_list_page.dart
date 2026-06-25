@@ -40,12 +40,20 @@ class _SavingsState {
   final List<SavingAccountItem> items;
   final bool isLoading;
   final String? error;
-  const _SavingsState({this.items = const [], this.isLoading = false, this.error});
-  _SavingsState copyWith({List<SavingAccountItem>? items, bool? isLoading, String? error}) =>
+  final int totalCount;
+  final Map<String, dynamic>? summary;
+
+  const _SavingsState({
+    this.items = const [], this.isLoading = false,
+    this.error, this.totalCount = 0, this.summary,
+  });
+  _SavingsState copyWith({List<SavingAccountItem>? items, bool? isLoading, String? error, int? totalCount, Map<String, dynamic>? summary}) =>
       _SavingsState(
         items: items ?? this.items,
         isLoading: isLoading ?? this.isLoading,
         error: error,
+        totalCount: totalCount ?? this.totalCount,
+        summary: summary ?? this.summary,
       );
 }
 
@@ -66,7 +74,10 @@ class _SavingsNotifier extends StateNotifier<_SavingsState> {
       final envelope = response.data as Map<String, dynamic>;
       final raw = (envelope['data'] as List<dynamic>? ?? []);
       final items = raw.map((e) => SavingAccountItem.fromJson(e as Map<String, dynamic>)).toList();
-      state = state.copyWith(isLoading: false, items: items);
+      final pagination = envelope['pagination'] as Map<String, dynamic>?;
+      final totalCount = pagination?['totalCount'] as int? ?? items.length;
+      final summary = envelope['summary'] as Map<String, dynamic>?;
+      state = state.copyWith(isLoading: false, items: items, totalCount: totalCount, summary: summary);
     } catch (e) {
       state = state.copyWith(isLoading: false, error: e.toString());
     }
@@ -174,7 +185,7 @@ class _SavingsListPageState extends ConsumerState<SavingsListPage>
                 )
               : Column(
                   children: [
-                    _buildSummary(all),
+                    _buildSummary(state),
                     Container(
                       color: AppColors.surface,
                       padding: const EdgeInsets.fromLTRB(
@@ -225,11 +236,12 @@ class _SavingsListPageState extends ConsumerState<SavingsListPage>
     );
   }
 
-  Widget _buildSummary(List<SavingAccountItem> all) {
-    final totalSavings = all.fold<double>(0, (s, a) => s + a.balance);
-    final activeCount = all.where((a) => a.status == 'Active').length;
-    final fdTotal = all.where((a) => a.accountType == 'FixedDeposit')
-        .fold<double>(0, (s, a) => s + a.balance);
+  Widget _buildSummary(_SavingsState state) {
+    final summary = state.summary ?? {};
+    final totalSavings = (summary['totalSavings'] as num?)?.toDouble() ?? 0.0;
+    final activeCount = summary['activeAccounts'] ?? 0;
+    final fdTotal = (summary['fdPortfolio'] as num?)?.toDouble() ?? 0.0;
+
     return Container(
       color: AppColors.surface,
       padding: const EdgeInsets.all(AppDimensions.md),
@@ -239,7 +251,7 @@ class _SavingsListPageState extends ConsumerState<SavingsListPage>
           const SizedBox(width: AppDimensions.sm),
           _SumCard(label: 'Active Accounts', value: '$activeCount', color: AppColors.primary),
           const SizedBox(width: AppDimensions.sm),
-          _SumCard(label: 'FD Portfolio', value: _fmt(fdTotal), color: AppColors.accent),
+          _SumCard(label: 'FD Portfolio', value: _fmt(fdTotal), color: AppColors.warning),
         ],
       ),
     );

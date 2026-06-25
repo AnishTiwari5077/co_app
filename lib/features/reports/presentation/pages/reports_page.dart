@@ -12,21 +12,21 @@ import 'reports_pdf_generator.dart';
 
 final _membersReportProvider = FutureProvider<List<Map<String, dynamic>>>((ref) async {
   final dio = ref.watch(dioProvider);
-  final res = await dio.get('/api/v1/members', queryParameters: {'pageSize': 500});
+  final res = await dio.get('/api/v1/members', queryParameters: {'pageSize': 2000});
   final envelope = res.data as Map<String, dynamic>;
   return (envelope['data'] as List<dynamic>? ?? []).cast<Map<String, dynamic>>();
 });
 
 final _loansReportProvider = FutureProvider<List<Map<String, dynamic>>>((ref) async {
   final dio = ref.watch(dioProvider);
-  final res = await dio.get('/api/v1/loans', queryParameters: {'pageSize': 500});
+  final res = await dio.get('/api/v1/loans', queryParameters: {'pageSize': 2000});
   final envelope = res.data as Map<String, dynamic>;
   return (envelope['data'] as List<dynamic>? ?? []).cast<Map<String, dynamic>>();
 });
 
 final _savingsReportProvider = FutureProvider<List<Map<String, dynamic>>>((ref) async {
   final dio = ref.watch(dioProvider);
-  final res = await dio.get('/api/v1/savings/accounts', queryParameters: {'pageSize': 500});
+  final res = await dio.get('/api/v1/savings/accounts', queryParameters: {'pageSize': 2000});
   final envelope = res.data as Map<String, dynamic>;
   return (envelope['data'] as List<dynamic>? ?? []).cast<Map<String, dynamic>>();
 });

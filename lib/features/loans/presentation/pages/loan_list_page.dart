@@ -42,20 +42,23 @@ class LoanListItem {
 // ── Provider ──────────────────────────────────────────────────────────────────
 
 class _LoanListState {
-  final List<LoanListItem> items;
   final bool isLoading;
   final String? error;
+  final List<LoanListItem> items;
   final int totalCount;
+  final Map<String, dynamic>? summary;
+
   const _LoanListState({
     this.items = const [], this.isLoading = false,
-    this.error, this.totalCount = 0,
+    this.error, this.totalCount = 0, this.summary,
   });
-  _LoanListState copyWith({List<LoanListItem>? items, bool? isLoading, String? error, int? totalCount}) =>
+  _LoanListState copyWith({List<LoanListItem>? items, bool? isLoading, String? error, int? totalCount, Map<String, dynamic>? summary}) =>
       _LoanListState(
         items: items ?? this.items,
         isLoading: isLoading ?? this.isLoading,
         error: error,
         totalCount: totalCount ?? this.totalCount,
+        summary: summary ?? this.summary,
       );
 }
 
@@ -78,7 +81,8 @@ class _LoanListNotifier extends StateNotifier<_LoanListState> {
       final items = raw.map((e) => LoanListItem.fromJson(e as Map<String, dynamic>)).toList();
       final pagination = envelope['pagination'] as Map<String, dynamic>?;
       final total = pagination?['totalCount'] as int? ?? items.length;
-      state = state.copyWith(isLoading: false, items: items, totalCount: total);
+      final summary = envelope['summary'] as Map<String, dynamic>?;
+      state = state.copyWith(isLoading: false, items: items, totalCount: total, summary: summary);
     } catch (e) {
       state = state.copyWith(isLoading: false, error: e.toString());
     }
@@ -186,7 +190,7 @@ class _LoanListPageState extends ConsumerState<LoanListPage>
                 )
               : Column(
                   children: [
-                    _buildSummary(all),
+                    _buildSummary(loanState),
                     Container(
                       color: AppColors.surface,
                       padding: const EdgeInsets.fromLTRB(
@@ -227,11 +231,13 @@ class _LoanListPageState extends ConsumerState<LoanListPage>
     );
   }
 
-  Widget _buildSummary(List<LoanListItem> all) {
-    final active = all.where((l) => l.status == 'Active').length;
-    final overdue = all.where((l) => l.overdueDays > 0).length;
-    final total = all.fold<double>(0, (s, l) => s + l.outstandingBalance);
-    final npa = all.where((l) => l.status == 'NPA').length;
+  Widget _buildSummary(_LoanListState state) {
+    final summary = state.summary ?? {};
+    final active = summary['activeCount'] ?? 0;
+    final overdue = summary['overdueCount'] ?? 0;
+    final total = (summary['totalPortfolio'] as num?)?.toDouble() ?? 0.0;
+    final npa = summary['npaCount'] ?? 0;
+
     return Container(
       color: AppColors.surface,
       padding: const EdgeInsets.all(AppDimensions.md),
