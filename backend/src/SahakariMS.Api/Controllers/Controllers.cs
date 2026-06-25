@@ -546,7 +546,7 @@ public class AccountingController(IMediator mediator) : ControllerBase
 [ApiController]
 [Route("api/v1/dashboard")]
 [Authorize] // all roles can see dashboard
-public class DashboardController(IMediator mediator, Application.Interfaces.ICacheService cache) : ControllerBase
+public class DashboardController(IMediator mediator, Domain.Interfaces.ICacheService cache) : ControllerBase
 {
     [HttpGet("summary")]
     public async Task<IActionResult> GetSummary(CancellationToken ct)
