@@ -123,11 +123,12 @@ public class DisburseLoanCommandHandler(IAppDbContext db, IUnitOfWork uow) : IRe
         {
             var interest  = Math.Round(balance * r, 2);
             var principal = i == loan.TenureMonths ? balance : Math.Round(loan.EmiAmount - interest, 2);
+            var actualEmi = principal + interest;
             balance -= principal;
             newSchedules.Add(new LoanEmiSchedule
             {
                 LoanId = cmd.LoanId,
-                InstallmentNo = i, DueDate = cmd.Date.AddMonths(i), EmiAmount = loan.EmiAmount,
+                InstallmentNo = i, DueDate = cmd.Date.AddMonths(i), EmiAmount = actualEmi,
                 PrincipalAmount = principal, InterestAmount = interest,
                 OutstandingBalance = Math.Max(0, balance),
                 CreatedBy = cmd.ActorId
