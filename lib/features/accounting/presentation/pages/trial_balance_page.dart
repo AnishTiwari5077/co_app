@@ -61,11 +61,36 @@ final _trialBalanceProvider = FutureProvider.autoDispose<TrialBalance>((ref) asy
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 class TrialBalancePage extends ConsumerWidget {
-  const TrialBalancePage({super.key});
+  final bool embedded;
+  const TrialBalancePage({super.key, this.embedded = false});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final tbAsync = ref.watch(_trialBalanceProvider);
+
+    if (embedded) {
+      return tbAsync.when(
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (e, _) => Center(
+          child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+            const Icon(Icons.error_outline_rounded, color: AppColors.error, size: 48),
+            const SizedBox(height: AppDimensions.md),
+            const Text('Could not load trial balance', style: AppTextStyles.titleMedium),
+            const SizedBox(height: AppDimensions.xs),
+            Text(e.toString(),
+                style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondary),
+                textAlign: TextAlign.center),
+            const SizedBox(height: AppDimensions.md),
+            TextButton.icon(
+              onPressed: () => ref.invalidate(_trialBalanceProvider),
+              icon: const Icon(Icons.refresh_rounded),
+              label: const Text('Retry'),
+            ),
+          ]),
+        ),
+        data: (tb) => _buildBody(context, ref, tb),
+      );
+    }
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -103,7 +128,12 @@ class TrialBalancePage extends ConsumerWidget {
             ),
           ]),
         ),
-        data: (tb) {
+        data: (tb) => _buildBody(context, ref, tb),
+      ),
+    );
+  }
+
+  Widget _buildBody(BuildContext context, WidgetRef ref, TrialBalance tb) {
           // Group accounts by type
           final groups = <String, List<TrialBalanceRow>>{};
           for (final row in tb.accounts) {
@@ -199,9 +229,6 @@ class TrialBalancePage extends ConsumerWidget {
               ),
             ),
           ]);
-        },
-      ),
-    );
   }
 }
 

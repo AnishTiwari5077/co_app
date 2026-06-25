@@ -12,6 +12,8 @@ import '../../../../shared/widgets/app_text_field.dart';
 import '../../../../core/api/api_client.dart';
 import '../../../../core/widgets/main_shell.dart';
 import 'voucher_pdf_generator.dart';
+import 'ledger_page.dart';
+import 'trial_balance_page.dart';
 
 // ── Chart of Account model ────────────────────────────────────────────────────
 
@@ -106,7 +108,7 @@ class _JournalEntryPageState extends ConsumerState<JournalEntryPage>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(length: 4, vsync: this);
     _tabController.addListener(() {
       if (_tabController.index == 1 && _vouchers.isEmpty) {
         _loadVouchers();
@@ -608,11 +610,6 @@ class _JournalEntryPageState extends ConsumerState<JournalEntryPage>
             child: Text('Fiscal Years',
                 style: AppTextStyles.labelLarge.copyWith(color: AppColors.accent)),
           ),
-          TextButton(
-            onPressed: () => context.push('/accounting/trial-balance'),
-            child: Text('Trial Balance',
-                style: AppTextStyles.labelLarge.copyWith(color: AppColors.primary)),
-          ),
           const AppBarUserBadge(),
         ],
         bottom: TabBar(
@@ -621,9 +618,13 @@ class _JournalEntryPageState extends ConsumerState<JournalEntryPage>
           unselectedLabelColor: AppColors.textSecondary,
           indicatorColor: AppColors.primary,
           labelStyle: AppTextStyles.labelLarge,
+          isScrollable: true,
+          tabAlignment: TabAlignment.start,
           tabs: const [
             Tab(text: 'Journal Entry'),
             Tab(text: 'Vouchers'),
+            Tab(text: 'Ledger'),
+            Tab(text: 'Trial Balance'),
           ],
         ),
       ),
@@ -632,6 +633,8 @@ class _JournalEntryPageState extends ConsumerState<JournalEntryPage>
         children: [
           _buildJournalEntry(),
           _buildVoucherList(),
+          const LedgerPage(embedded: true),
+          const TrialBalancePage(embedded: true),
         ],
       ),
     );
