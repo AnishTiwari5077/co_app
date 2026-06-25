@@ -318,7 +318,7 @@ public class GetLoansQueryHandler(IAppDbContext db)
         var total = await query.CountAsync(ct);
         var items = await query
             .OrderByDescending(l => l.CreatedAt)
-            .Skip((q.Page - 1) * q.PageSize).Take(Math.Min(q.PageSize, 2000))
+            .Skip((q.Page - 1) * q.PageSize).Take(Math.Min(q.PageSize, 50000))
             .Select(l => new LoanListDto(
                 l.Id, l.LoanNumber,
                 l.Member.FirstName + (l.Member.MiddleName != null ? " " + l.Member.MiddleName : "") + " " + l.Member.LastName,

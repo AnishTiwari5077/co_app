@@ -61,7 +61,7 @@ public class GetMembersQueryHandler(IAppDbContext db)
 
         var total = await query.CountAsync(ct);
         var items = await query.OrderByDescending(m => m.CreatedAt)
-            .Skip((q.Page - 1) * q.PageSize).Take(Math.Min(q.PageSize, 2000))
+            .Skip((q.Page - 1) * q.PageSize).Take(Math.Min(q.PageSize, 50000))
             .Select(m => new MemberListDto(
                 m.Id, m.MemberCode,
                 m.FirstName + (m.MiddleName != null ? " " + m.MiddleName : "") + " " + m.LastName,
