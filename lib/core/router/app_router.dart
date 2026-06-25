@@ -19,7 +19,6 @@ import '../../features/savings/presentation/pages/deposit_page.dart';
 import '../../features/savings/presentation/pages/withdrawal_page.dart';
 import '../../features/savings/presentation/pages/open_account_page.dart';
 import '../../features/accounting/presentation/pages/journal_entry_page.dart';
-import '../../features/accounting/presentation/pages/trial_balance_page.dart';
 import '../../features/accounting/presentation/pages/ledger_page.dart';
 import '../../features/accounting/presentation/pages/fiscal_year_page.dart';
 import '../../features/accounting/presentation/pages/chart_of_accounts_page.dart';
@@ -212,11 +211,7 @@ final routerProvider = Provider<GoRouter>((ref) {
               child: const JournalEntryPage(),
             ),
             routes: [
-              GoRoute(
-                path: 'trial-balance',
-                name: 'trial-balance',
-                builder: (context, state) => const TrialBalancePage(),
-              ),
+
               GoRoute(
                 path: 'ledger',
                 name: 'ledger',

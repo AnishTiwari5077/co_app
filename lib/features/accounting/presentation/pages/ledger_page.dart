@@ -6,7 +6,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/theme/app_dimensions.dart';
 import '../../../../core/api/api_client.dart';
-
+import 'ledger_pdf_generator.dart';
 // ── Models ────────────────────────────────────────────────────────────────────
 
 class AccountPickerItem {
@@ -364,6 +364,12 @@ class _LedgerView extends ConsumerWidget {
                   style: AppTextStyles.labelSmall
                       .copyWith(color: AppColors.creditAmount)),
             ]),
+            const SizedBox(width: AppDimensions.sm),
+            IconButton(
+              onPressed: () => LedgerPdfGenerator.previewAndPrint(context, ledger),
+              icon: const Icon(Icons.print_rounded, color: AppColors.primary),
+              tooltip: 'Print Ledger',
+            ),
           ]),
         ),
 

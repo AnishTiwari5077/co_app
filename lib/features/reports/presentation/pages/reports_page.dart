@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
+
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/theme/app_dimensions.dart';
@@ -31,12 +31,6 @@ final _savingsReportProvider = FutureProvider<List<Map<String, dynamic>>>((ref) 
   return (envelope['data'] as List<dynamic>? ?? []).cast<Map<String, dynamic>>();
 });
 
-final _trialBalanceProvider = FutureProvider.family<Map<String, dynamic>, String>((ref, date) async {
-  final dio = ref.watch(dioProvider);
-  final res = await dio.get('/api/v1/accounting/trial-balance', queryParameters: {'asOfDate': date});
-  final envelope = res.data as Map<String, dynamic>;
-  return (envelope['data'] as Map<String, dynamic>?) ?? {};
-});
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 
@@ -72,12 +66,7 @@ class ReportsPage extends ConsumerWidget {
             icon: Icons.account_balance_outlined,
             color: AppColors.primary,
             reports: [
-              _ReportItem(
-                title: 'Trial Balance',
-                subtitle: 'Debit/Credit summary by account',
-                icon: Icons.balance_rounded,
-                onTap: (ctx, ref) => _showTrialBalanceSheet(ctx, ref),
-              ),
+
               _ReportItem(
                 title: 'Member List',
                 subtitle: 'All registered members with status',
@@ -236,114 +225,6 @@ class ReportsPage extends ConsumerWidget {
     );
   }
 
-  static Future<void> _showTrialBalanceSheet(
-      BuildContext ctx, WidgetRef ref) async {
-    DateTime selectedDate = DateTime.now();
-
-    await showModalBottomSheet(
-      context: ctx,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius:
-            BorderRadius.vertical(top: Radius.circular(AppDimensions.radiusXl)),
-      ),
-      builder: (sheetCtx) => StatefulBuilder(
-        builder: (sheetCtx, setLocal) => Padding(
-          padding: const EdgeInsets.all(AppDimensions.lg),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(children: [
-                Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: AppColors.primary.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: const Icon(Icons.balance_rounded,
-                      color: AppColors.primary, size: 22),
-                ),
-                const SizedBox(width: 12),
-                const Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Trial Balance', style: AppTextStyles.titleLarge),
-                    Text('Debit/Credit summary by account',
-                        style: AppTextStyles.bodySmall),
-                  ],
-                ),
-              ]),
-              const SizedBox(height: AppDimensions.md),
-              const Divider(),
-              const SizedBox(height: AppDimensions.sm),
-              const Text('As of Date', style: AppTextStyles.labelMedium),
-              const SizedBox(height: 6),
-              InkWell(
-                onTap: () async {
-                  final picked = await showDatePicker(
-                    context: sheetCtx,
-                    initialDate: selectedDate,
-                    firstDate: DateTime(2020),
-                    lastDate: DateTime.now(),
-                  );
-                  if (picked != null) setLocal(() => selectedDate = picked);
-                },
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 12, vertical: 12),
-                  decoration: BoxDecoration(
-                    border: Border.all(color: AppColors.primary.withValues(alpha: 0.4)),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Row(children: [
-                    const Icon(Icons.calendar_today_rounded,
-                        size: 16, color: AppColors.primary),
-                    const SizedBox(width: 8),
-                    Text(DateFormat('yyyy-MM-dd').format(selectedDate),
-                        style: AppTextStyles.bodyMedium
-                            .copyWith(color: AppColors.primary)),
-                    const Spacer(),
-                    const Icon(Icons.edit_rounded,
-                        size: 14, color: AppColors.textSecondary),
-                  ]),
-                ),
-              ),
-              const SizedBox(height: AppDimensions.lg),
-              _GenerateButton(
-                label: 'Generate Trial Balance PDF',
-                icon: Icons.picture_as_pdf_rounded,
-                color: AppColors.primary,
-                onTap: () async {
-                  Navigator.pop(sheetCtx);
-                  final dateStr =
-                      DateFormat('yyyy-MM-dd').format(selectedDate);
-                  try {
-                    final tb = await ref
-                        .read(_trialBalanceProvider(dateStr).future);
-                    if (ctx.mounted) {
-                      await ReportsPdfGenerator.previewTrialBalance(
-                          ctx, tb, dateStr);
-                    }
-                  } catch (e) {
-                    if (ctx.mounted) {
-                      ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(
-                        content: Text('Failed: ${e.toString()}'),
-                        backgroundColor: AppColors.error,
-                        behavior: SnackBarBehavior.floating,
-                      ));
-                    }
-                  }
-                },
-              ),
-              const SizedBox(height: AppDimensions.md),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
 
   static Future<void> _showReportSheet(
     BuildContext ctx,

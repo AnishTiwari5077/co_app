@@ -424,15 +424,6 @@ public class AccountingController(IMediator mediator) : ControllerBase
         return Created($"/api/v1/accounting/vouchers/{result.Value}", new { id = result.Value });
     }
 
-    /// <summary>GET /accounting/trial-balance — Admin, Manager, Accountant can view trial balance.</summary>
-    [HttpGet("trial-balance")]
-    public async Task<IActionResult> GetTrialBalance([FromQuery] Guid? branchId, [FromQuery] DateOnly? asOfDate, CancellationToken ct)
-    {
-        var bid = branchId ?? (Guid.TryParse(User.FindFirst("branchId")?.Value, out var b) ? b : Guid.Empty);
-        var result = await mediator.Send(new Application.Accounting.GetTrialBalanceQuery(bid, asOfDate ?? DateOnly.FromDateTime(DateTime.UtcNow)), ct);
-        if (!result.IsSuccess) return BadRequest(ApiResponse<object>.Fail(result.ErrorCode!, result.ErrorMessage!));
-        return Ok(ApiResponse<Application.Accounting.TrialBalanceDto>.Ok(result.Value!));
-    }
 
     /// <summary>GET /accounting/vouchers — paginated voucher list with entries.</summary>
     [HttpGet("vouchers")]

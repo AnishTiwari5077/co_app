@@ -54,16 +54,7 @@ class ReportsPdfGenerator {
         onLayout: (_) async => pdf, name: 'Savings_Summary.pdf');
   }
 
-  static Future<void> previewTrialBalance(
-    BuildContext context,
-    Map<String, dynamic> trialBalance,
-    String asOfDate,
-  ) async {
-    final pdf = await _buildTrialBalancePdf(trialBalance, asOfDate);
-    if (!context.mounted) return;
-    await Printing.layoutPdf(
-        onLayout: (_) async => pdf, name: 'Trial_Balance.pdf');
-  }
+
 
   static Future<void> previewNpaReport(
     BuildContext context,
@@ -386,98 +377,7 @@ class ReportsPdfGenerator {
     return doc.save();
   }
 
-  // ────────────────────────────────────────────────────────────────────────────
-  // Trial Balance PDF
-  // ────────────────────────────────────────────────────────────────────────────
 
-  static Future<Uint8List> _buildTrialBalancePdf(
-      Map<String, dynamic> tb, String asOfDate) async {
-    final doc = pw.Document();
-    final now = DateFormat('yyyy-MM-dd HH:mm').format(DateTime.now());
-
-    // API returns 'accounts' list; fall back to 'entries' for compatibility
-    final entries = ((tb['accounts'] as List<dynamic>?) ??
-            (tb['entries'] as List<dynamic>?) ??
-            [])
-        .cast<Map<String, dynamic>>();
-    final totalDebit = (tb['totalDebit'] as num?)?.toDouble() ?? 0;
-    final totalCredit = (tb['totalCredit'] as num?)?.toDouble() ?? 0;
-
-    doc.addPage(pw.MultiPage(
-      pageFormat: PdfPageFormat.a4,
-      margin: const pw.EdgeInsets.all(28),
-      header: (ctx) => _reportHeader(
-          'TRIAL BALANCE', 'As of $asOfDate', now, _primary),
-      footer: _footer,
-      build: (ctx) => [
-        pw.SizedBox(height: 8),
-        pw.Row(children: [
-          _statCard('Total Debit', 'NPR ${_fmt.format(totalDebit)}', _error),
-          pw.SizedBox(width: 8),
-          _statCard('Total Credit', 'NPR ${_fmt.format(totalCredit)}', _secondary),
-          pw.SizedBox(width: 8),
-          _statCard(
-              'Difference',
-              'NPR ${_fmt.format((totalDebit - totalCredit).abs())}',
-              (totalDebit - totalCredit).abs() < 0.01 ? _secondary : _error),
-        ]),
-        pw.SizedBox(height: 12),
-        if (entries.isEmpty)
-          _emptyMsg('No entries found for the selected period.')
-        else
-          pw.Table(
-            border: pw.TableBorder.all(color: _border, width: 0.5),
-            columnWidths: {
-              0: const pw.FlexColumnWidth(2),  // Code
-              1: const pw.FlexColumnWidth(5),  // Account Name
-              2: const pw.FlexColumnWidth(2),  // Type
-              3: const pw.FlexColumnWidth(2.5), // Debit
-              4: const pw.FlexColumnWidth(2.5), // Credit
-            },
-            children: [
-              _tableHeader(_primary,
-                  ['Code', 'Account Name', 'Type', 'Debit (NPR)', 'Credit (NPR)']),
-              ...entries.asMap().entries.map((e) {
-                final i = e.key;
-                final en = e.value;
-                // API uses debitBalance/creditBalance; fall back to debit/credit
-                final debit = (en['debitBalance'] as num?)?.toDouble() ??
-                    (en['debit'] as num?)?.toDouble() ?? 0;
-                final credit = (en['creditBalance'] as num?)?.toDouble() ??
-                    (en['credit'] as num?)?.toDouble() ?? 0;
-                return pw.TableRow(
-                  decoration: pw.BoxDecoration(
-                      color: i.isEven ? PdfColors.white : _light),
-                  children: [
-                    _td(en['accountCode'] as String? ?? 'N/A'),
-                    _td(en['accountName'] as String? ?? 'N/A'),
-                    _td(en['accountType'] as String? ?? 'N/A'),
-                    _td(debit > 0 ? _fmt.format(debit) : '-',
-                        right: true, color: debit > 0 ? _error : _grey),
-                    _td(credit > 0 ? _fmt.format(credit) : '-',
-                        right: true, color: credit > 0 ? _secondary : _grey),
-                  ],
-                );
-              }),
-              // Totals row
-              pw.TableRow(
-                decoration: const pw.BoxDecoration(color: PdfColor.fromInt(0xFFEFF3FB)),
-                children: [
-                  _td('', bold: true),
-                  _tdColored('TOTAL', _primary),
-                  _td(''),
-                  _td('NPR ${_fmt.format(totalDebit)}',
-                      right: true, bold: true, color: _error),
-                  _td('NPR ${_fmt.format(totalCredit)}',
-                      right: true, bold: true, color: _secondary),
-                ],
-              ),
-            ],
-          ),
-      ],
-    ));
-    return doc.save();
-  }
 
   // ────────────────────────────────────────────────────────────────────────────
   // Shared PDF building helpers
@@ -600,13 +500,6 @@ class ReportsPdfGenerator {
                   color: color,
                   fontWeight: pw.FontWeight.bold)),
         ),
-      );
-
-  static pw.Widget _tdColored(String text, PdfColor color) => pw.Container(
-        padding: const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 4),
-        child: pw.Text(text,
-            style: pw.TextStyle(
-                fontSize: 7.5, color: color, fontWeight: pw.FontWeight.bold)),
       );
 
   static pw.Widget _emptyMsg(String msg) => pw.Center(
