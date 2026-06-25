@@ -195,7 +195,7 @@ public class GetSavingAccountsQueryHandler(IAppDbContext db)
         var total = await query.CountAsync(ct);
         var items = await query
             .OrderByDescending(a => a.UpdatedAt)
-            .Skip((q.Page - 1) * q.PageSize).Take(Math.Min(q.PageSize, 100))
+            .Skip((q.Page - 1) * q.PageSize).Take(Math.Min(q.PageSize, 2000))
             .Select(a => new SavingAccountListDto(
                 a.Id, a.AccountNumber,
                 a.Member!.FirstName + (a.Member.MiddleName != null ? " " + a.Member.MiddleName : "") + " " + a.Member.LastName,
@@ -418,7 +418,7 @@ public class GetSavingTransactionsQueryHandler(IAppDbContext db)
         var items = await db.SavingTransactions.AsNoTracking()
             .Where(t => t.AccountId == q.AccountId)
             .OrderByDescending(t => t.TransactionDate)
-            .Skip((q.Page - 1) * q.PageSize).Take(Math.Min(q.PageSize, 100))
+            .Skip((q.Page - 1) * q.PageSize).Take(Math.Min(q.PageSize, 2000))
             .Select(t => new SavingTransactionDto(
                 t.Id, t.ReceiptNumber, t.TransactionType,
                 t.Amount, t.BalanceAfter,
