@@ -2,40 +2,35 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/api/repositories/member_repository.dart';
 
 // ── Member list provider (paginated + search) ─────────────────────────────────
-typedef MemberListState = ({List<MemberListItem> items, int totalCount});
-
 final memberListProvider =
-    AsyncNotifierProvider<MemberListNotifier, MemberListState>(
+    AsyncNotifierProvider<MemberListNotifier, List<MemberListItem>>(
   MemberListNotifier.new,
 );
 
-class MemberListNotifier extends AsyncNotifier<MemberListState> {
+class MemberListNotifier extends AsyncNotifier<List<MemberListItem>> {
   int _page = 1;
   bool _hasMore = true;
   String _search = '';
   String _status = 'All';
-  int _totalCount = 0;
   final List<MemberListItem> _items = [];
 
   @override
-  Future<MemberListState> build() async {
+  Future<List<MemberListItem>> build() async {
     return _loadPage(reset: true);
   }
 
-  Future<MemberListState> _loadPage({bool reset = false}) async {
+  Future<List<MemberListItem>> _loadPage({bool reset = false}) async {
     if (reset) {
       _page = 1;
       _hasMore = true;
       _items.clear();
-      _totalCount = 0;
     }
     final repo = ref.read(memberRepositoryProvider);
     final result = await repo.getMembers(
         page: _page, search: _search, status: _status);
     _hasMore = result.data.length >= 20;
     _items.addAll(result.data);
-    _totalCount = result.total;
-    return (items: List<MemberListItem>.unmodifiable(_items), totalCount: _totalCount);
+    return List.unmodifiable(_items);
   }
 
   Future<void> search(String query) async {

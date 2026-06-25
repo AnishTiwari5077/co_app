@@ -8,10 +8,9 @@ public class PagedResult<T>
     public int PageSize { get; init; }
     public int TotalCount { get; init; }
     public int TotalPages => (int)Math.Ceiling((double)TotalCount / PageSize);
-    public object? Summary { get; init; }
 
-    public static PagedResult<T> Create(IReadOnlyList<T> data, int page, int pageSize, int totalCount, object? summary = null) =>
-        new() { Data = data, Page = page, PageSize = pageSize, TotalCount = totalCount, Summary = summary };
+    public static PagedResult<T> Create(IReadOnlyList<T> data, int page, int pageSize, int totalCount) =>
+        new() { Data = data, Page = page, PageSize = pageSize, TotalCount = totalCount };
 }
 
 /// <summary>Standard query parameters for paginated list endpoints.</summary>
