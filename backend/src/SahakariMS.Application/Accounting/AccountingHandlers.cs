@@ -167,7 +167,7 @@ public class GetDashboardSummaryQueryHandler(IAppDbContext db, ICacheService cac
         var summary = new DashboardSummaryDto(totalMembers, activeLoans, totalSavings, totalOutstanding,
             todayDeposits, todayWithdrawals, recoveryRate, npaPercent, newMembers, 0);
 
-        try { await cache.SetAsync(cacheKey, summary, TimeSpan.FromMinutes(5), ct); }
+        try { await cache.SetAsync(cacheKey, summary, TimeSpan.FromMinutes(1), ct); }
         catch { /* Redis unavailable — skip cache write */ }
 
         return Result<DashboardSummaryDto>.Success(summary);
