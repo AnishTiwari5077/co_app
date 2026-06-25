@@ -28,9 +28,11 @@ class ReportsPdfGenerator {
     BuildContext context,
     List<Map<String, dynamic>> members,
   ) async {
-    final pdf = await _buildMemberListPdf(members);
     if (!context.mounted) return;
-    await Printing.layoutPdf(onLayout: (_) async => pdf, name: 'Member_List.pdf');
+    await Printing.layoutPdf(
+        onLayout: (format) async => await _buildMemberListPdf(members, format),
+        name: 'Member_List.pdf',
+        format: PdfPageFormat.a4.landscape);
   }
 
   static Future<void> previewLoanPortfolio(
@@ -38,20 +40,22 @@ class ReportsPdfGenerator {
     List<Map<String, dynamic>> loans, {
     String? statusFilter,
   }) async {
-    final pdf = await _buildLoanPdf(loans, statusFilter: statusFilter);
     if (!context.mounted) return;
     await Printing.layoutPdf(
-        onLayout: (_) async => pdf, name: 'Loan_Portfolio.pdf');
+        onLayout: (format) async => await _buildLoanPdf(loans, format, statusFilter: statusFilter),
+        name: 'Loan_Portfolio.pdf',
+        format: PdfPageFormat.a4.landscape);
   }
 
   static Future<void> previewSavingsSummary(
     BuildContext context,
     List<Map<String, dynamic>> accounts,
   ) async {
-    final pdf = await _buildSavingsSummaryPdf(accounts);
     if (!context.mounted) return;
     await Printing.layoutPdf(
-        onLayout: (_) async => pdf, name: 'Savings_Summary.pdf');
+        onLayout: (format) async => await _buildSavingsSummaryPdf(accounts, format),
+        name: 'Savings_Summary.pdf',
+        format: PdfPageFormat.a4.landscape);
   }
 
 
@@ -67,10 +71,12 @@ class ReportsPdfGenerator {
                 l['npaClassification'].toString().isNotEmpty &&
                 l['npaClassification'] != 'Standard'))
         .toList();
-    final pdf = await _buildLoanPdf(npa,
-        title: 'NPA Report', subtitle: 'Non-Performing Assets (Overdue > 90 days)');
     if (!context.mounted) return;
-    await Printing.layoutPdf(onLayout: (_) async => pdf, name: 'NPA_Report.pdf');
+    await Printing.layoutPdf(
+        onLayout: (format) async => await _buildLoanPdf(npa, format,
+            title: 'NPA Report', subtitle: 'Non-Performing Assets (Overdue > 90 days)'),
+        name: 'NPA_Report.pdf',
+        format: PdfPageFormat.a4.landscape);
   }
 
   static Future<void> previewOverdueLoans(
@@ -80,12 +86,13 @@ class ReportsPdfGenerator {
     final overdue = loans
         .where((l) => ((l['overdueAmount'] as num?)?.toDouble() ?? 0) > 0)
         .toList();
-    final pdf = await _buildLoanPdf(overdue,
-        title: 'Overdue Loans Report',
-        subtitle: 'Loans with outstanding overdue installments');
     if (!context.mounted) return;
     await Printing.layoutPdf(
-        onLayout: (_) async => pdf, name: 'Overdue_Loans.pdf');
+        onLayout: (format) async => await _buildLoanPdf(overdue, format,
+            title: 'Overdue Loans Report',
+            subtitle: 'Loans with outstanding overdue installments'),
+        name: 'Overdue_Loans.pdf',
+        format: PdfPageFormat.a4.landscape);
   }
 
   // ────────────────────────────────────────────────────────────────────────────
@@ -93,7 +100,7 @@ class ReportsPdfGenerator {
   // ────────────────────────────────────────────────────────────────────────────
 
   static Future<Uint8List> _buildMemberListPdf(
-      List<Map<String, dynamic>> members) async {
+      List<Map<String, dynamic>> members, PdfPageFormat format) async {
     final doc = pw.Document();
     final now = DateFormat('yyyy-MM-dd HH:mm').format(DateTime.now());
 
@@ -105,7 +112,7 @@ class ReportsPdfGenerator {
         members.where((m) => m['status'] == 'Inactive').length;
 
     doc.addPage(pw.MultiPage(
-      pageFormat: PdfPageFormat.a4.landscape,
+      pageFormat: format,
       margin: const pw.EdgeInsets.all(28),
       header: (ctx) =>
           _reportHeader('MEMBER LIST REPORT', 'All registered members', now, _purple),
@@ -183,7 +190,8 @@ class ReportsPdfGenerator {
   // ────────────────────────────────────────────────────────────────────────────
 
   static Future<Uint8List> _buildLoanPdf(
-    List<Map<String, dynamic>> loans, {
+    List<Map<String, dynamic>> loans,
+    PdfPageFormat format, {
     String title = 'Loan Portfolio Report',
     String subtitle = 'All loans by status',
     String? statusFilter,
@@ -202,7 +210,7 @@ class ReportsPdfGenerator {
     const totalOverdue = 0.0;
 
     doc.addPage(pw.MultiPage(
-      pageFormat: PdfPageFormat.a4.landscape,
+      pageFormat: format,
       margin: const pw.EdgeInsets.all(28),
       header: (ctx) => _reportHeader(title, subtitle, now, _accent),
       footer: _footer,
@@ -289,7 +297,7 @@ class ReportsPdfGenerator {
   // ────────────────────────────────────────────────────────────────────────────
 
   static Future<Uint8List> _buildSavingsSummaryPdf(
-      List<Map<String, dynamic>> accounts) async {
+      List<Map<String, dynamic>> accounts, PdfPageFormat format) async {
     final doc = pw.Document();
     final now = DateFormat('yyyy-MM-dd HH:mm').format(DateTime.now());
 
@@ -299,7 +307,7 @@ class ReportsPdfGenerator {
     final closed = accounts.where((a) => a['status'] == 'Closed').length;
 
     doc.addPage(pw.MultiPage(
-      pageFormat: PdfPageFormat.a4.landscape,
+      pageFormat: format,
       margin: const pw.EdgeInsets.all(28),
       header: (ctx) => _reportHeader(
           'SAVINGS SUMMARY REPORT', 'All savings accounts', now, _secondary),
