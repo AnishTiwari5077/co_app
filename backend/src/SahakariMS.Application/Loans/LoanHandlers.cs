@@ -318,7 +318,7 @@ public class GetLoansQueryHandler(IAppDbContext db)
         var total = await query.CountAsync(ct);
         var items = await query
             .OrderByDescending(l => l.CreatedAt)
-            .Skip((q.Page - 1) * q.PageSize).Take(Math.Min(q.PageSize, 100))
+            .Skip((q.Page - 1) * q.PageSize).Take(Math.Min(q.PageSize, 2000))
             .Select(l => new LoanListDto(
                 l.Id, l.LoanNumber,
                 l.Member.FirstName + (l.Member.MiddleName != null ? " " + l.Member.MiddleName : "") + " " + l.Member.LastName,
@@ -429,7 +429,7 @@ public class GetLoanPaymentsQueryHandler(IAppDbContext db)
         var items = await db.LoanPayments.AsNoTracking()
             .Where(p => p.LoanId == q.LoanId)
             .OrderByDescending(p => p.PaymentDate)
-            .Skip((q.Page - 1) * q.PageSize).Take(Math.Min(q.PageSize, 100))
+            .Skip((q.Page - 1) * q.PageSize).Take(Math.Min(q.PageSize, 2000))
             .Select(p => new LoanPaymentDto(
                 p.ReceiptNumber, p.TotalPaid, p.PrincipalPaid,
                 p.InterestPaid, p.PenaltyPaid, p.PaymentMode,

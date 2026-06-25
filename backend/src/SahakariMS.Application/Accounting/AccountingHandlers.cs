@@ -407,7 +407,7 @@ public class GetVouchersQueryHandler(IAppDbContext db)
         var items = await query
             .OrderByDescending(v => v.VoucherDate)
             .ThenByDescending(v => v.CreatedAt)
-            .Skip((q.Page - 1) * q.PageSize).Take(Math.Min(q.PageSize, 100))
+            .Skip((q.Page - 1) * q.PageSize).Take(Math.Min(q.PageSize, 2000))
             .ToListAsync(ct);
 
         var dtos = items.Select(v => new VoucherListDto(
