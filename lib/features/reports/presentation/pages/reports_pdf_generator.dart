@@ -439,14 +439,19 @@ class ReportsPdfGenerator {
         ],
       );
 
+  static PdfColor _lighten(PdfColor c, [double f = 0.1]) => PdfColor(
+      c.red * f + 1.0 * (1 - f),
+      c.green * f + 1.0 * (1 - f),
+      c.blue * f + 1.0 * (1 - f),
+      1.0);
+
   static pw.Widget _statCard(String label, String value, PdfColor color) =>
       pw.Expanded(
         child: pw.Container(
           padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 7),
           decoration: pw.BoxDecoration(
-            color: PdfColor(color.red, color.green, color.blue, 0.08),
-            border: pw.Border.all(
-                color: PdfColor(color.red, color.green, color.blue, 0.3)),
+            color: _lighten(color, 0.08),
+            border: pw.Border.all(color: _lighten(color, 0.3)),
             borderRadius: pw.BorderRadius.circular(4),
           ),
           child: pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.start, children: [
@@ -491,7 +496,7 @@ class ReportsPdfGenerator {
         child: pw.Container(
           padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 2),
           decoration: pw.BoxDecoration(
-            color: PdfColor(color.red, color.green, color.blue, 0.12),
+            color: _lighten(color, 0.12),
             borderRadius: pw.BorderRadius.circular(3),
           ),
           child: pw.Text(text,
