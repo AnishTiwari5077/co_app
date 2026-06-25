@@ -139,18 +139,16 @@ class ReportsPdfGenerator {
               1: const pw.FlexColumnWidth(2.5), // Code
               2: const pw.FlexColumnWidth(4),   // Name
               3: const pw.FlexColumnWidth(2.5), // Phone
-              4: const pw.FlexColumnWidth(2.5), // District
-              5: const pw.FlexColumnWidth(2),   // Status
-              6: const pw.FlexColumnWidth(2.5), // Joined
+              4: const pw.FlexColumnWidth(2),   // Status
+              5: const pw.FlexColumnWidth(2.5), // Joined
+              6: const pw.FlexColumnWidth(2.5), // Savings
             },
             children: [
-              _tableHeader(_purple, ['#', 'Member Code', 'Full Name', 'Phone', 'District', 'Status', 'Joined']),
+              _tableHeader(_purple, ['#', 'Member Code', 'Full Name', 'Phone', 'Status', 'Joined', 'Savings']),
               ...members.asMap().entries.map((e) {
                 final i = e.key;
                 final m = e.value;
-                final name =
-                    '${m['firstName'] ?? ''} ${m['middleName'] ?? ''} ${m['lastName'] ?? ''}'
-                        .trim();
+                final name = m['fullName'] as String? ?? 'Unknown';
                 final status = m['status'] as String? ?? 'N/A';
                 final statusColor = status == 'Active'
                     ? _secondary
@@ -166,10 +164,10 @@ class ReportsPdfGenerator {
                     _td('${i + 1}'),
                     _td(m['memberCode'] as String? ?? 'N/A'),
                     _td(name),
-                    _td(m['phoneNumber'] as String? ?? 'N/A'),
-                    _td(m['addressDistrict'] as String? ?? 'N/A'),
+                    _td(m['phone'] as String? ?? 'N/A'),
                     _tdBadge(status, statusColor),
                     _td(_shortDate(m['membershipDate'])),
+                    _td(_fmt.format((m['totalSavings'] as num?)?.toDouble() ?? 0), right: true),
                   ],
                 );
               }),
@@ -198,11 +196,10 @@ class ReportsPdfGenerator {
         : loans;
 
     final totalDisbursed = data.fold<double>(
-        0, (s, l) => s + ((l['approvedAmount'] as num?)?.toDouble() ?? 0));
+        0, (s, l) => s + ((l['appliedAmount'] as num?)?.toDouble() ?? 0));
     final totalOutstanding = data.fold<double>(
         0, (s, l) => s + ((l['outstandingBalance'] as num?)?.toDouble() ?? 0));
-    final totalOverdue = data.fold<double>(
-        0, (s, l) => s + ((l['overdueAmount'] as num?)?.toDouble() ?? 0));
+    const totalOverdue = 0.0;
 
     doc.addPage(pw.MultiPage(
       pageFormat: PdfPageFormat.a4.landscape,
@@ -234,22 +231,22 @@ class ReportsPdfGenerator {
               0: const pw.FlexColumnWidth(2),   // Loan No
               1: const pw.FlexColumnWidth(3.5), // Member
               2: const pw.FlexColumnWidth(2),   // Status
-              3: const pw.FlexColumnWidth(2),   // Approved
+              3: const pw.FlexColumnWidth(2),   // Applied
               4: const pw.FlexColumnWidth(2.5), // Outstanding
-              5: const pw.FlexColumnWidth(2),   // Overdue Amt
+              5: const pw.FlexColumnWidth(2),   // EMI
               6: const pw.FlexColumnWidth(1.5), // Overdue Days
-              7: const pw.FlexColumnWidth(2),   // NPA
+              7: const pw.FlexColumnWidth(2),   // Product
             },
             children: [
               _tableHeader(_accent, [
                 'Loan No.',
                 'Member',
                 'Status',
-                'Approved (NPR)',
+                'Applied (NPR)',
                 'Outstanding (NPR)',
-                'Overdue Amt',
+                'EMI (NPR)',
                 'Days',
-                'NPA Class'
+                'Product'
               ]),
               ...data.asMap().entries.map((e) {
                 final i = e.key;
@@ -270,18 +267,13 @@ class ReportsPdfGenerator {
                     _td(l['loanNumber'] as String? ?? 'N/A'),
                     _td(l['memberName'] as String? ?? 'N/A'),
                     _tdBadge(status, statusColor),
-                    _td(_fmt.format((l['approvedAmount'] as num?)?.toDouble() ?? 0), right: true),
+                    _td(_fmt.format((l['appliedAmount'] as num?)?.toDouble() ?? 0), right: true),
                     _td(_fmt.format((l['outstandingBalance'] as num?)?.toDouble() ?? 0), right: true),
-                    _td(
-                        _fmt.format((l['overdueAmount'] as num?)?.toDouble() ?? 0),
-                        right: true,
-                        color: ((l['overdueAmount'] as num?)?.toDouble() ?? 0) > 0
-                            ? _error
-                            : null),
+                    _td(_fmt.format((l['emiAmount'] as num?)?.toDouble() ?? 0), right: true),
                     _td('$overdueDays',
                         right: true,
-                        color: overdueDays > 30 ? _error : null),
-                    _td(l['npaClassification'] as String? ?? 'Standard'),
+                        color: overdueDays > 0 ? _error : null),
+                    _td(l['productName'] as String? ?? '—'),
                   ],
                 );
               }),
@@ -337,14 +329,14 @@ class ReportsPdfGenerator {
               0: const pw.FlexColumnWidth(0.8),  // #
               1: const pw.FlexColumnWidth(2.5),  // Account No
               2: const pw.FlexColumnWidth(3.5),  // Member
-              3: const pw.FlexColumnWidth(2.5),  // Scheme
+              3: const pw.FlexColumnWidth(2.5),  // Type
               4: const pw.FlexColumnWidth(2),    // Balance
               5: const pw.FlexColumnWidth(1.8),  // Status
-              6: const pw.FlexColumnWidth(2),    // Open Date
+              6: const pw.FlexColumnWidth(2),    // Last Txn
             },
             children: [
               _tableHeader(_secondary,
-                  ['#', 'Account No.', 'Member Name', 'Scheme', 'Balance (NPR)', 'Status', 'Opened']),
+                  ['#', 'Account No.', 'Member Name', 'Account Type', 'Balance (NPR)', 'Status', 'Last Txn']),
               ...accounts.asMap().entries.map((e) {
                 final i = e.key;
                 final a = e.value;
@@ -358,7 +350,7 @@ class ReportsPdfGenerator {
                     _td('${i + 1}'),
                     _td(a['accountNumber'] as String? ?? 'N/A'),
                     _td(a['memberName'] as String? ?? 'N/A'),
-                    _td(a['schemeName'] as String? ?? 'N/A'),
+                    _td(a['accountType'] as String? ?? 'N/A'),
                     _td(
                       _fmt.format((a['balance'] as num?)?.toDouble() ?? 0),
                       right: true,
@@ -366,7 +358,7 @@ class ReportsPdfGenerator {
                       color: _secondary,
                     ),
                     _tdBadge(status, statusColor),
-                    _td(_shortDate(a['openDate'])),
+                    _td(_shortDate(a['lastTransactionDate'])),
                   ],
                 );
               }),
