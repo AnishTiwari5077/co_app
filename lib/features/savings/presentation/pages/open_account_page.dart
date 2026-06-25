@@ -800,7 +800,7 @@ class _OpenAccountPageState extends ConsumerState<OpenAccountPage> {
           decoration: InputDecoration(
             labelText: 'Amount (NPR)',
             hintText: '0',
-            prefixIcon: const Icon(Icons.currency_rupee_rounded),
+
             helperText: minDeposit > 0
                 ? 'Minimum: NPR ${minDeposit.toStringAsFixed(0)}'
                 : null,

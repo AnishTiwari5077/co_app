@@ -666,7 +666,7 @@ class _LoanApplicationPageState extends ConsumerState<LoanApplicationPage> {
           controller: _amountCtrl,
           label: 'Loan Amount (NPR) *',
           hint: '0.00',
-          prefixIcon: Icons.currency_rupee_rounded,
+
           keyboardType: TextInputType.number,
           inputFormatters: [FilteringTextInputFormatter.digitsOnly],
           validator: (v) {
@@ -796,7 +796,7 @@ class _LoanApplicationPageState extends ConsumerState<LoanApplicationPage> {
           controller: _collateralValueCtrl,
           label: 'Estimated Value (NPR)',
           hint: '0',
-          prefixIcon: Icons.currency_rupee_rounded,
+
           keyboardType: TextInputType.number,
           inputFormatters: [FilteringTextInputFormatter.digitsOnly],
         ),
