@@ -546,7 +546,7 @@ public class AccountingController(IMediator mediator) : ControllerBase
 [ApiController]
 [Route("api/v1/dashboard")]
 [Authorize] // all roles can see dashboard
-public class DashboardController(IMediator mediator) : ControllerBase
+public class DashboardController(IMediator mediator, Application.Interfaces.ICacheService cache) : ControllerBase
 {
     [HttpGet("summary")]
     public async Task<IActionResult> GetSummary(CancellationToken ct)
@@ -564,6 +564,15 @@ public class DashboardController(IMediator mediator) : ControllerBase
         var result = await mediator.Send(new Application.Accounting.GetDashboardActivityQuery(), ct);
         if (!result.IsSuccess) return BadRequest(ApiResponse<object>.Fail(result.ErrorCode!, result.ErrorMessage!));
         return Ok(ApiResponse<Application.Accounting.DashboardActivityDto>.Ok(result.Value!));
+    }
+
+    /// <summary>POST /dashboard/flush-cache — clears Redis dashboard cache so next GET returns live data.</summary>
+    [HttpPost("flush-cache")]
+    public async Task<IActionResult> FlushCache(CancellationToken ct)
+    {
+        try { await cache.RemoveByPrefixAsync("dashboard:", ct); }
+        catch (Exception ex) { return StatusCode(500, new { error = ex.Message }); }
+        return Ok(new { message = "Dashboard cache cleared. Next request will fetch live data." });
     }
 }
 
