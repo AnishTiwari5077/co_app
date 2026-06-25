@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("SahakariMS.Domain")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+598f5e5dd41d607d4c92c1b434292c1d0cecf036")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+f96078048a97a556723a5ddb5f9acaf77da4a2cb")]
 [assembly: System.Reflection.AssemblyProductAttribute("SahakariMS.Domain")]
 [assembly: System.Reflection.AssemblyTitleAttribute("SahakariMS.Domain")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
