@@ -99,7 +99,8 @@ final _ledgerProvider = FutureProvider.autoDispose
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 class LedgerPage extends ConsumerStatefulWidget {
-  const LedgerPage({super.key});
+  final bool embedded;
+  const LedgerPage({super.key, this.embedded = false});
 
   @override
   ConsumerState<LedgerPage> createState() => _LedgerPageState();
@@ -165,6 +166,10 @@ class _LedgerPageState extends ConsumerState<LedgerPage> {
 
   @override
   Widget build(BuildContext context) {
+    if (widget.embedded) {
+      return _buildBody();
+    }
+
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
@@ -176,8 +181,13 @@ class _LedgerPageState extends ConsumerState<LedgerPage> {
           onPressed: () => context.pop(),
         ),
       ),
-      body: Column(children: [
-        // Account picker
+      body: _buildBody(),
+    );
+  }
+
+  Widget _buildBody() {
+    return Column(children: [
+      // Account picker
         Container(
           color: AppColors.surface,
           padding: const EdgeInsets.all(AppDimensions.md),
@@ -287,8 +297,7 @@ class _LedgerPageState extends ConsumerState<LedgerPage> {
                 )
               : _LedgerView(accountId: _selectedAccount!.id),
         ),
-      ]),
-    );
+      ]);
   }
 
   String _fmtAmt(double v) {

@@ -395,7 +395,10 @@ class ReportsPdfGenerator {
     final doc = pw.Document();
     final now = DateFormat('yyyy-MM-dd HH:mm').format(DateTime.now());
 
-    final entries = (tb['entries'] as List<dynamic>? ?? [])
+    // API returns 'accounts' list; fall back to 'entries' for compatibility
+    final entries = ((tb['accounts'] as List<dynamic>?) ??
+            (tb['entries'] as List<dynamic>?) ??
+            [])
         .cast<Map<String, dynamic>>();
     final totalDebit = (tb['totalDebit'] as num?)?.toDouble() ?? 0;
     final totalCredit = (tb['totalCredit'] as num?)?.toDouble() ?? 0;
@@ -437,8 +440,11 @@ class ReportsPdfGenerator {
               ...entries.asMap().entries.map((e) {
                 final i = e.key;
                 final en = e.value;
-                final debit = (en['debit'] as num?)?.toDouble() ?? 0;
-                final credit = (en['credit'] as num?)?.toDouble() ?? 0;
+                // API uses debitBalance/creditBalance; fall back to debit/credit
+                final debit = (en['debitBalance'] as num?)?.toDouble() ??
+                    (en['debit'] as num?)?.toDouble() ?? 0;
+                final credit = (en['creditBalance'] as num?)?.toDouble() ??
+                    (en['credit'] as num?)?.toDouble() ?? 0;
                 return pw.TableRow(
                   decoration: pw.BoxDecoration(
                       color: i.isEven ? PdfColors.white : _light),

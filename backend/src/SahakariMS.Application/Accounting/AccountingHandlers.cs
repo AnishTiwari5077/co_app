@@ -90,13 +90,27 @@ public class GetTrialBalanceQueryHandler(IAppDbContext db)
         if (branch is null) return Result<TrialBalanceDto>.Failure("BRANCH_NOT_FOUND", "Branch not found.");
 
         var accounts = await db.ChartOfAccounts.AsNoTracking()
-            .Where(a => a.AllowDirectPosting && a.IsActive)
+            .Where(a => a.IsActive && !a.IsDeleted)
             .OrderBy(a => a.AccountCode).ToListAsync(ct);
 
-        var rows = accounts.Select(a => new TrialBalanceRowDto(
-            a.AccountCode, a.AccountName, a.AccountType,
-            a.CurrentBalance >= 0 ? a.CurrentBalance : 0,
-            a.CurrentBalance < 0 ? Math.Abs(a.CurrentBalance) : 0)).ToList();
+        var entries = await db.VoucherEntries.AsNoTracking()
+            .Include(e => e.Voucher)
+            .Where(e => e.Voucher!.BranchId == q.BranchId && e.Voucher.VoucherDate <= q.AsOfDate && !e.IsDeleted)
+            .GroupBy(e => e.AccountId)
+            .Select(g => new
+            {
+                AccountId = g.Key,
+                Balance = g.Sum(e => e.EntryType == "Debit" ? e.Amount : -e.Amount)
+            }).ToDictionaryAsync(x => x.AccountId, x => x.Balance, ct);
+
+        var rows = accounts.Select(a =>
+        {
+            var bal = entries.GetValueOrDefault(a.Id, 0m);
+            return new TrialBalanceRowDto(
+                a.AccountCode, a.AccountName, a.AccountType,
+                bal >= 0 ? bal : 0,
+                bal < 0 ? Math.Abs(bal) : 0);
+        }).Where(r => r.DebitBalance > 0 || r.CreditBalance > 0).ToList();
 
         var td = rows.Sum(r => r.DebitBalance);
         var tc = rows.Sum(r => r.CreditBalance);
