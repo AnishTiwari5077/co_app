@@ -156,7 +156,8 @@ class _MemberListPageState extends ConsumerState<MemberListPage> {
                   ],
                 ),
               ),
-              data: (members) {
+              data: (membersState) {
+                final members = membersState.items;
                 if (members.isEmpty) {
                   return const EmptyView(
                     icon: Icons.people_outline_rounded,
@@ -173,7 +174,7 @@ class _MemberListPageState extends ConsumerState<MemberListPage> {
                           vertical: AppDimensions.xs),
                       child: Row(
                         children: [
-                          Text('${members.length} members',
+                          Text('${membersState.totalCount} members',
                               style: AppTextStyles.bodySmall
                                   .copyWith(color: AppColors.textSecondary)),
                         ],
