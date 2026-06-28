@@ -318,8 +318,9 @@ class _LoanDetailPageState extends ConsumerState<LoanDetailPage>
                     width: double.infinity,
                     child: ElevatedButton.icon(
                       onPressed: () {
-                        if (formKey.currentState!.validate())
+                        if (formKey.currentState!.validate()) {
                           Navigator.pop(ctx, true);
+                        }
                       },
                       icon: const Icon(Icons.check_circle_rounded),
                       label: const Text('Approve Loan'),
@@ -459,8 +460,9 @@ class _LoanDetailPageState extends ConsumerState<LoanDetailPage>
                       width: double.infinity,
                       child: ElevatedButton.icon(
                         onPressed: () {
-                          if (formKey.currentState!.validate())
+                          if (formKey.currentState!.validate()) {
                             Navigator.pop(ctx, true);
+                          }
                         },
                         icon: const Icon(Icons.send_rounded),
                         label: const Text('Disburse Loan'),
@@ -716,8 +718,9 @@ class _LoanDetailPageState extends ConsumerState<LoanDetailPage>
                       width: double.infinity,
                       child: ElevatedButton.icon(
                         onPressed: () {
-                          if (formKey.currentState!.validate())
+                          if (formKey.currentState!.validate()) {
                             Navigator.pop(ctx, true);
+                          }
                         },
                         icon: const Icon(Icons.check_rounded),
                         label: Text(pendingEmi != null
